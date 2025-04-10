@@ -1,0 +1,26 @@
+src = ["chanx", "tests"]
+target-version = "py311"
+
+[lint]
+ignore = [
+  "E501",  # line too long, handled by black
+  "F405"  # defined from star imports
+]
+select = [
+  "B",  # flake8-bugbear
+  "C",  # flake8-comprehensions
+  "E",  # pycodestyle errors
+  "F",  # pyflakes
+  "I",  # isort
+  "N",  # pep8-naming
+  "PL",  # pylint
+  "Q",  # flake8-quotes
+  "UP",  # pyupgrade
+  "W"  # pycodestyle warnings
+]
+
+[lint.isort]
+section-order = ["future", "standard-library", "django", "third-party", "first-party", "local-folder"]
+
+[lint.isort.sections]
+django = ["channels", "django", "rest_framework"]

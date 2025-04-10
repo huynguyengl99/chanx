@@ -1,0 +1,138 @@
+[build-system]
+build-backend = "hatchling.build"
+requires = ["hatchling"]
+
+[dependency-groups]
+dev = [
+  "Faker>=37.1.0,<38",
+  "commitizen>=4.5.0,<5",
+  "coveralls>=4.0.1,<5",
+  "daphne>=4.1.2,<5",
+  "django-cleanup>=9.0.0,<10",
+  "django-debug-toolbar>=5.1.0,<6",
+  "django-environ>=0.12.0,<1",
+  "django-extensions>=3.2.3,<4",
+  "django-structlog>=9.1.1",
+  "drf-spectacular>=0.28.0,<1",
+  "factory-boy>=3.3.3,<4",
+  "freezegun>=1.5.1,<2",
+  "ipython>=8.35.0",
+  "mock>=5.2.0,<6",
+  "psycopg-pool>=3.2.6,<4",
+  "psycopg[binary]>=3.2.6,<4",
+  "pytest-cov>=6.1.1,<7",
+  "pytest-django>=4.11.1,<5",
+  "pytest-mock>=3.14.0,<4",
+  "pytest-xdist>=3.6.1,<4"
+]
+docs = [
+  "Sphinx>=7.0.0,<8",
+  "sphinx_rtd_theme"
+]
+lint = [
+  "black>=25.1.0,<26",
+  "django-stubs[compatible-mypy]>=5.1.3",
+  "djangorestframework-stubs[compatible-mypy]>=3.15.3",
+  "mypy>=1.15.0",
+  "pre-commit>=3.4.0,<4.0.0",
+  "ruff>=0.11.3,<0.12",
+  "toml-sort>=0.24.2,<0.25"
+]
+test = [
+  "coverage[toml]>=7.8.0,<8",
+  "pytest-cov>=6.1.0,<7",
+  "pytest-mock>=3.14.0,<4",
+  "pytest-xdist>=3.6.1,<4",
+  "pytest>=8.3.5,<9"
+]
+
+[project]
+authors = [{email = "danghuy1999@gmail.com", name = "Huy Nguyen"}]
+classifiers = [
+  "Environment :: Web Environment",
+  "Intended Audience :: Developers",
+  "Intended Audience :: Information Technology",
+  "License :: OSI Approved :: BSD License",
+  "Operating System :: OS Independent",
+  "Programming Language :: Python :: 3 :: Only",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.9",
+  "Topic :: Internet :: WWW/HTTP :: Dynamic Content",
+  "Topic :: Internet :: WWW/HTTP",
+  "Topic :: Software Development :: Libraries :: Application Frameworks",
+  "Topic :: Software Development :: Libraries",
+  "Topic :: Software Development"
+]
+dependencies = [
+  "Django>=5,<6",
+  "channels-redis>=4,<5",
+  "channels>=4,<5",
+  "djangorestframework>=3,<4",
+  "polyfactory>=2.20.0",
+  "pydantic>=2.11.3",
+  "redis[hiredis]>=5.2.1,<6",
+  "structlog>=25.2.0"
+]
+description = "The missing toolkit for Django Channels — auth, logging, consumers, and more."
+license = {file = "LICENSE"}
+name = "chanx"
+readme = "README.md"
+requires-python = ">=3.10,<4.0"
+version = "0.0.0"
+
+[project.optional-dependencies]
+jwt = [
+  "dj-rest-auth[with-social]>=7.0.1",
+  "djangorestframework-simplejwt>=5.5.0"
+]
+logging = []
+
+[project.urls]
+Documentation = "https://chanx.readthedocs.io/"
+Homepage = "https://github.com/huynguyengl99/chanx"
+Repository = "https://github.com/huynguyengl99/chanx"
+
+[tool.black]
+exclude = '''
+/(
+    \.git
+ |  \.pytest_cache
+ |  \.vscode
+ |  __pycache__
+ |  .venv
+ |  build
+ |  coverage
+)/
+'''
+line-length = 88
+preview = true
+
+[tool.commitizen]
+name = "cz_conventional_commits"
+tag_format = "v$version"
+update_changelog_on_bump = true
+version_provider = "pep621"
+version_scheme = "pep440"
+
+[tool.commitizen.customize]
+bump_map = {build = "PATCH", ci = "PATCH", docs = "PATCH", feat = "MINOR", fix = "PATCH", perf = "PATCH", refactor = "PATCH"}
+bump_pattern = '^(feat|fix|ci|build|perf|refactor|docs)'
+schema_pattern = '^(build|ci|docs|feat|fix|perf|refactor|style|test|chore|revert|bump)(\(\S+\))?\:?\s.*'
+
+[tool.hatch.build.targets.sdist]
+include = ["chanx"]
+
+[tool.hatch.build.targets.wheel]
+include = ["chanx"]
+
+[tool.tomlsort]
+all = true
+in_place = true
+spaces_before_inline_comment = 2
+overrides."lint.isort.section-order".inline_arrays = false
+
+[tool.uv]
+default-groups = "all"

@@ -9,9 +9,11 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 """
 
 import os
+from datetime import timedelta
 from pathlib import Path
 
 import environ
+import structlog
 
 # =========================================================================
 # PATH CONFIGURATION
@@ -59,13 +61,23 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
+    "django.contrib.sites",
     "rest_framework",
+    "rest_framework_simplejwt.token_blacklist",
     "drf_spectacular",
+    "django_structlog",
+    "allauth",
+    "allauth.account",
+    "allauth.socialaccount",
+    "dj_rest_auth.registration",
     "django_cleanup.apps.CleanupConfig",
     "debug_toolbar",
     "django_extensions",
     "channels",
     "sandbox_app",
+    "accounts",
+    "chanx",
+    "chanx.playground",
 ]
 
 # =========================================================================
@@ -81,6 +93,8 @@ MIDDLEWARE = [
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
+    "allauth.account.middleware.AccountMiddleware",
+    "django_structlog.middlewares.RequestMiddleware",
     "debug_toolbar.middleware.DebugToolbarMiddleware",
 ]
 
@@ -161,6 +175,13 @@ AUTH_PASSWORD_VALIDATORS = [
 ]
 
 
+# Custom User
+AUTH_USER_MODEL = "accounts.User"
+DEFAULT_FROM_EMAIL = env.str("DEFAULT_FROM_EMAIL", "webmaster@localhost")
+
+# Site ID for django.contrib.sites
+SITE_ID = 1
+
 # =========================================================================
 # INTERNATIONALIZATION
 # =========================================================================
@@ -189,6 +210,9 @@ REST_FRAMEWORK = {
         "rest_framework.renderers.JSONRenderer",
         "rest_framework.renderers.BrowsableAPIRenderer",
     ],
+    "DEFAULT_AUTHENTICATION_CLASSES": (
+        "dj_rest_auth.jwt_auth.JWTCookieAuthentication",
+    ),
     "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
     "DEFAULT_PARSER_CLASSES": (
         "rest_framework.parsers.JSONParser",
@@ -198,6 +222,44 @@ REST_FRAMEWORK = {
     "DEFAULT_PAGINATION_CLASS": "rest_framework.pagination.LimitOffsetPagination",
     "PAGE_SIZE": 20,
 }
+
+# =========================================================================
+# DJ-REST-AUTH CONFIGURATION
+# =========================================================================
+
+REST_AUTH = {
+    "USE_JWT": True,
+    "SESSION_LOGIN": False,
+    "TOKEN_MODEL": None,
+    "LOGIN_SERIALIZER": (
+        "accounts.serializers.authentication_serializer.LoginSerializer"
+    ),
+    "REGISTER_SERIALIZER": (
+        "accounts.serializers.authentication_serializer.RegisterSerializer"
+    ),
+    "USER_DETAILS_SERIALIZER": "accounts.serializers.user_serializer.UserSerializer",
+    "JWT_AUTH_COOKIE": "my-project-auth",
+    "JWT_AUTH_REFRESH_COOKIE": "my-project-refresh",
+    "JWT_AUTH_RETURN_EXPIRATION": True,
+    "JWT_AUTH_SECURE": True,
+    "JWT_AUTH_SAMESITE": "Strict",
+}
+
+SIMPLE_JWT = {
+    "ACCESS_TOKEN_LIFETIME": timedelta(days=30),
+    "REFRESH_TOKEN_LIFETIME": timedelta(days=30),
+}
+
+# =========================================================================
+# ALLAUTH CONFIGURATION
+# =========================================================================
+
+ACCOUNT_USER_MODEL_USERNAME_FIELD = None
+ACCOUNT_SIGNUP_FIELDS = ["email*", "password1*", "password2*"]
+ACCOUNT_LOGIN_METHODS = {"email"}
+ACCOUNT_EMAIL_VERIFICATION = "mandatory"
+
+EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
 
 # =========================================================================
 # API DOCUMENTATION CONFIGURATION
@@ -221,6 +283,78 @@ SPECTACULAR_SETTINGS = {
 CORS_ALLOWED_ORIGINS = env.list("CORS_ALLOWED_ORIGINS", default=[])
 CORS_ALLOW_CREDENTIALS = True
 CSRF_TRUSTED_ORIGINS = env.list("CSRF_TRUSTED_ORIGINS", default=[SERVER_URL])
+
+
+# =========================================================================
+# LOGGING CONFIGURATION
+# =========================================================================
+
+pre_chain = [
+    structlog.contextvars.merge_contextvars,
+    structlog.processors.TimeStamper(fmt="iso"),
+    structlog.stdlib.add_logger_name,
+    structlog.stdlib.add_log_level,
+    structlog.stdlib.PositionalArgumentsFormatter(),
+]
+
+LOGGING = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "formatters": {
+        "plain_console": {
+            "()": structlog.stdlib.ProcessorFormatter,
+            "processors": [
+                structlog.stdlib.ProcessorFormatter.remove_processors_meta,
+                structlog.dev.ConsoleRenderer(),
+            ],
+            "foreign_pre_chain": pre_chain,
+        },
+    },
+    "handlers": {
+        "console": {
+            "level": "INFO",
+            "class": "logging.StreamHandler",
+            "formatter": "plain_console",
+        },
+    },
+    "loggers": {
+        "uvicorn": {"handlers": ["console"], "level": "INFO", "propagate": False},
+        "uvicorn.error": {"handlers": ["console"], "level": "INFO", "propagate": False},
+        "uvicorn.access": {},
+        "django_structlog": {
+            "handlers": ["console"],
+            "level": "INFO",
+            "propagate": False,
+        },
+        "": {
+            "handlers": ["console"],
+            "level": "INFO",
+            "propagate": False,
+        },
+        "sandbox": {
+            "handlers": ["console"],
+            "level": "INFO",
+        },
+        "django_structlog_sandbox": {
+            "handlers": ["console"],
+            "level": "INFO",
+            "propagate": False,
+        },
+    },
+}
+
+structlog.configure(
+    processors=pre_chain
+    + [
+        structlog.stdlib.filter_by_level,
+        structlog.processors.StackInfoRenderer(),
+        structlog.processors.UnicodeDecoder(),
+        structlog.stdlib.ProcessorFormatter.wrap_for_formatter,
+    ],
+    logger_factory=structlog.stdlib.LoggerFactory(),
+    cache_logger_on_first_use=True,
+)
+
 # =========================================================================
 # DJANGO CHANNELS CONFIGURATION
 # =========================================================================
@@ -234,3 +368,12 @@ CHANNEL_LAYERS = {
         },
     },
 }
+
+# =========================================================================
+# DJANGO SHELL_PLUS
+# =========================================================================
+SHELL_PLUS = "ipython"
+IPYTHON_ARGUMENTS = [
+    "--ext",
+    "autoreload",
+]

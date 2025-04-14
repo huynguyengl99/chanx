@@ -28,4 +28,4 @@ routing = {
     ),
 }
 
-application = ProtocolTypeRouter(routing)
+application: ProtocolTypeRouter = ProtocolTypeRouter(routing)

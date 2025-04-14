@@ -4,4 +4,4 @@ DEBUG = False
 TEST = True
 
 MEDIA_URL = "media-testing/"
-MEDIA_ROOT = str(BASE_DIR / "media-testing/")
+MEDIA_ROOT = str(ROOT_DIR / "media-testing/")

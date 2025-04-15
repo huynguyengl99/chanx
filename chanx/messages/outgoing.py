@@ -17,3 +17,9 @@ class CompleteMessage(BaseMessage):
     """Acknowledge all the message has been sent."""
 
     action: Literal["complete"] = ACTION_COMPLETE
+
+
+class PongMessage(BaseMessage):
+    """Simple ping speech message to check connection status."""
+
+    action: Literal["pong"] = "pong"

@@ -2,7 +2,7 @@ import abc
 from types import UnionType
 from typing import Any, Literal, Union, Unpack, get_args, get_origin
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class BaseMessage(BaseModel, abc.ABC):
@@ -103,4 +103,21 @@ class BaseIncomingMessage(BaseModel):
             raise TypeError(
                 f"The 'message' field of {cls.__name__!r} must be BaseMessage "
                 f"or a union of BaseMessage subclasses, got {message_field}"
+            )
+
+        has_discriminator_message_field = False
+        try:
+            if hasattr(cls, "message") and cls.message.discriminator is not None:
+                has_discriminator_message_field = True
+        except (AttributeError, TypeError):
+            pass
+
+        # Add discriminator automatically if not explicitly set
+        if not has_discriminator_message_field:
+            # Check if there's a settings module with MESSAGE_ACTION_KEY
+            from chanx.settings import chanx_settings
+
+            # Update the field with discriminator
+            cls.model_fields["message"] = Field(
+                discriminator=chanx_settings.MESSAGE_ACTION_KEY
             )

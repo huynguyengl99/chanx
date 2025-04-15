@@ -45,7 +45,7 @@ jobs:
           python-version: ${{ matrix.python-version }}
       - run: mkdir coverage
       - name: Test
-        run: uv run --group test coverage run -m pytest tests
+        run: uv run --group test --all-extras coverage run -m pytest sandbox
         env:
           COVERAGE_FILE: coverage/.coverage.${{ runner.os }}-py${{ matrix.python-version }}
           CONTEXT: ${{ runner.os }}-py${{ matrix.python-version }}

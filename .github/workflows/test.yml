@@ -30,8 +30,28 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: ["3.9", "3.10", "3.11", "3.12"]
+        python-version: ["3.10", "3.11", "3.12"]
       fail-fast: false
+    services:
+      postgres:
+        image: postgres
+        env:
+          POSTGRES_PASSWORD: chanx_test_pass
+          POSTGRES_DB: chanx_test_db
+          POSTGRES_USER: chanx_test_user
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+    env:
+      POSTGRES_DB: chanx_test_db
+      POSTGRES_USER: chanx_test_user
+      POSTGRES_PASSWORD: chanx_test_pass
+      POSTGRES_HOST: localhost
+      POSTGRES_PORT: 5432
     steps:
       - name: Dump GitHub context
         env:

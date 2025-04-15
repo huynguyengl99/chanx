@@ -4,6 +4,8 @@ from typing import Any, Literal, Union, Unpack, get_args, get_origin
 
 from pydantic import BaseModel, ConfigDict, Field
 
+# TODO: add v1 compatible
+
 
 class BaseMessage(BaseModel, abc.ABC):
     """
@@ -107,7 +109,7 @@ class BaseIncomingMessage(BaseModel):
 
         has_discriminator_message_field = False
         try:
-            if hasattr(cls, "message") and cls.message.discriminator is not None:
+            if hasattr(cls, "message") and cls.message.discriminator is not None:  # type: ignore
                 has_discriminator_message_field = True
         except (AttributeError, TypeError):
             pass

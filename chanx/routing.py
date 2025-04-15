@@ -13,18 +13,18 @@ _URLConf: TypeAlias = str | ModuleType
 
 def include(arg: _URLConf) -> list[URLPattern]:
     """
-    Include routes from another module for Channels routing.
+    Include router from another module for Channels routing.
 
     This function can handle both:
-    - Modules with a 'routes' attribute that contains a list of paths
-    - Modules with a 'routes' attribute that is a URLRouter
+    - Modules with a 'router' attribute that contains a list of paths
+    - Modules with a 'router' attribute that is a URLRouter
 
     Args:
         arg: Either a string path to a module or the module itself.
-             The module should have a 'routes' attribute.
+             The module should have a 'router' attribute.
 
     Returns:
-        The routes from the module as a list of URLPattern.
+        The router from the module as a list of URLPattern.
     """
     # Check if it's a string path to module
     if isinstance(arg, str):
@@ -32,17 +32,17 @@ def include(arg: _URLConf) -> list[URLPattern]:
     else:
         imported_module = arg
 
-    # Get 'routes' from the module
-    routes = getattr(imported_module, "routes", imported_module)
+    # Get 'router' from the module
+    router = getattr(imported_module, "router", imported_module)
 
-    # If routes is already a URLRouter, return it directly
-    if isinstance(routes, URLRouter):
+    # If router is already a URLRouter, return it directly
+    if isinstance(router, URLRouter):
         # Cast to the correct return type
-        return cast(list[URLPattern], routes)
+        return cast(list[URLPattern], router)
 
-    # Otherwise, make sure routes is iterable
-    if not isinstance(routes, list | tuple):
-        raise ImproperlyConfigured("'routes' must be a list, tuple, or URLRouter.")
+    # Otherwise, make sure router is iterable
+    if not isinstance(router, list | tuple):
+        raise ImproperlyConfigured("'router' must be a list, tuple, or URLRouter.")
 
-    # Return routes list, ensuring it's the correct type
-    return cast(list[URLPattern], routes)
+    # Return router list, ensuring it's the correct type
+    return cast(list[URLPattern], router)

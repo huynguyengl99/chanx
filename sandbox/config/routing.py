@@ -1,12 +1,17 @@
 from channels.routing import URLRouter
 from django.urls import path
 
-from sandbox_app.routing import routes
+from chanx.routing import include
 
-ws_all_routes = URLRouter([*routes])
-
-ws_routes = URLRouter(
+ws_router = URLRouter(
     [
-        path("ws/", ws_all_routes),
+        # Use ws_include which returns a URLRouter
+        path("chat/", include("chat.routing")),
+    ]
+)
+
+router = URLRouter(
+    [
+        path("ws/", ws_router),
     ]
 )

@@ -33,7 +33,6 @@ env = environ.Env()
 env_file = f"{ROOT_DIR}/.env.test"
 
 if os.path.isfile(env_file):
-    os.environ.pop("DJANGO_SETTINGS_MODULE")
     environ.Env.read_env(env_file)
 
 CURRENT_ENV = env.str("DJANGO_SETTINGS_MODULE").split(".")[-1]
@@ -74,7 +73,7 @@ INSTALLED_APPS = [
     "debug_toolbar",
     "django_extensions",
     "channels",
-    "sandbox_app",
+    "chat",
     "accounts",
     "chanx",
     "chanx.playground",

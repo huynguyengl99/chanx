@@ -29,7 +29,6 @@ from drf_spectacular.views import (
 
 api_urlpatterns = [
     path("accounts/", include("accounts.urls")),
-    path("app/", include("sandbox_app.urls")),
     path("playground/", include("chanx.playground.urls")),
     path("schema/", SpectacularAPIView.as_view(), name="schema"),
     path(

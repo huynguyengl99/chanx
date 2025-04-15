@@ -3,6 +3,7 @@ from collections.abc import Iterable
 from dataclasses import dataclass
 from typing import cast, get_type_hints
 
+from channels.routing import URLRouter
 from django.conf import settings
 from rest_framework.authentication import BaseAuthentication
 from rest_framework.settings import APISettings
@@ -16,6 +17,8 @@ class MySetting:
     MESSAGE_ACTION_KEY: str = "action"
     SEND_COMPLETION: bool = False
     SEND_MESSAGE_IMMEDIATELY: bool = True
+    SEND_AUTHENTICATION_MESSAGE: bool = True
+    ROOT_ROUTER: URLRouter = "config.routing.router"
 
     LOG_RECEIVED_MESSAGE: bool = True
     LOG_SENT_MESSAGE: bool = True
@@ -29,6 +32,7 @@ class MySetting:
 IMPORT_STRINGS = (
     "DEFAULT_AUTHENTICATION_CLASSES",
     "INCOMING_MESSAGE_SCHEMA",
+    "ROOT_ROUTER",
 )
 
 

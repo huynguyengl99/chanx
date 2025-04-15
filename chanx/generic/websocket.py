@@ -25,7 +25,12 @@ from asgiref.sync import sync_to_async
 from pydantic import ValidationError
 
 from chanx.messages.base import BaseIncomingMessage, BaseMessage
-from chanx.messages.outgoing import CompleteMessage, ErrorMessage
+from chanx.messages.outgoing import (
+    AuthenticationMessage,
+    AuthenticationPayload,
+    CompleteMessage,
+    ErrorMessage,
+)
 from chanx.settings import chanx_settings
 from chanx.utils import create_task, get_request_header, logger, request_from_scope
 
@@ -191,13 +196,16 @@ class AsyncJsonWebsocketConsumer(BaseAsyncJsonWebsocketConsumer, ABC):  # type: 
         await logger.ainfo("Finished authenticating ws request")
 
         # We need to check status_code attribute which exists on both HttpResponse and Response
-        if getattr(res, "status_code", 0) != status.HTTP_200_OK:
-            # For DRF Response objects, data would be available
-            data = getattr(res, "data", {})
-            await self.send_message(ErrorMessage(payload=data))
-            await asyncio.sleep(0)
+        status_code = getattr(res, "status_code", 500)
+        data = getattr(res, "data", {})
+        if chanx_settings.SEND_AUTHENTICATION_MESSAGE:
+            await self.send_message(
+                AuthenticationMessage(
+                    payload=AuthenticationPayload(status_code=status_code, data=data)
+                )
+            )
+        if status_code != status.HTTP_200_OK:
             await self.close()
-            return
 
     @sync_to_async
     def _perform_dispatch(self) -> tuple[HttpResponseBase, HttpRequest]:

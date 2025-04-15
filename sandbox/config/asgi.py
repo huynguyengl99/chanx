@@ -18,12 +18,12 @@ from django.core.asgi import get_asgi_application
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "config.settings.dev")
 django_asgi_app = get_asgi_application()  # isort: skip
 
-from config.routing import ws_routes  # noqa
+from config.routing import router  # noqa
 
 routing = {
     "http": django_asgi_app,
     "websocket": OriginValidator(
-        CookieMiddleware(ws_routes),
+        CookieMiddleware(router),
         settings.CORS_ALLOWED_ORIGINS + settings.CSRF_TRUSTED_ORIGINS,
     ),
 }

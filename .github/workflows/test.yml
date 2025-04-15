@@ -46,12 +46,22 @@ jobs:
           --health-retries 5
         ports:
           - 5432:5432
+      redis:
+        image: redis
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 6379:6379
     env:
       POSTGRES_DB: chanx_test_db
       POSTGRES_USER: chanx_test_user
       POSTGRES_PASSWORD: chanx_test_pass
       POSTGRES_HOST: localhost
       POSTGRES_PORT: 5432
+      REDIS_HOST: redis://localhost:6379
     steps:
       - name: Dump GitHub context
         env:

@@ -9,6 +9,7 @@ from asgiref.timeout import timeout as async_timeout
 from chanx.messages.base import BaseMessage
 from chanx.messages.outgoing import ACTION_COMPLETE, AuthenticationMessage
 from chanx.settings import chanx_settings
+from chanx.utils.asgi import get_websocket_application
 
 
 class WebsocketCommunicator(BaseWebsocketCommunicator):  # type: ignore
@@ -53,12 +54,26 @@ class WebsocketTestCase(TestCase):
         self._auth_communicator_instance: WebsocketCommunicator | None = None
 
         if not self.router:
-            self.router = chanx_settings.ROOT_ROUTER
+            # First try to get the complete WebSocket application with middleware
+            ws_app = get_websocket_application()
+            if ws_app:
+                self.router = ws_app
+            else:
+                raise ValueError(
+                    "Could not obtain a WebSocket application. Make sure your ASGI application is properly configured"
+                    " with a 'websocket' handler in the ProtocolTypeRouter."
+                )
+
+    def get_ws_headers(self) -> list[tuple[bytes, bytes]]:
+        return []
+
+    def get_subprotocols(self) -> list[str]:
+        return []
 
     def setUp(self) -> None:
         super().setUp()
-        self.ws_headers: list[tuple[Any]] = []
-        self.subprotocols: list[str] = []
+        self.ws_headers: list[tuple[bytes, bytes]] = self.get_ws_headers()
+        self.subprotocols: list[str] = self.get_subprotocols()
         self._auth_communicator_instance = None
 
     def tearDown(self) -> None:

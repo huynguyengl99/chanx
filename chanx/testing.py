@@ -2,8 +2,9 @@ import asyncio
 from typing import Any
 
 from channels.testing import WebsocketCommunicator as BaseWebsocketCommunicator
-from django.test import TestCase
+from django.test import TransactionTestCase
 
+from asgiref.sync import async_to_sync
 from asgiref.timeout import timeout as async_timeout
 
 from chanx.messages.base import BaseMessage
@@ -37,8 +38,12 @@ class WebsocketCommunicator(BaseWebsocketCommunicator):  # type: ignore
             await asyncio.sleep(max_auth_time)
             return None
 
+    async def assert_closed(self) -> None:
+        closed_status = await self.receive_output()
+        assert closed_status == {"type": "websocket.close"}
 
-class WebsocketTestCase(TestCase):
+
+class WebsocketTestCase(TransactionTestCase):
     ws_path: str | None = None
     router: Any = None
 
@@ -77,6 +82,8 @@ class WebsocketTestCase(TestCase):
         self._auth_communicator_instance = None
 
     def tearDown(self) -> None:
+        if self._auth_communicator_instance:
+            async_to_sync(self._auth_communicator_instance.disconnect)()
         self._auth_communicator_instance = None
 
     @property

@@ -45,24 +45,17 @@ class AsyncJsonWebsocketConsumer(BaseAsyncJsonWebsocketConsumer, ABC):  # type: 
     permission checking, structured message handling, and logging.
     """
 
-    permission_classes: Sequence[
-        type[BasePermission] | OperandHolder | SingleOperandHolder
-    ] = cast(Sequence[type[BasePermission]], api_settings.DEFAULT_PERMISSION_CLASSES)
-    authentication_classes: Sequence[type[BaseAuthentication]] = cast(
-        Sequence[type[BaseAuthentication]],
-        chanx_settings.DEFAULT_AUTHENTICATION_CLASSES
-        or api_settings.DEFAULT_AUTHENTICATION_CLASSES,
-    )
+    permission_classes: (
+        Sequence[type[BasePermission] | OperandHolder | SingleOperandHolder] | None
+    ) = None
+    authentication_classes: Sequence[type[BaseAuthentication]] | None = None
 
-    send_completion: bool = chanx_settings.SEND_COMPLETION
-    send_message_immediately: bool = chanx_settings.SEND_MESSAGE_IMMEDIATELY
-    silent_actions: set[str] = set()
-    log_received_message: bool = chanx_settings.LOG_RECEIVED_MESSAGE
-    log_sent_message: bool = chanx_settings.LOG_SENT_MESSAGE
-    log_ignored_actions: Iterable[str] = chanx_settings.LOG_IGNORED_ACTIONS
-    INCOMING_MESSAGE_SCHEMA: type[BaseIncomingMessage] = (
-        chanx_settings.INCOMING_MESSAGE_SCHEMA
-    )
+    send_completion: bool | None = None
+    send_message_immediately: bool | None = None
+    log_received_message: bool | None = None
+    log_sent_message: bool | None = None
+    log_ignored_actions: Iterable[str] | None = None
+    INCOMING_MESSAGE_SCHEMA: type[BaseIncomingMessage] | None = None
 
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         """
@@ -73,6 +66,36 @@ class AsyncJsonWebsocketConsumer(BaseAsyncJsonWebsocketConsumer, ABC):  # type: 
             **kwargs: Arbitrary keyword arguments.
         """
         super().__init__(*args, **kwargs)
+
+        if self.permission_classes is None:
+            self.permission_classes = cast(
+                Sequence[type[BasePermission]], api_settings.DEFAULT_PERMISSION_CLASSES
+            )
+
+        if self.authentication_classes is None:
+            self.authentication_classes = cast(
+                Sequence[type[BaseAuthentication]],
+                chanx_settings.DEFAULT_AUTHENTICATION_CLASSES
+                or api_settings.DEFAULT_AUTHENTICATION_CLASSES,
+            )
+
+        if self.send_completion is None:
+            self.send_completion = chanx_settings.SEND_COMPLETION
+
+        if self.send_message_immediately is None:
+            self.send_message_immediately = chanx_settings.SEND_MESSAGE_IMMEDIATELY
+
+        if self.log_received_message is None:
+            self.log_received_message = chanx_settings.LOG_RECEIVED_MESSAGE
+
+        if self.log_sent_message is None:
+            self.log_sent_message = chanx_settings.LOG_SENT_MESSAGE
+
+        if self.log_ignored_actions is None:
+            self.log_ignored_actions = chanx_settings.LOG_IGNORED_ACTIONS
+
+        if self.INCOMING_MESSAGE_SCHEMA is None:
+            self.INCOMING_MESSAGE_SCHEMA = chanx_settings.INCOMING_MESSAGE_SCHEMA
 
         self._v = APIView()
         self._v.authentication_classes = self.authentication_classes
@@ -128,7 +151,7 @@ class AsyncJsonWebsocketConsumer(BaseAsyncJsonWebsocketConsumer, ABC):  # type: 
             message_id=message_id, received_action=message_action
         )
 
-        if self.log_received_message:
+        if self.log_received_message and message_action not in self.log_ignored_actions:
             await logger.ainfo("Received websocket json")
 
         create_task(self._handle_receive_json_and_signal_complete(content, **kwargs))
@@ -279,11 +302,12 @@ class AsyncJsonWebsocketConsumer(BaseAsyncJsonWebsocketConsumer, ABC):  # type: 
             **kwargs: Additional keyword arguments.
         """
         try:
-            message = self.INCOMING_MESSAGE_SCHEMA.model_validate(
-                {"message": content}
-            ).message
+            if self.INCOMING_MESSAGE_SCHEMA is not None:
+                message = self.INCOMING_MESSAGE_SCHEMA.model_validate(
+                    {"message": content}
+                ).message
 
-            await self.receive_message(message, **kwargs)
+                await self.receive_message(message, **kwargs)
         except ValidationError as e:
             await self.send_message(
                 ErrorMessage(
@@ -297,7 +321,6 @@ class AsyncJsonWebsocketConsumer(BaseAsyncJsonWebsocketConsumer, ABC):  # type: 
             await self.send_message(
                 ErrorMessage(payload={"detail": "Failed to process message"})
             )
-            return
 
         if self.send_completion:
             await self.send_message(CompleteMessage())

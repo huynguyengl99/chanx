@@ -1,9 +1,10 @@
 import dataclasses
 from collections.abc import Iterable
 from dataclasses import dataclass
-from typing import cast, get_type_hints
+from typing import Any, cast
 
 from django.conf import settings
+from django.core.signals import setting_changed
 from rest_framework.authentication import BaseAuthentication
 from rest_framework.settings import APISettings
 
@@ -26,6 +27,10 @@ class MySetting:
         "chanx.messages.incoming.IncomingMessage"  # type: ignore
     )
 
+    # Add this field to satisfy the type checker
+    # It will be used by APISettings but isn't part of the real dataclass structure
+    user_settings: dict[str, Any] = dataclasses.field(default_factory=dict)
+
 
 IMPORT_STRINGS = (
     "DEFAULT_AUTHENTICATION_CLASSES",
@@ -34,11 +39,13 @@ IMPORT_STRINGS = (
 
 
 def create_api_settings_from_model(
-    model_class: type, import_strings: tuple[str, ...]
+    model_class: type,
+    import_strings: tuple[str, ...],
+    override_value: dict[str, Any] | None = None,
 ) -> MySetting:
     """Create an APISettings instance from a dataclass"""
     # Get user settings from Django settings
-    user_settings = getattr(settings, "CHANX", None)
+    user_settings = getattr(settings, "CHANX", override_value)
 
     # Get defaults from dataclass fields
     defaults_dict = {}
@@ -53,20 +60,25 @@ def create_api_settings_from_model(
             defaults_dict[field.name] = field.default_factory()
     # Create APISettings instance
     api_settings = APISettings(
-        user_settings=user_settings,
+        user_settings=user_settings,  # type: ignore
         defaults=defaults_dict,  # type: ignore
         import_strings=import_strings,
     )
-
-    # Add type annotations to help IDEs
-    type_hints = get_type_hints(model_class)
-    api_settings.__annotations__ = {
-        k: v
-        for k, v in type_hints.items()
-        if not k.startswith("_") and k in defaults_dict
-    }
 
     return cast(MySetting, api_settings)
 
 
 chanx_settings = create_api_settings_from_model(MySetting, IMPORT_STRINGS)
+
+
+def reload_api_settings(*args: Any, **kwargs: Any) -> None:
+    global chanx_settings  # noqa
+
+    setting, value = kwargs["setting"], kwargs["value"]
+    if setting == "CHANX":
+        chanx_settings = create_api_settings_from_model(
+            MySetting, IMPORT_STRINGS, value
+        )
+
+
+setting_changed.connect(reload_api_settings)

@@ -8,8 +8,6 @@ from django.core.signals import setting_changed
 from rest_framework.authentication import BaseAuthentication
 from rest_framework.settings import APISettings
 
-from chanx.messages.base import BaseIncomingMessage
-
 
 @dataclass
 class MySetting:
@@ -22,10 +20,6 @@ class MySetting:
     LOG_RECEIVED_MESSAGE: bool = True
     LOG_SENT_MESSAGE: bool = True
     LOG_IGNORED_ACTIONS: Iterable[str] = dataclasses.field(default_factory=list)
-
-    INCOMING_MESSAGE_SCHEMA: type[BaseIncomingMessage] = (
-        "chanx.messages.incoming.IncomingMessage"  # type: ignore
-    )
 
     # Add this field to satisfy the type checker
     # It will be used by APISettings but isn't part of the real dataclass structure

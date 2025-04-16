@@ -9,7 +9,7 @@ from channels.generic.websocket import (
 )
 from django.contrib.auth.base_user import AbstractBaseUser
 from django.contrib.auth.models import AnonymousUser
-from django.http import HttpRequest, HttpResponseBase
+from django.http import HttpRequest
 from rest_framework import status
 from rest_framework.authentication import BaseAuthentication
 from rest_framework.permissions import (
@@ -17,6 +17,7 @@ from rest_framework.permissions import (
     OperandHolder,
     SingleOperandHolder,
 )
+from rest_framework.response import Response
 from rest_framework.settings import api_settings
 from rest_framework.views import APIView
 
@@ -39,10 +40,22 @@ from chanx.utils.request import get_request_header, request_from_scope
 
 class AsyncJsonWebsocketConsumer(BaseAsyncJsonWebsocketConsumer, ABC):  # type: ignore
     """
-    Base class for asynchronous JSON WebSocket consumers with authentication and permission handling.
+    Base class for asynchronous JSON WebSocket consumers with authentication and permissions.
 
-    This class extends Django Channels' AsyncJsonWebsocketConsumer to provide authentication,
-    permission checking, structured message handling, and logging.
+    Provides DRF-style authentication/permissions, structured message handling with
+    Pydantic validation, logging, and error handling. Subclasses must implement
+    `receive_message` and set `INCOMING_MESSAGE_SCHEMA`.
+
+    Attributes:
+        permission_classes: DRF permission classes for connection authorization
+        authentication_classes: DRF authentication classes for connection verification
+        send_completion: Whether to send completion message after processing
+        send_message_immediately: Whether to yield control after sending messages
+        log_received_message: Whether to log received messages
+        log_sent_message: Whether to log sent messages
+        log_ignored_actions: Message actions that should not be logged
+        send_authentication_message: Whether to send auth status after connection
+        INCOMING_MESSAGE_SCHEMA: Pydantic model class for message validation
     """
 
     permission_classes: (
@@ -55,15 +68,20 @@ class AsyncJsonWebsocketConsumer(BaseAsyncJsonWebsocketConsumer, ABC):  # type: 
     log_received_message: bool | None = None
     log_sent_message: bool | None = None
     log_ignored_actions: Iterable[str] | None = None
-    INCOMING_MESSAGE_SCHEMA: type[BaseIncomingMessage] | None = None
+    send_authentication_message: bool | None = None
+
+    INCOMING_MESSAGE_SCHEMA: type[BaseIncomingMessage]
 
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         """
-        Initialize the WebSocket consumer with authentication and permission setup.
+        Initialize with authentication and permission setup.
 
         Args:
-            *args: Variable length argument list.
-            **kwargs: Arbitrary keyword arguments.
+            *args: Variable length argument list
+            **kwargs: Arbitrary keyword arguments
+
+        Raises:
+            ValueError: If INCOMING_MESSAGE_SCHEMA is not set
         """
         super().__init__(*args, **kwargs)
 
@@ -94,8 +112,17 @@ class AsyncJsonWebsocketConsumer(BaseAsyncJsonWebsocketConsumer, ABC):  # type: 
         if self.log_ignored_actions is None:
             self.log_ignored_actions = chanx_settings.LOG_IGNORED_ACTIONS
 
-        if self.INCOMING_MESSAGE_SCHEMA is None:
-            self.INCOMING_MESSAGE_SCHEMA = chanx_settings.INCOMING_MESSAGE_SCHEMA
+        self.ignore_actions: set[str] = (
+            set(self.log_ignored_actions) if self.log_ignored_actions else set()
+        )
+
+        if self.send_authentication_message is None:
+            self.send_authentication_message = (
+                chanx_settings.SEND_AUTHENTICATION_MESSAGE
+            )
+
+        if not hasattr(self, "INCOMING_MESSAGE_SCHEMA"):
+            raise ValueError("INCOMING_MESSAGE_SCHEMA attribute is required.")
 
         self._v = APIView()
         self._v.authentication_classes = self.authentication_classes
@@ -108,11 +135,10 @@ class AsyncJsonWebsocketConsumer(BaseAsyncJsonWebsocketConsumer, ABC):  # type: 
         """
         Handle WebSocket connection request.
 
-        This method is called when a client attempts to establish a WebSocket connection.
-        It accepts the connection and authenticates the user.
+        Accepts the connection and authenticates the user.
 
         Args:
-            message: The connection message.
+            message: The connection message from Channels
         """
         await self.accept()
         await self._authenticate()
@@ -121,11 +147,10 @@ class AsyncJsonWebsocketConsumer(BaseAsyncJsonWebsocketConsumer, ABC):  # type: 
         """
         Handle WebSocket disconnection.
 
-        This method is called when a client disconnects from the WebSocket.
-        It cleans up context variables and logs the disconnection.
+        Cleans up context variables and logs the disconnection.
 
         Args:
-            message: The disconnection message.
+            message: The disconnection message from Channels
         """
         await logger.ainfo("Disconnecting websocket")
         structlog.contextvars.clear_contextvars()
@@ -135,14 +160,13 @@ class AsyncJsonWebsocketConsumer(BaseAsyncJsonWebsocketConsumer, ABC):  # type: 
 
     async def receive_json(self, content: dict[str, Any], **kwargs: Any) -> None:
         """
-        Receive and process JSON data from the WebSocket.
+        Receive and process JSON data from WebSocket.
 
-        This method is called when a client sends a JSON message. It logs the received
-        message and creates a task to handle it asynchronously.
+        Logs messages, assigns ID, and creates task for async processing.
 
         Args:
-            content: The JSON content received from the client.
-            **kwargs: Additional keyword arguments.
+            content: The JSON content received from the client
+            **kwargs: Additional keyword arguments
         """
         message_action = content.get(chanx_settings.MESSAGE_ACTION_KEY)
 
@@ -151,7 +175,7 @@ class AsyncJsonWebsocketConsumer(BaseAsyncJsonWebsocketConsumer, ABC):  # type: 
             message_id=message_id, received_action=message_action
         )
 
-        if self.log_received_message and message_action not in self.log_ignored_actions:
+        if self.log_received_message and message_action not in self.ignore_actions:
             await logger.ainfo("Received websocket json")
 
         create_task(self._handle_receive_json_and_signal_complete(content, **kwargs))
@@ -160,29 +184,24 @@ class AsyncJsonWebsocketConsumer(BaseAsyncJsonWebsocketConsumer, ABC):  # type: 
     @abstractmethod
     async def receive_message(self, message: BaseMessage, **kwargs: Any) -> None:
         """
-        Process a received message.
+        Process a validated received message.
 
-        This abstract method must be implemented by subclasses to handle
-        received messages after they've been deserialized.
+        Must be implemented by subclasses to handle messages after validation.
 
         Args:
-            message: The deserialized Message object.
-            **kwargs: Additional keyword arguments.
-
-        Raises:
-            NotImplementedError: If the subclass does not implement this method.
+            message: The validated message object
+            **kwargs: Additional keyword arguments
         """
-        raise NotImplementedError
 
     async def send_json(self, content: dict[str, Any], close: bool = False) -> None:
         """
         Send JSON data to the WebSocket client.
 
-        This method sends a JSON message to the client and optionally logs it.
+        Sends data and optionally logs it.
 
         Args:
-            content: The JSON content to send.
-            close: Whether to close the connection after sending.
+            content: The JSON content to send
+            close: Whether to close the connection after sending
         """
         await super().send_json(content, close)
 
@@ -191,17 +210,17 @@ class AsyncJsonWebsocketConsumer(BaseAsyncJsonWebsocketConsumer, ABC):  # type: 
 
         message_action = content.get(chanx_settings.MESSAGE_ACTION_KEY)
 
-        if self.log_sent_message:
+        if self.log_sent_message and message_action not in self.ignore_actions:
             await logger.ainfo("Sent websocket json", sent_action=message_action)
 
     async def send_message(self, message: BaseMessage) -> None:
         """
         Send a Message object to the WebSocket client.
 
-        This method serializes a Message object and sends it to the client.
+        Serializes the message and sends it as JSON.
 
         Args:
-            message: The Message object to send.
+            message: The Message object to send
         """
         await self.send_json(message.model_dump())
 
@@ -211,19 +230,19 @@ class AsyncJsonWebsocketConsumer(BaseAsyncJsonWebsocketConsumer, ABC):  # type: 
         """
         Authenticate the WebSocket connection.
 
-        This method authenticates the WebSocket connection using the configured
-        authentication classes and sets the user attribute.
+        Uses DRF authentication classes and sends status if configured.
+        Closes connection on authentication failure.
         """
         res, req = await self._perform_dispatch()
 
-        self.user = req.user if hasattr(req, "user") else None
+        self.user = req.user
 
         await logger.ainfo("Finished authenticating ws request")
 
         # We need to check status_code attribute which exists on both HttpResponse and Response
         status_code = getattr(res, "status_code", 500)
-        data = getattr(res, "data", {})
-        if chanx_settings.SEND_AUTHENTICATION_MESSAGE:
+        data = getattr(res, "data", {}) if status_code != status.HTTP_200_OK else "OK"
+        if self.send_authentication_message:
             await self.send_message(
                 AuthenticationMessage(
                     payload=AuthenticationPayload(status_code=status_code, data=data)
@@ -233,26 +252,25 @@ class AsyncJsonWebsocketConsumer(BaseAsyncJsonWebsocketConsumer, ABC):  # type: 
             await self.close()
 
     @sync_to_async
-    def _perform_dispatch(self) -> tuple[HttpResponseBase, HttpRequest]:
+    def _perform_dispatch(self) -> tuple[Response, HttpRequest]:
         """
         Perform authentication dispatch synchronously.
 
-        This method creates a request from the WebSocket scope, binds logging context,
-        and dispatches the request through the authentication pipeline.
+        Creates request from WebSocket scope and runs it through
+        the DRF authentication pipeline.
 
         Returns:
-            A tuple containing the response and request objects.
+            Tuple of (response, request) objects
         """
         raw_request = request_from_scope(self.scope)
         self._bind_structlog_request_context(raw_request)
 
         logger.info("Start to authenticate ws request")
 
-        res = self._v.dispatch(raw_request)
+        res = cast(Response, self._v.dispatch(raw_request))
 
         # Assuming res has a render method (it does if it's a DRF Response)
-        if hasattr(res, "render"):
-            res.render()
+        res.render()
 
         # For DRF Response objects, renderer_context would be available
         if hasattr(res, "renderer_context"):
@@ -267,21 +285,16 @@ class AsyncJsonWebsocketConsumer(BaseAsyncJsonWebsocketConsumer, ABC):  # type: 
         """
         Bind structured logging context variables from request.
 
-        This method extracts and binds request metadata to the structured logging context.
+        Extracts request ID, path and IP for consistent logging.
 
         Args:
-            raw_request: The HTTP request object.
+            raw_request: The HTTP request object
         """
         request_id = get_request_header(
             raw_request, "x-request-id", "HTTP_X_REQUEST_ID"
         ) or str(uuid.uuid4())
-        correlation_id = get_request_header(
-            raw_request, "x-correlation-id", "HTTP_X_CORRELATION_ID"
-        )
-        structlog.contextvars.bind_contextvars(request_id=request_id)
 
-        if correlation_id:
-            structlog.contextvars.bind_contextvars(correlation_id=correlation_id)
+        structlog.contextvars.bind_contextvars(request_id=request_id)
 
         structlog.contextvars.bind_contextvars(path=raw_request.path)
         structlog.contextvars.bind_contextvars(ip=self.scope.get("client", [None])[0])
@@ -292,22 +305,21 @@ class AsyncJsonWebsocketConsumer(BaseAsyncJsonWebsocketConsumer, ABC):  # type: 
         self, content: dict[str, Any], **kwargs: Any
     ) -> None:
         """
-        Handle received JSON content and signal completion.
+        Handle received JSON and signal completion.
 
-        This method deserializes the JSON content into a Message object, calls the
-        receive_message method, and optionally sends a completion signal.
+        Validates JSON against schema, processes it, handles exceptions,
+        and optionally sends completion message.
 
         Args:
-            content: The JSON content to handle.
-            **kwargs: Additional keyword arguments.
+            content: The JSON content to handle
+            **kwargs: Additional keyword arguments
         """
         try:
-            if self.INCOMING_MESSAGE_SCHEMA is not None:
-                message = self.INCOMING_MESSAGE_SCHEMA.model_validate(
-                    {"message": content}
-                ).message
+            message = self.INCOMING_MESSAGE_SCHEMA.model_validate(
+                {"message": content}
+            ).message
 
-                await self.receive_message(message, **kwargs)
+            await self.receive_message(message, **kwargs)
         except ValidationError as e:
             await self.send_message(
                 ErrorMessage(

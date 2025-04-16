@@ -16,7 +16,6 @@ from chat.messages.chat import (
 class ChatConsumer(AsyncJsonWebsocketConsumer):
     """Websocket to chat with server, like chat with chatbot system"""
 
-    permission_classes = []
     INCOMING_MESSAGE_SCHEMA = ChatIncomingMessage
 
     async def receive_message(self, message: BaseMessage, **kwargs: Any) -> None:

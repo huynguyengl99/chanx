@@ -14,6 +14,17 @@ from chanx.utils.asgi import get_websocket_application
 
 
 class WebsocketCommunicator(BaseWebsocketCommunicator):  # type: ignore
+    def __init__(
+        self,
+        application: Any,
+        path: str,
+        headers: list[tuple[bytes, bytes]] | None = None,
+        subprotocols: list[str] | None = None,
+        spec_version: str | None = None,
+    ) -> None:
+        super().__init__(application, path, headers, subprotocols, spec_version)
+        self.connected = False
+
     async def receive_all_json(self, timeout: int = 5) -> list[dict[str, Any]]:
         messages: list[dict[str, Any]] = []
         async with async_timeout(timeout):
@@ -29,9 +40,12 @@ class WebsocketCommunicator(BaseWebsocketCommunicator):  # type: ignore
         await self.send_json_to(message.model_dump())
 
     async def wait_for_auth(
-        self, max_auth_time: int = 1
+        self, send_authentication_message: bool | None = None, max_auth_time: int = 1
     ) -> AuthenticationMessage | None:
-        if chanx_settings.SEND_AUTHENTICATION_MESSAGE:
+        if send_authentication_message is None:
+            send_authentication_message = chanx_settings.SEND_AUTHENTICATION_MESSAGE
+
+        if send_authentication_message:
             json_message = await self.receive_json_from(max_auth_time)
             return AuthenticationMessage.model_validate(json_message)
         else:
@@ -42,9 +56,21 @@ class WebsocketCommunicator(BaseWebsocketCommunicator):  # type: ignore
         closed_status = await self.receive_output()
         assert closed_status == {"type": "websocket.close"}
 
+    async def connect(self, timeout: float = 1) -> tuple[bool, int]:
+        try:
+            res: tuple[bool, int] = await super().connect(timeout)
+            self.connected = True
+            return res
+        except:
+            raise
+
+    @property
+    def is_alive(self) -> bool:
+        return self.future.done() and self.connected
+
 
 class WebsocketTestCase(TransactionTestCase):
-    ws_path: str | None = None
+    ws_path: str
     router: Any = None
 
     @classmethod
@@ -82,7 +108,10 @@ class WebsocketTestCase(TransactionTestCase):
         self._auth_communicator_instance = None
 
     def tearDown(self) -> None:
-        if self._auth_communicator_instance:
+        if (
+            self._auth_communicator_instance
+            and self._auth_communicator_instance.is_alive
+        ):
             async_to_sync(self._auth_communicator_instance.disconnect)()
         self._auth_communicator_instance = None
 

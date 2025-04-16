@@ -24,7 +24,7 @@ from polyfactory.factories.pydantic_factory import ModelFactory
 from pydantic import BaseModel
 
 from chanx.messages.base import BaseIncomingMessage
-from chanx.utils import logger
+from chanx.utils.logging import logger
 
 
 class MessageExample(TypedDict):

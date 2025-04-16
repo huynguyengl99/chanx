@@ -7,7 +7,8 @@ from rest_framework import serializers
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from ..utils import logger
+from chanx.utils.logging import logger
+
 from .utils import WebSocketRoute, get_websocket_routes
 
 

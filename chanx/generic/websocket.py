@@ -32,7 +32,9 @@ from chanx.messages.outgoing import (
     ErrorMessage,
 )
 from chanx.settings import chanx_settings
-from chanx.utils import create_task, get_request_header, logger, request_from_scope
+from chanx.utils.asyncio import create_task
+from chanx.utils.logging import logger
+from chanx.utils.request import get_request_header, request_from_scope
 
 
 class AsyncJsonWebsocketConsumer(BaseAsyncJsonWebsocketConsumer, ABC):  # type: ignore

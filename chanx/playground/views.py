@@ -9,7 +9,7 @@ from rest_framework.views import APIView
 
 from chanx.utils.logging import logger
 
-from .utils import WebSocketRoute, get_websocket_routes
+from .utils import WebSocketRoute, get_playground_websocket_routes
 
 
 class WebSocketPlaygroundView(TemplateView):
@@ -57,8 +57,10 @@ class WebSocketInfoView(APIView):
 
     def get(self, request: HttpRequest) -> Response:
         try:
-            # Get available WebSocket endpoints using the utility function
-            available_endpoints: list[WebSocketRoute] = get_websocket_routes(request)
+            # Get available WebSocket endpoints using the new playground utility function
+            available_endpoints: list[WebSocketRoute] = get_playground_websocket_routes(
+                request
+            )
 
             # Use the list serializer directly
             serializer = WebSocketRouteListSerializer(available_endpoints)

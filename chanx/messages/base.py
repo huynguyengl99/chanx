@@ -25,10 +25,6 @@ class BaseMessage(BaseModel, abc.ABC):
         """
         super().__init_subclass__(**kwargs)
 
-        # Skip validation for abstract base classes that might not have fields defined yet
-        if cls.__module__ == "__main__" and cls.__name__ == "BaseMessage":
-            return
-
         try:
             action_field = cls.__annotations__["action"]
         except (KeyError, AttributeError) as e:
@@ -39,14 +35,6 @@ class BaseMessage(BaseModel, abc.ABC):
         if get_origin(action_field) is not Literal:
             raise TypeError(
                 f"Class {cls.__name__!r} requires the field 'action' to be a `Literal` type"
-            )
-
-        action_values = set(get_args(action_field))
-
-        # Check for empty literal
-        if not action_values:
-            raise ValueError(
-                f"Class {cls.__name__!r} has an empty Literal for 'action'"
             )
 
 
@@ -63,7 +51,7 @@ class BaseIncomingMessage(BaseModel):
     2. The discriminator field 'action' is properly used
     """
 
-    message: BaseMessage | BaseMessage
+    message: BaseMessage
 
     def __init_subclass__(cls, **kwargs: Unpack[ConfigDict]):
         """
@@ -106,11 +94,8 @@ class BaseIncomingMessage(BaseModel):
             )
 
         has_discriminator_message_field = False
-        try:
-            if hasattr(cls, "message") and cls.message.discriminator is not None:  # type: ignore
-                has_discriminator_message_field = True
-        except (AttributeError, TypeError):
-            pass
+        if hasattr(cls, "message") and cls.message.discriminator is not None:  # type: ignore
+            has_discriminator_message_field = True
 
         # Add discriminator automatically if not explicitly set
         if not has_discriminator_message_field:

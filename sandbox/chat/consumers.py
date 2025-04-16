@@ -3,7 +3,7 @@ from typing import Any
 from chanx.generic.websocket import AsyncJsonWebsocketConsumer
 from chanx.messages.base import BaseMessage
 from chanx.messages.incoming import PingMessage
-from chanx.messages.outgoing import ErrorMessage, PongMessage
+from chanx.messages.outgoing import PongMessage
 
 from chat.messages.chat import (
     ChatIncomingMessage,
@@ -32,14 +32,5 @@ class ChatConsumer(AsyncJsonWebsocketConsumer):
                 await self.send_message(
                     ReplyMessage(
                         payload=MessagePayload(content=f"Reply: {payload.content}")
-                    )
-                )
-
-            case _:
-                await self.send_message(
-                    ErrorMessage(
-                        payload={
-                            "message": f"Unrecognized message type: {message.action}"
-                        }
                     )
                 )

@@ -277,17 +277,9 @@ class AsyncJsonWebsocketConsumer(BaseAsyncJsonWebsocketConsumer, ABC):  # type: 
             **kwargs: Additional keyword arguments.
         """
         try:
-            # Using the discriminator field pattern
-            try:
-                # For Pydantic v2
-                message = self.INCOMING_MESSAGE_SCHEMA.model_validate(
-                    {"message": content}
-                ).message
-            except AttributeError:
-                # For Pydantic v1
-                message = self.INCOMING_MESSAGE_SCHEMA.parse_obj(
-                    {"message": content}
-                ).message
+            message = self.INCOMING_MESSAGE_SCHEMA.model_validate(
+                {"message": content}
+            ).message
 
             await self.receive_message(message, **kwargs)
         except ValidationError as e:

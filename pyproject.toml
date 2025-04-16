@@ -72,7 +72,7 @@ dependencies = [
   "channels>=4,<5",
   "djangorestframework>=3,<4",
   "polyfactory>=2.20.0",
-  "pydantic>=2.11.3",
+  "pydantic>=2,<3",
   "redis[hiredis]>=5.2.1,<6",
   "structlog>=25.2.0"
 ]

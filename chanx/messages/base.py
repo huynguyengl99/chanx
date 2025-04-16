@@ -4,8 +4,6 @@ from typing import Any, Literal, Union, Unpack, get_args, get_origin
 
 from pydantic import BaseModel, ConfigDict, Field
 
-# TODO: add v1 compatible
-
 
 class BaseMessage(BaseModel, abc.ABC):
     """

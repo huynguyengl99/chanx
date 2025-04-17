@@ -10,6 +10,9 @@ insert_final_newline = true
 charset = utf-8
 end_of_line = lf
 
+[*.ini]
+indent_size = 4
+
 [*.py]
 indent_size = 4
 

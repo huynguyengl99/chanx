@@ -13,18 +13,16 @@ jobs:
   lint:
     runs-on: ubuntu-latest
     steps:
-      - name: Dump GitHub context
-        env:
-          GITHUB_CONTEXT: ${{ toJson(github) }}
-        run: echo "$GITHUB_CONTEXT"
       - uses: actions/checkout@v4
-      - name: Install the latest version of uv and set the python version to 3.13t
+      - name: Install the latest version of uv
         uses: astral-sh/setup-uv@v5
         with:
-            enable-cache: true
-            python-version: 3.11
-      - name: Lint
-        run: uv run bash scripts/lint.sh
+          enable-cache: true
+          python-version: "3.11"
+      - name: Install tox
+        run: uv tool install tox --with tox-uv --with tox-gh
+      - name: Run lint
+        run: tox -e lint
 
   test:
     runs-on: ubuntu-latest
@@ -62,25 +60,64 @@ jobs:
       POSTGRES_HOST: localhost
       POSTGRES_PORT: 5432
       REDIS_HOST: redis://localhost:6379
+      TOX_GH_MAJOR_MINOR: ${{ matrix.python-version }}
     steps:
-      - name: Dump GitHub context
-        env:
-          GITHUB_CONTEXT: ${{ toJson(github) }}
-        run: echo "$GITHUB_CONTEXT"
       - uses: actions/checkout@v4
-      - name: Install the latest version of uv and set the python version
+      - name: Install the latest version of uv
         uses: astral-sh/setup-uv@v5
         with:
           enable-cache: true
           python-version: ${{ matrix.python-version }}
-      - run: mkdir coverage
-      - name: Test
-        run: uv run --group test --all-extras coverage run -m pytest sandbox
+      - name: Install tox
+        run: uv tool install tox --with tox-uv --with tox-gh
+      - name: Run tests
+        run: tox
+
+  coverage:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres
         env:
-          COVERAGE_FILE: coverage/.coverage.${{ runner.os }}-py${{ matrix.python-version }}
-          CONTEXT: ${{ runner.os }}-py${{ matrix.python-version }}
-      - name: Store coverage files
-        uses: actions/upload-artifact@v4
+          POSTGRES_PASSWORD: chanx_test_pass
+          POSTGRES_DB: chanx_test_db
+          POSTGRES_USER: chanx_test_user
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5440:5432
+      redis:
+        image: redis
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 6390:6379
+    env:
+      POSTGRES_DB: chanx_test_db
+      POSTGRES_USER: chanx_test_user
+      POSTGRES_PASSWORD: chanx_test_pass
+      POSTGRES_HOST: localhost
+      POSTGRES_PORT: 5440
+      REDIS_HOST: redis://localhost:6390
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install the latest version of uv
+        uses: astral-sh/setup-uv@v5
         with:
-          name: coverage
-          path: coverage
+          enable-cache: true
+          python-version: "3.11"
+      - name: Install tox
+        run: uv tool install tox --with tox-uv --with tox-gh
+      - name: Run coverage
+        run: tox -e coverage
+      - name: Upload coverage reports to Codecov
+        uses: codecov/codecov-action@v5
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          slug: huynguyengl99/chanx

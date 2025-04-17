@@ -102,6 +102,7 @@ exclude = '''
  |  \.vscode
  |  __pycache__
  |  .venv
+ |  .tox
  |  build
  |  coverage
 )/

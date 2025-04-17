@@ -6,7 +6,7 @@ from chanx.messages.base import BaseMessage
 
 
 class PongMessage(BaseMessage):
-    """Simple ping speech message to check connection status."""
+    """Simple pong speech message to verify connection status."""
 
     action: Literal["pong"] = "pong"
 
@@ -24,7 +24,7 @@ class AuthenticationPayload(BaseModel):
 
 
 class AuthenticationMessage(BaseMessage):
-    """Send error message back to the user."""
+    """Send authentication info message to the user."""
 
     action: Literal["authentication"] = "authentication"
     payload: AuthenticationPayload

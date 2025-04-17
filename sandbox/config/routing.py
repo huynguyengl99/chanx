@@ -6,7 +6,7 @@ from chanx.routing import include
 ws_router = URLRouter(
     [
         # Use ws_include which returns a URLRouter
-        path("chat/", include("chat.routing")),
+        path("assistants/", include("assistants.routing")),
     ]
 )
 

@@ -17,11 +17,11 @@ from chanx.settings import chanx_settings
 from chanx.utils.settings import override_chanx_settings
 from test_utils.testing import WebsocketTestCase
 
-from chat.messages.chat import MessagePayload, NewMessage, ReplyMessage
+from assistants.messages.assistant import MessagePayload, NewMessage, ReplyMessage
 
 
 class TestChatConsumer(WebsocketTestCase):
-    ws_path = "/ws/chat/"
+    ws_path = "/ws/assistants/"
 
     async def test_connect_successfully_and_send_and_reply_message(self):
         # Test basic connection and message flow
@@ -93,7 +93,7 @@ class TestChatConsumer(WebsocketTestCase):
 
         # Mock the receive_message method to raise an exception
         with patch(
-            "chat.consumers.ChatConsumer.receive_message",
+            "assistants.consumers.AssistantConsumer.receive_message",
             side_effect=Exception("Test exception"),
         ):
             # Send a message that will trigger the exception

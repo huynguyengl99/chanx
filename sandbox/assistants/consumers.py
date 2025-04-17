@@ -5,18 +5,18 @@ from chanx.messages.base import BaseMessage
 from chanx.messages.incoming import PingMessage
 from chanx.messages.outgoing import PongMessage
 
-from chat.messages.chat import (
-    ChatIncomingMessage,
+from assistants.messages.assistant import (
+    AssistantIncomingMessage,
     MessagePayload,
     NewMessage,
     ReplyMessage,
 )
 
 
-class ChatConsumer(AsyncJsonWebsocketConsumer):
+class AssistantConsumer(AsyncJsonWebsocketConsumer):
     """Websocket to chat with server, like chat with chatbot system"""
 
-    INCOMING_MESSAGE_SCHEMA = ChatIncomingMessage
+    INCOMING_MESSAGE_SCHEMA = AssistantIncomingMessage
 
     async def receive_message(self, message: BaseMessage, **kwargs: Any) -> None:
         match message:

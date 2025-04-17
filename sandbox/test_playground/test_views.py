@@ -57,8 +57,8 @@ class TestWebSocketInfoView(APITestCase):
         assert response.status_code == 200
         assert response.data == [
             {
-                "name": "ChatConsumer",
-                "url": "ws://testserver/ws/chat/",
+                "name": "AssistantConsumer",
+                "url": "ws://testserver/ws/assistants/",
                 "description": (
                     "Websocket to chat with server, like chat with chatbot system"
                 ),

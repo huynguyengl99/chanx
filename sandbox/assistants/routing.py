@@ -1,10 +1,10 @@
 from channels.routing import URLRouter
 from django.urls import path
 
-from chat.consumers import ChatConsumer
+from assistants.consumers import AssistantConsumer
 
 router = URLRouter(
     [
-        path("", ChatConsumer.as_asgi()),
+        path("", AssistantConsumer.as_asgi()),
     ]
 )

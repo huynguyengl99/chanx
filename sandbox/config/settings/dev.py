@@ -73,7 +73,7 @@ INSTALLED_APPS = [
     "debug_toolbar",
     "django_extensions",
     "channels",
-    "chat",
+    "assistants",
     "accounts",
     "chanx",
     "chanx.playground",
@@ -256,7 +256,7 @@ SIMPLE_JWT = {
 ACCOUNT_USER_MODEL_USERNAME_FIELD = None
 ACCOUNT_SIGNUP_FIELDS = ["email*", "password1*", "password2*"]
 ACCOUNT_LOGIN_METHODS = {"email"}
-ACCOUNT_EMAIL_VERIFICATION = "mandatory"
+ACCOUNT_EMAIL_VERIFICATION = "none"
 
 EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
 

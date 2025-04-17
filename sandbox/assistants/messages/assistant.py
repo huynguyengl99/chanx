@@ -19,5 +19,5 @@ class ReplyMessage(BaseMessage):
     payload: MessagePayload
 
 
-class ChatIncomingMessage(IncomingMessage):
+class AssistantIncomingMessage(IncomingMessage):
     message: NewMessage | PingMessage

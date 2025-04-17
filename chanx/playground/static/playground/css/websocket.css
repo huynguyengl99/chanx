@@ -117,12 +117,6 @@ button:disabled {
     word-break: break-word;
 }
 
-.message-content.collapsible {
-    max-height: 60px;
-    overflow: hidden;
-    position: relative;
-}
-
 .message-expand {
     color: #4CAF50;
     cursor: pointer;
@@ -227,12 +221,9 @@ pre {
     font-size: 13px;
 }
 
+/* JSON syntax highlighting */
 .json-key {
     color: #0000cd;
-}
-
-.json-value {
-    color: #008000;
 }
 
 .json-string {
@@ -251,22 +242,9 @@ pre {
     color: #808080;
 }
 
-#connectionControls {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    margin-bottom: 15px;
-    padding-bottom: 15px;
-    border-bottom: 1px solid #eee;
-}
-
+/* Connection status and controls */
 #connectionStatus {
     margin-left: auto;
-}
-
-#messageControls {
-    display: flex;
-    gap: 10px;
 }
 
 .endpoint-description {
@@ -276,6 +254,7 @@ pre {
     font-style: italic;
 }
 
+/* Loading indicator */
 .loading {
     display: inline-block;
     width: 20px;
@@ -314,12 +293,12 @@ pre {
     background-color: #e0e0e0;
 }
 
+/* Connection tabs */
 .connection-tabs {
     margin-top: 15px;
 }
 
 .tab-buttons {
-    margin-top: 0;
     display: flex;
     border-bottom: 1px solid #ddd;
     margin-bottom: 15px;
@@ -438,23 +417,6 @@ pre {
     background-color: #45a049;
 }
 
-/* Query URL preview */
-.url-preview {
-    margin-top: 15px;
-    padding: 10px;
-    background-color: #f0f0f0;
-    border-radius: 4px;
-    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
-    font-size: 14px;
-    word-break: break-all;
-}
-
-.url-preview-label {
-    font-weight: 500;
-    margin-bottom: 5px;
-    color: #555;
-}
-
 /* Styling for the path parameters */
 .param-pattern {
     font-size: 0.8em;
@@ -473,7 +435,7 @@ input[readonly] {
     border-color: #ddd;
 }
 
-/* Hide path params tab by default */
+/* Path params tab styling */
 #pathParamsTabButton {
     display: block;
 }

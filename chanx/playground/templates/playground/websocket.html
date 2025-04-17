@@ -32,51 +32,45 @@
         </div>
 
         <div class="connection-tabs">
-            <!-- Move the connection controls above the tabs -->
-            <div class="form-group" id="connectionControls">
+            <div class="form-group">
                 <button id="connectBtn">Connect</button>
                 <button id="disconnectBtn" disabled>Disconnect</button>
                 <span id="connectionStatus" class="status disconnected">Disconnected</span>
             </div>
 
-            <div class="connection-tabs">
-                <div class="tab-buttons">
-                    <!-- Removed the Basic tab button, kept only Path Params and Query Params -->
-                    <button class="tab-button active" data-tab="connection-path-params" id="pathParamsTabButton">Path
-                        Params
-                    </button>
-                    <button class="tab-button" data-tab="connection-params">Query Params</button>
-                </div>
+            <div class="tab-buttons">
+                <button class="tab-button active" data-tab="connection-path-params" id="pathParamsTabButton">Path Params</button>
+                <button class="tab-button" data-tab="connection-params">Query Params</button>
+            </div>
 
-                <!-- Path Params tab -->
-                <div class="connection-tab-content active" id="connection-path-params">
-                    <div class="params-container">
-                        <div class="params-headers">
-                            <div class="param-key">Parameter</div>
-                            <div class="param-value">Value</div>
-                            <div class="param-desc">Description</div>
-                            <div class="param-actions"></div>
-                        </div>
-                        <div id="pathParamsList">
-                            <!-- Path parameters will be added here -->
-                        </div>
+            <!-- Path Params tab -->
+            <div class="connection-tab-content active" id="connection-path-params">
+                <div class="params-container">
+                    <div class="params-headers">
+                        <div class="param-key">Parameter</div>
+                        <div class="param-value">Value</div>
+                        <div class="param-desc">Description</div>
+                        <div class="param-actions"></div>
+                    </div>
+                    <div id="pathParamsList">
+                        <!-- Path parameters will be added here -->
                     </div>
                 </div>
+            </div>
 
-                <!-- Query Params tab -->
-                <div class="connection-tab-content" id="connection-params">
-                    <div class="params-container">
-                        <div class="params-headers">
-                            <div class="param-key">Key</div>
-                            <div class="param-value">Value</div>
-                            <div class="param-desc">Description</div>
-                            <div class="param-actions"></div>
-                        </div>
-                        <div id="queryParamsList">
-                            <!-- Query parameters will be added here -->
-                        </div>
-                        <button id="addQueryParamBtn" class="add-param-btn">Add Query Parameter</button>
+            <!-- Query Params tab -->
+            <div class="connection-tab-content" id="connection-params">
+                <div class="params-container">
+                    <div class="params-headers">
+                        <div class="param-key">Key</div>
+                        <div class="param-value">Value</div>
+                        <div class="param-desc">Description</div>
+                        <div class="param-actions"></div>
                     </div>
+                    <div id="queryParamsList">
+                        <!-- Query parameters will be added here -->
+                    </div>
+                    <button id="addQueryParamBtn" class="add-param-btn">Add Query Parameter</button>
                 </div>
             </div>
         </div>
@@ -90,6 +84,7 @@
             <div class="tab" data-tab="raw">Raw Text</div>
             <div class="tab" data-tab="file">File</div>
         </div>
+
         <!-- JSON Tab -->
         <div class="tab-content active" id="tab-json">
             <div class="form-group">
@@ -106,11 +101,10 @@
             </div>
             <div class="form-group">
                 <label for="jsonInput">JSON Message:</label>
-                <textarea id="jsonInput" class="json-editor" rows="6" placeholder='{"key": "value"}'
-                          disabled></textarea>
+                <textarea id="jsonInput" class="json-editor" rows="6" placeholder='{"key": "value"}' disabled></textarea>
                 <div id="jsonError" class="json-error"></div>
             </div>
-            <div class="form-group" id="jsonControls">
+            <div class="form-group">
                 <button id="formatJsonBtn" disabled>Format JSON</button>
                 <button id="sendJsonBtn" disabled>Send JSON</button>
             </div>
@@ -122,7 +116,7 @@
                 <label for="messageInput">Message:</label>
                 <textarea id="messageInput" rows="3" placeholder="Type your message here..." disabled></textarea>
             </div>
-            <div class="form-group" id="messageControls">
+            <div class="form-group">
                 <button id="sendRawBtn" disabled>Send Message</button>
             </div>
         </div>
@@ -147,7 +141,7 @@
 </div>
 
 <!-- Load the JavaScript file and initialize the playground -->
-<script src="{% static 'playground/js/websocket.js' %}"></script>
+<script type="module" src="{% static 'playground/js/websocket.js' %}"></script>
 <script>
     // Initialize the WebSocket playground with the Django template variable
     document.addEventListener('DOMContentLoaded', function () {

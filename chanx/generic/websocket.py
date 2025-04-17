@@ -2,7 +2,7 @@ import asyncio
 import uuid
 from abc import ABC, abstractmethod
 from collections.abc import Iterable, Sequence
-from typing import Any, cast
+from typing import Any, Literal, cast
 
 from channels.generic.websocket import (
     AsyncJsonWebsocketConsumer as BaseAsyncJsonWebsocketConsumer,
@@ -18,13 +18,12 @@ from rest_framework.permissions import (
     SingleOperandHolder,
 )
 from rest_framework.response import Response
-from rest_framework.settings import api_settings
-from rest_framework.views import APIView
 
 import structlog
 from asgiref.sync import sync_to_async
 from pydantic import ValidationError
 
+from chanx.generics import ChanxAuthView
 from chanx.messages.base import BaseIncomingMessage, BaseMessage
 from chanx.messages.outgoing import (
     AuthenticationMessage,
@@ -72,6 +71,18 @@ class AsyncJsonWebsocketConsumer(BaseAsyncJsonWebsocketConsumer, ABC):  # type: 
 
     INCOMING_MESSAGE_SCHEMA: type[BaseIncomingMessage]
 
+    auth_class = ChanxAuthView
+    auth_method: Literal[
+        "get",
+        "post",
+        "put",
+        "patch",
+        "delete",
+        "head",
+        "options",
+        "trace",
+    ] = "get"
+
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         """
         Initialize with authentication and permission setup.
@@ -84,19 +95,6 @@ class AsyncJsonWebsocketConsumer(BaseAsyncJsonWebsocketConsumer, ABC):  # type: 
             ValueError: If INCOMING_MESSAGE_SCHEMA is not set
         """
         super().__init__(*args, **kwargs)
-
-        if self.permission_classes is None:
-            self.permission_classes = cast(
-                Sequence[type[BasePermission]], api_settings.DEFAULT_PERMISSION_CLASSES
-            )
-
-        if self.authentication_classes is None:
-            self.authentication_classes = cast(
-                Sequence[type[BaseAuthentication]],
-                chanx_settings.DEFAULT_AUTHENTICATION_CLASSES
-                or api_settings.DEFAULT_AUTHENTICATION_CLASSES,
-            )
-
         if self.send_completion is None:
             self.send_completion = chanx_settings.SEND_COMPLETION
 
@@ -124,9 +122,13 @@ class AsyncJsonWebsocketConsumer(BaseAsyncJsonWebsocketConsumer, ABC):  # type: 
         if not hasattr(self, "INCOMING_MESSAGE_SCHEMA"):
             raise ValueError("INCOMING_MESSAGE_SCHEMA attribute is required.")
 
-        self._v = APIView()
-        self._v.authentication_classes = self.authentication_classes
-        self._v.permission_classes = self.permission_classes
+        self._v = self.auth_class()
+
+        if self.authentication_classes is not None:
+            self._v.authentication_classes = self.authentication_classes
+        if self.permission_classes is not None:
+            self._v.permission_classes = self.permission_classes
+
         self.user: AbstractBaseUser | AnonymousUser | None = None
 
     # Connection lifecycle methods
@@ -262,12 +264,14 @@ class AsyncJsonWebsocketConsumer(BaseAsyncJsonWebsocketConsumer, ABC):  # type: 
         Returns:
             Tuple of (response, request) objects
         """
-        req = request_from_scope(self.scope)
+        req = request_from_scope(self.scope, self.auth_method.upper())
         self._bind_structlog_request_context(req)
 
         logger.info("Start to authenticate ws request")
-
-        res = cast(Response, self._v.dispatch(req))
+        url_route: dict[str, Any] = self.scope["url_route"]
+        res = cast(
+            Response, self._v.dispatch(req, *url_route["args"], **url_route["kwargs"])
+        )
 
         # Assuming res has a render method (it does if it's a DRF Response)
         res.render()

@@ -60,7 +60,7 @@ class TestChatConsumer(WebsocketTestCase):
 
     async def test_authentication_failure(self):
         # Test authentication failure handling
-        with patch("chanx.generic.websocket.APIView.dispatch") as mock_dispatch:
+        with patch("chanx.generic.websocket.ChanxAuthView.dispatch") as mock_dispatch:
             # Create a mock response for authentication failure
             mock_response = MagicMock()
             mock_response.status_code = status.HTTP_401_UNAUTHORIZED

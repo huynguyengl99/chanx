@@ -4,7 +4,7 @@ from django.contrib.auth.models import AnonymousUser
 from django.http import HttpRequest
 
 
-def request_from_scope(scope: dict[str, Any]) -> HttpRequest:
+def request_from_scope(scope: dict[str, Any], method: str) -> HttpRequest:
     """
     Creates a Django HttpRequest from an ASGI scope dictionary.
 
@@ -14,12 +14,13 @@ def request_from_scope(scope: dict[str, Any]) -> HttpRequest:
 
     Args:
         scope: The ASGI connection scope dictionary
+        method: The request method
 
     Returns:
         A Django HttpRequest populated with data from the scope
     """
     request: HttpRequest = HttpRequest()
-    request.method = "OPTIONS"
+    request.method = method
     request.path = scope.get("path", "")
     request.COOKIES = scope.get("cookies", {})
     request.user = scope.get("user", AnonymousUser())

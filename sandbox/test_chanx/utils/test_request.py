@@ -19,7 +19,7 @@ class TestRequestUtils(TestCase):
         }
 
         # Get request from scope
-        request = request_from_scope(scope)
+        request = request_from_scope(scope, "get")
 
         # Verify headers were processed correctly
         assert request.META["HTTP_CONTENT_TYPE"] == "application/json"
@@ -34,7 +34,7 @@ class TestRequestUtils(TestCase):
             ]
         }
 
-        request = request_from_scope(scope)
+        request = request_from_scope(scope, "get")
 
         # Verify the header wasn't double-prefixed
         assert "HTTP_HTTP_ALREADY_PREFIXED" not in request.META
@@ -48,7 +48,7 @@ class TestRequestUtils(TestCase):
             ]
         }
 
-        request = request_from_scope(scope)
+        request = request_from_scope(scope, "get")
 
         # Verify the HTTP_ prefix was added
         assert request.META["HTTP_NORMAL_HEADER"] == "test-value"

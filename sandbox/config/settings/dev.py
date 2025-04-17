@@ -75,6 +75,7 @@ INSTALLED_APPS = [
     "channels",
     "assistants",
     "accounts",
+    "chat",
     "chanx",
     "chanx.playground",
 ]

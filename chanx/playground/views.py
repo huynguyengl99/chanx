@@ -34,10 +34,12 @@ class WebSocketRouteSerializer(serializers.Serializer[WebSocketRoute]):
 
     name = serializers.CharField()
     url = serializers.CharField()
+    friendly_url = serializers.CharField(allow_blank=True, required=False)
     description = serializers.CharField(allow_blank=True)
     message_examples = serializers.ListField(
         child=serializers.DictField(), required=False
     )
+    path_params = serializers.ListField(child=serializers.DictField(), required=False)
 
 
 class WebSocketRouteListSerializer(serializers.ListSerializer[list[WebSocketRoute]]):

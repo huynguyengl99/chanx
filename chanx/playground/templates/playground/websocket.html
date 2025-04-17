@@ -31,35 +31,52 @@
             <input type="text" id="wsUrl" placeholder="ws://example.com/ws/">
         </div>
 
-        <!-- Connection tabs for params, headers, etc. -->
         <div class="connection-tabs">
-            <div class="tab-buttons">
-                <button class="tab-button active" data-tab="connection-basic">Basic</button>
-                <button class="tab-button" data-tab="connection-params">Query Params</button>
+            <!-- Move the connection controls above the tabs -->
+            <div class="form-group" id="connectionControls">
+                <button id="connectBtn">Connect</button>
+                <button id="disconnectBtn" disabled>Disconnect</button>
+                <span id="connectionStatus" class="status disconnected">Disconnected</span>
             </div>
 
-            <!-- Basic tab (always visible) -->
-            <div class="connection-tab-content active" id="connection-basic">
-                <div class="form-group" id="connectionControls">
-                    <button id="connectBtn">Connect</button>
-                    <button id="disconnectBtn" disabled>Disconnect</button>
-                    <span id="connectionStatus" class="status disconnected">Disconnected</span>
+            <div class="connection-tabs">
+                <div class="tab-buttons">
+                    <!-- Removed the Basic tab button, kept only Path Params and Query Params -->
+                    <button class="tab-button active" data-tab="connection-path-params" id="pathParamsTabButton">Path
+                        Params
+                    </button>
+                    <button class="tab-button" data-tab="connection-params">Query Params</button>
                 </div>
-            </div>
 
-            <!-- Query Params tab -->
-            <div class="connection-tab-content" id="connection-params">
-                <div class="params-container">
-                    <div class="params-headers">
-                        <div class="param-key">Key</div>
-                        <div class="param-value">Value</div>
-                        <div class="param-desc">Description</div>
-                        <div class="param-actions"></div>
+                <!-- Path Params tab -->
+                <div class="connection-tab-content active" id="connection-path-params">
+                    <div class="params-container">
+                        <div class="params-headers">
+                            <div class="param-key">Parameter</div>
+                            <div class="param-value">Value</div>
+                            <div class="param-desc">Description</div>
+                            <div class="param-actions"></div>
+                        </div>
+                        <div id="pathParamsList">
+                            <!-- Path parameters will be added here -->
+                        </div>
                     </div>
-                    <div id="queryParamsList">
-                        <!-- Query parameters will be added here -->
+                </div>
+
+                <!-- Query Params tab -->
+                <div class="connection-tab-content" id="connection-params">
+                    <div class="params-container">
+                        <div class="params-headers">
+                            <div class="param-key">Key</div>
+                            <div class="param-value">Value</div>
+                            <div class="param-desc">Description</div>
+                            <div class="param-actions"></div>
+                        </div>
+                        <div id="queryParamsList">
+                            <!-- Query parameters will be added here -->
+                        </div>
+                        <button id="addQueryParamBtn" class="add-param-btn">Add Query Parameter</button>
                     </div>
-                    <button id="addQueryParamBtn" class="add-param-btn">Add Query Parameter</button>
                 </div>
             </div>
         </div>

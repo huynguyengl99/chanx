@@ -5,13 +5,11 @@ from typing import Any, cast
 
 from django.conf import settings
 from django.core.signals import setting_changed
-from rest_framework.authentication import BaseAuthentication
 from rest_framework.settings import APISettings
 
 
 @dataclass
 class MySetting:
-    DEFAULT_AUTHENTICATION_CLASSES: Iterable[BaseAuthentication] | None = None
     MESSAGE_ACTION_KEY: str = "action"
     SEND_COMPLETION: bool = False
     SEND_MESSAGE_IMMEDIATELY: bool = True
@@ -28,10 +26,7 @@ class MySetting:
     user_settings: dict[str, Any] = dataclasses.field(default_factory=dict)
 
 
-IMPORT_STRINGS = (
-    "DEFAULT_AUTHENTICATION_CLASSES",
-    "INCOMING_MESSAGE_SCHEMA",
-)
+IMPORT_STRINGS = ("INCOMING_MESSAGE_SCHEMA",)
 
 
 def create_api_settings_from_model(

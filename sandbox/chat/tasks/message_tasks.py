@@ -1,0 +1,25 @@
+from channels.layers import get_channel_layer
+
+from asgiref.sync import async_to_sync
+
+from chat.models import GroupChat
+from chat.serializers import (
+    GroupChatSerializer,
+)
+from chat.utils import make_list_group_chat_layer_name
+
+channel_layer = get_channel_layer()
+
+
+def task_handle_new_chat_message(group_chat_id):
+    group_chat = GroupChat.objects.get(id=group_chat_id)
+    serializer = GroupChatSerializer(group_chat)
+    chat_list_layer_name = make_list_group_chat_layer_name(group_chat_id)
+
+    async_to_sync(channel_layer.group_send)(
+        chat_list_layer_name,
+        {
+            "type": "notify_new_chat_message",
+            "payload": serializer.data,
+        },
+    )

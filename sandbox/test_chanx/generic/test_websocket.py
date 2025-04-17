@@ -40,7 +40,6 @@ class MyConsumerTestCase(WebsocketTestCase):
     router = URLRouter([path("my-consumer/", MyConsumer.as_asgi())])
 
     @override_chanx_settings(
-        DEFAULT_AUTHENTICATION_CLASSES=None,
         SEND_COMPLETION=False,
         SEND_MESSAGE_IMMEDIATELY=False,
         SEND_AUTHENTICATION_MESSAGE=False,

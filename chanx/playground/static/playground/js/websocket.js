@@ -26,6 +26,10 @@ function initWebSocketPlayground(websocketInfoUrl) {
     const connectionTabButtons = document.querySelectorAll('.tab-button');
     const connectionTabContents = document.querySelectorAll('.connection-tab-content');
 
+    // DOM elements for path params
+    const pathParamsList = document.getElementById('pathParamsList');
+    const pathParamsTabButton = document.getElementById('pathParamsTabButton');
+
     // DOM elements for query params
     const queryParamsList = document.getElementById('queryParamsList');
     const addQueryParamBtn = document.getElementById('addQueryParamBtn');
@@ -36,6 +40,8 @@ function initWebSocketPlayground(websocketInfoUrl) {
     const messageExamplesLoading = document.getElementById('messageExamplesLoading');
 
     let currentEndpoint = null;
+    let originalPathPattern = null;  // Store the original URL pattern with regex or :param format
+    let pathParameters = [];         // Store the path parameters for the current endpoint
 
     // WebSocket instance
     let socket = null;
@@ -62,8 +68,10 @@ function initWebSocketPlayground(websocketInfoUrl) {
             // Add new options
             for (const endpoint of endpoints) {
                 const option = document.createElement('option');
+                // Use the original URL for value but display friendly URL if available
                 option.value = endpoint.url;
-                option.textContent = `${endpoint.name} (${endpoint.url})`;
+                const displayUrl = endpoint.friendly_url || endpoint.url;
+                option.textContent = `${endpoint.name} (${displayUrl})`;
                 wsEndpointSelect.appendChild(option);
             }
 
@@ -514,12 +522,33 @@ function initWebSocketPlayground(websocketInfoUrl) {
         });
     });
 
+    // Handle path parameters
+    function addPathParamRow(container, param) {
+        const row = document.createElement('div');
+        row.className = 'param-row';
+
+        row.innerHTML = `
+                <input type="text" class="param-key-input" value="${param.name}" placeholder="Parameter" readonly>
+                <input type="text" class="param-value-input" placeholder="Value" data-param-name="${param.name}">
+                <input type="text" class="param-desc-input" value="${param.description}" placeholder="Description" readonly>
+                <div class="param-actions">
+                    <span class="param-pattern" title="Pattern: ${param.pattern}">${param.pattern}</span>
+                </div>
+            `;
+
+        // Add event listener to value input for URL updating
+        const valueInput = row.querySelector('.param-value-input');
+        valueInput.addEventListener('input', updateWebSocketUrlWithPathParams);
+
+        container.appendChild(row);
+    }
+
     // Add query parameter row
     addQueryParamBtn.addEventListener('click', () => {
-        addParamRow(queryParamsList);
+        addQueryParamRow(queryParamsList);
     });
 
-    function addParamRow(container) {
+    function addQueryParamRow(container) {
         const row = document.createElement('div');
         row.className = 'param-row';
 
@@ -568,6 +597,35 @@ function initWebSocketPlayground(websocketInfoUrl) {
         return params;
     }
 
+    // Update WebSocket URL with path parameters
+    function updateWebSocketUrlWithPathParams() {
+        if (!originalPathPattern) return;
+
+        let updatedPath = originalPathPattern;
+        const pathParamValues = {};
+
+        // Collect path parameter values
+        const paramInputs = pathParamsList.querySelectorAll('.param-value-input');
+        paramInputs.forEach(input => {
+            const paramName = input.getAttribute('data-param-name');
+            const paramValue = input.value.trim();
+            pathParamValues[paramName] = paramValue;
+        });
+
+        // Replace parameters in the URL
+        for (const [paramName, paramValue] of Object.entries(pathParamValues)) {
+            // Replace either :paramName or (?P<paramName>pattern)
+            const regexPattern = new RegExp(`(\\(\\?P<${paramName}>[^)]+\\)|:${paramName})`, 'g');
+            updatedPath = updatedPath.replace(regexPattern, paramValue || `:${paramName}`);
+        }
+
+        // Update the URL input
+        wsUrlInput.value = updatedPath;
+
+        // Then apply query parameters
+        updateWebSocketUrl();
+    }
+
     // Update WebSocket URL with query parameters
     function updateWebSocketUrl() {
         const baseUrl = wsUrlInput.value.split('?')[0];
@@ -584,31 +642,94 @@ function initWebSocketPlayground(websocketInfoUrl) {
         }
     }
 
-    // Initialize by adding one row to each container
-    addParamRow(queryParamsList);
+    // When loading path parameters
+    function loadPathParameters(endpoint) {
+        // Clear existing path parameters
+        pathParamsList.innerHTML = '';
 
-    // Update URL when endpoint is selected (modified to work with query params)
+        // If no endpoint is selected or no path params, show empty state
+        if (!endpoint || !endpoint.path_params || endpoint.path_params.length === 0) {
+            // Add a placeholder message in the path params list
+            const emptyState = document.createElement('div');
+            emptyState.className = 'empty-params-state';
+            emptyState.textContent = 'No path parameters for this endpoint.';
+            pathParamsList.appendChild(emptyState);
+            return;
+        }
+
+        // Add UI for each path parameter
+        endpoint.path_params.forEach(param => {
+            addPathParamRow(pathParamsList, param);
+        });
+
+        // Store the original pattern for replacements
+        originalPathPattern = endpoint.url;
+
+        // Initialize with friendly URL if available
+        if (endpoint.friendly_url) {
+            wsUrlInput.value = endpoint.friendly_url;
+        }
+    }
+
+    // When no endpoint has path parameters, show Query Params tab as active
+    function updateTabVisibility(endpoint) {
+        // Check if the endpoint has path parameters
+        const hasPathParams = endpoint && endpoint.path_params && endpoint.path_params.length > 0;
+
+        // Get the tab buttons
+        const pathParamsTab = document.querySelector('.tab-button[data-tab="connection-path-params"]');
+        const queryParamsTab = document.querySelector('.tab-button[data-tab="connection-params"]');
+
+        // Get the tab content elements
+        const pathParamsContent = document.getElementById('connection-path-params');
+        const queryParamsContent = document.getElementById('connection-params');
+
+        if (!hasPathParams) {
+            // If no path params, make Query Params tab active
+            pathParamsTab.classList.remove('active');
+            queryParamsTab.classList.add('active');
+
+            pathParamsContent.classList.remove('active');
+            queryParamsContent.classList.add('active');
+        }
+    }
+
+    // Initialize by adding one row to each container
+    addQueryParamRow(queryParamsList);
+
+    // Update URL when endpoint is selected
     wsEndpointSelect.addEventListener('change', () => {
         const selectedUrl = wsEndpointSelect.value;
-        wsUrlInput.value = selectedUrl;
         currentEndpoint = selectedUrl; // Store the current endpoint URL
-        updateWebSocketUrl();
 
-        // Update the description
+        // Find the selected endpoint
         const selectedEndpoint = availableEndpoints.find(e => e.url === selectedUrl);
         if (selectedEndpoint) {
+            // Update the description
             endpointDescription.textContent = selectedEndpoint.description || 'No description available';
 
-            // Load message examples for this endpoint
+            // Set the URL field (prefer friendly URL if available)
+            wsUrlInput.value = selectedEndpoint.friendly_url || selectedUrl;
+
+            // Load path parameters
+            loadPathParameters(selectedEndpoint);
+
+            // Update tab visibility based on whether we have path params
+            updateTabVisibility(selectedEndpoint);
+
+            // Load message examples
             loadMessageExamples(selectedUrl);
+
+            // Parse query params
+            parseExistingQueryParams();
         } else {
             endpointDescription.textContent = '';
+            wsUrlInput.value = selectedUrl;
         }
     });
 
-    // Add an event listener to all wsUrlInput to update when manually changed
-    wsUrlInput.addEventListener('change', () => {
-        // Parse existing query params from the URL and populate the UI
+    // Parse existing query parameters from the URL
+    function parseExistingQueryParams() {
         try {
             const url = new URL(wsUrlInput.value);
             const params = Array.from(url.searchParams.entries());
@@ -650,13 +771,16 @@ function initWebSocketPlayground(websocketInfoUrl) {
                 });
             } else {
                 // Add one empty row if no params found
-                addParamRow(queryParamsList);
+                addQueryParamRow(queryParamsList);
             }
         } catch (error) {
             // If URL parsing fails, keep the UI as is
             console.warn('Failed to parse WebSocket URL:', error);
         }
-    });
+    }
+
+    // Add an event listener to wsUrlInput to update when manually changed
+    wsUrlInput.addEventListener('change', parseExistingQueryParams);
 
     // Initial call to set up the UI
     document.addEventListener('DOMContentLoaded', () => {
@@ -665,7 +789,7 @@ function initWebSocketPlayground(websocketInfoUrl) {
             queryParamsList.removeChild(queryParamsList.firstChild);
         }
 
-        addParamRow(queryParamsList);
+        addQueryParamRow(queryParamsList);
     });
 
     // Initialize with a status message

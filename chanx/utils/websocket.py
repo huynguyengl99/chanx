@@ -6,6 +6,7 @@ in a Django Channels application. It focuses on the generic mechanism
 of route discovery that can be used by various components.
 """
 
+import re
 from collections.abc import Callable
 from dataclasses import dataclass
 from typing import Any, TypeVar
@@ -30,16 +31,34 @@ class RouteInfo:
         path: The URL path pattern for the WebSocket route.
         handler: The consumer or handler function for this route.
         base_url: The base WebSocket URL (e.g., ws://domain.com).
+        path_params: Dictionary of path parameters with their regex patterns.
     """
 
     path: str
     handler: Any  # Using Any instead of RouteHandler for broader compatibility
     base_url: str
+    path_params: dict[str, str] | None = None
 
     @property
     def full_url(self) -> str:
         """Get the full WebSocket URL for this route."""
         return f"{self.base_url}/{self.path}"
+
+    @property
+    def friendly_path(self) -> str:
+        """Get a user-friendly path with :param format instead of regex."""
+        if not self.path_params:
+            return self.path
+
+        path = self.path
+        for param_name, pattern in self.path_params.items():
+            path = path.replace(f"(?P<{param_name}>{pattern})", f":{param_name}")
+        return path
+
+    @property
+    def friendly_full_url(self) -> str:
+        """Get the full user-friendly WebSocket URL with :param format."""
+        return f"{self.base_url}/{self.friendly_path}"
 
 
 # Type variable for the transformation result
@@ -159,8 +178,8 @@ def _extract_routes_from_router(
     """
     for route in router.routes:
         try:
-            # Get the pattern string
-            pattern: str = _get_pattern_string(route)
+            # Get the pattern string and extract path parameters
+            pattern, path_params = _get_pattern_string_and_params(route)
 
             # Build the full path
             full_path: str = f"{prefix}{pattern}"
@@ -174,7 +193,12 @@ def _extract_routes_from_router(
             else:
                 # For consumers, add to the routes list as a RouteInfo dataclass instance
                 routes.append(
-                    RouteInfo(path=full_path, handler=handler, base_url=ws_base_url)
+                    RouteInfo(
+                        path=full_path,
+                        handler=handler,
+                        base_url=ws_base_url,
+                        path_params=path_params,
+                    )
                 )
         except AttributeError as e:
             # More specific error for attribute issues
@@ -188,19 +212,22 @@ def _extract_routes_from_router(
             )
 
 
-def _get_pattern_string(route: Any) -> str:
+def _get_pattern_string_and_params(route: Any) -> tuple[str, dict[str, str] | None]:
     """
-    Extract pattern string from a route object.
+    Extract pattern string and path parameters from a route object.
 
     Handles different route pattern implementations to extract
-    the URL pattern string.
+    the URL pattern string and identified named path parameters.
 
     Args:
         route: The route object to extract pattern from.
 
     Returns:
-        The cleaned URL pattern string.
+        A tuple containing:
+        - The cleaned URL pattern string
+        - Dictionary of path parameters with their regex patterns, or None if no parameters
     """
+    # Get the pattern string
     if hasattr(route, "pattern"):
         # For URLRoute
         if hasattr(route.pattern, "pattern"):
@@ -211,9 +238,19 @@ def _get_pattern_string(route: Any) -> str:
     else:
         pattern = str(route)
 
-    # Clean up the pattern string
+    # Extract path parameters
+    path_params = {}
+    param_regex = r"\(\?P<([^>]+)>([^)]+)\)"
+    matches = re.findall(param_regex, pattern)
+
+    if matches:
+        for name, regex_pattern in matches:
+            path_params[name] = regex_pattern
+
+    # Clean up the pattern string (but keep path params for now)
     pattern = pattern.replace("^", "").replace("$", "")
-    return pattern
+
+    return pattern, path_params if path_params else None
 
 
 # Additional helper for applying a transformation function to all routes

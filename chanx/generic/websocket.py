@@ -262,22 +262,18 @@ class AsyncJsonWebsocketConsumer(BaseAsyncJsonWebsocketConsumer, ABC):  # type: 
         Returns:
             Tuple of (response, request) objects
         """
-        raw_request = request_from_scope(self.scope)
-        self._bind_structlog_request_context(raw_request)
+        req = request_from_scope(self.scope)
+        self._bind_structlog_request_context(req)
 
         logger.info("Start to authenticate ws request")
 
-        res = cast(Response, self._v.dispatch(raw_request))
+        res = cast(Response, self._v.dispatch(req))
 
         # Assuming res has a render method (it does if it's a DRF Response)
         res.render()
 
         # For DRF Response objects, renderer_context would be available
-        if hasattr(res, "renderer_context"):
-            req = res.renderer_context.get("request")
-        else:
-            # Fallback to the original request if renderer_context is not available
-            req = raw_request
+        req = res.renderer_context.get("request")  # type: ignore
 
         return res, req
 

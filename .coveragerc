@@ -1,7 +1,8 @@
 [run]
 branch = True
 source = chanx
-
+omit =
+    settings.py
 
 [report]
 show_missing = True

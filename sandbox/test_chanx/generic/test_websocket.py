@@ -75,6 +75,12 @@ class MyConsumerTestCase(WebsocketTestCase):
             },
         ]
 
+    async def test_override_wait_for_auth(self):
+        await self.auth_communicator.connect()
+
+        res = await self.auth_communicator.wait_for_auth(False, 0.2)
+        assert not res
+
 
 class InvalidConsumer(AsyncJsonWebsocketConsumer):
     async def receive_message(self, message: BaseMessage, **kwargs: Any) -> None:

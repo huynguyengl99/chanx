@@ -40,7 +40,7 @@ class WebsocketCommunicator(BaseWebsocketCommunicator):  # type: ignore
         await self.send_json_to(message.model_dump())
 
     async def wait_for_auth(
-        self, send_authentication_message: bool | None = None, max_auth_time: int = 1
+        self, send_authentication_message: bool | None = None, max_auth_time: float = 1
     ) -> AuthenticationMessage | None:
         if send_authentication_message is None:
             send_authentication_message = chanx_settings.SEND_AUTHENTICATION_MESSAGE
@@ -76,8 +76,8 @@ class WebsocketTestCase(TransactionTestCase):
     @classmethod
     def setUpClass(cls) -> None:
         super().setUpClass()
-        if not cls.ws_path:
-            raise ValueError("ws_path is not set")
+        if not hasattr(cls, "ws_path"):
+            raise AttributeError(f"ws_path is not set in {cls.__name__}")
 
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         super().__init__(*args, **kwargs)

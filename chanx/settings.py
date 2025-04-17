@@ -21,6 +21,8 @@ class MySetting:
     LOG_SENT_MESSAGE: bool = True
     LOG_IGNORED_ACTIONS: Iterable[str] = dataclasses.field(default_factory=list)
 
+    WEBSOCKET_BASE_URL: str = "ws://localhost:8000"
+
     # Add this field to satisfy the type checker
     # It will be used by APISettings but isn't part of the real dataclass structure
     user_settings: dict[str, Any] = dataclasses.field(default_factory=dict)

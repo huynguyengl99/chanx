@@ -35,7 +35,7 @@ from chanx.messages.outgoing import (
 from chanx.settings import chanx_settings
 from chanx.utils.asyncio import create_task
 from chanx.utils.logging import logger
-from chanx.utils.request import get_request_header, request_from_scope
+from chanx.utils.request import request_from_scope
 
 
 class AsyncJsonWebsocketConsumer(BaseAsyncJsonWebsocketConsumer, ABC):  # type: ignore
@@ -290,9 +290,7 @@ class AsyncJsonWebsocketConsumer(BaseAsyncJsonWebsocketConsumer, ABC):  # type: 
         Args:
             raw_request: The HTTP request object
         """
-        request_id = get_request_header(
-            raw_request, "x-request-id", "HTTP_X_REQUEST_ID"
-        ) or str(uuid.uuid4())
+        request_id = raw_request.headers.get("x-request-id") or str(uuid.uuid4())
 
         structlog.contextvars.bind_contextvars(request_id=request_id)
 

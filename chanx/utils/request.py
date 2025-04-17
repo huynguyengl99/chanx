@@ -18,12 +18,3 @@ def request_from_scope(scope: dict[str, Any]) -> HttpRequest:
         request.META[trans_header] = value.decode("utf-8")
 
     return request
-
-
-def get_request_header(
-    request: HttpRequest, header_key: str, meta_key: str
-) -> str | None:
-    if hasattr(request, "headers"):
-        return request.headers.get(header_key)
-
-    return request.META.get(meta_key)

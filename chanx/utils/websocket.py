@@ -13,6 +13,7 @@ from typing import Any, TypeVar
 from channels.routing import URLRouter
 from django.http import HttpRequest
 
+from chanx.settings import chanx_settings
 from chanx.utils.asgi import get_websocket_application
 from chanx.utils.logging import logger
 
@@ -90,7 +91,7 @@ def _get_websocket_base_url(request: HttpRequest | None) -> str:
         The WebSocket base URL (ws:// or wss:// followed by domain).
     """
     if request is None:
-        return "ws://localhost:8000"
+        return chanx_settings.WEBSOCKET_BASE_URL
 
     # Get the current domain from the request
     domain: str = request.get_host()

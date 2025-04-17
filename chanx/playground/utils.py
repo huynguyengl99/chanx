@@ -22,7 +22,6 @@ from polyfactory.factories.pydantic_factory import ModelFactory
 from pydantic import BaseModel
 
 from chanx.messages.base import BaseIncomingMessage
-from chanx.utils.logging import logger
 from chanx.utils.websocket import RouteInfo, get_websocket_routes, transform_routes
 
 
@@ -110,22 +109,16 @@ def _get_handler_info(handler: Any, path: str, ws_base_url: str) -> WebSocketRou
     # Default values
     name: str = getattr(handler, "__name__", "Unknown")
     description: str = handler.__doc__ or ""
-    message_examples: list[MessageExample] = []
 
-    try:
-        # Extract the consumer class if it's an as_asgi wrapper
-        consumer_class: Any = handler.consumer_class
+    # Extract the consumer class if it's an as_asgi wrapper
+    consumer_class: Any = handler.consumer_class
 
-        # Try to get message schema from the consumer class
-        incoming_message_schema: type[BaseIncomingMessage] | None = getattr(
-            consumer_class, "INCOMING_MESSAGE_SCHEMA", None
-        )
+    # Try to get message schema from the consumer class
+    incoming_message_schema: type[BaseIncomingMessage] = (
+        consumer_class.INCOMING_MESSAGE_SCHEMA
+    )
 
-        if incoming_message_schema:
-            message_examples = get_message_examples(incoming_message_schema)
-    except AttributeError as e:
-        # Log the error but continue with empty message examples
-        logger.debug(f"Could not extract message schema for {name}: {str(e)}")
+    message_examples = get_message_examples(incoming_message_schema)
 
     return {
         "name": name,
@@ -179,25 +172,17 @@ def get_message_examples(
     examples: list[MessageExample] = []
 
     # Find the discriminated union field in the Message class
-    try:
-        type_hints = get_type_hints(message_type)
+    type_hints = get_type_hints(message_type)
 
-        message_type = type_hints["message"]
-    except (TypeError, AttributeError, KeyError):
-        # Handle various type inspection errors
-        logger.exception(f"Could not get type hints for {message_type}")
-        return examples
-
-    if not message_type:
-        return examples
+    message_field_type = type_hints["message"]
 
     # If it's not a union type, just generate a single example
-    origin = get_origin(message_type)
+    origin = get_origin(message_field_type)
     if not (origin is Union or origin is UnionType):
-        return [_create_example(message_type)]
+        return [_create_example(message_field_type)]
 
     # For each message type in the union, create an example
-    union_types = get_args(message_type)
+    union_types = get_args(message_field_type)
     for msg_type in union_types:
         examples.append(_create_example(msg_type))
 

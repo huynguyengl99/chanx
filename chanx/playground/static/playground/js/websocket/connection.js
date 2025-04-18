@@ -9,9 +9,31 @@ export function initConnection(elements, state) {
     elements.disconnectBtn.addEventListener('click', () => disconnectWebSocket(elements, state));
 }
 
+// Extract the real URL from the display element
+function extractRealUrlFromDisplay(displayElement) {
+    if (!displayElement || !displayElement.textContent) {
+        return null;
+    }
+
+    // Real URL is displayed as "Real URL: [actual-url]"
+    const match = displayElement.textContent.match(/Real URL: (.+)/);
+    return match ? match[1] : null;
+}
+
 // Connect to a WebSocket server
 function connectWebSocket(elements, state) {
-    const url = elements.wsUrlInput.value.trim();
+    // First try to get the real URL from the display
+    const realUrlFromDisplay = extractRealUrlFromDisplay(elements.realUrlDisplay);
+
+    // If we have a real URL and it's visible (i.e., we have path parameters), use it
+    const shouldUseRealUrl = realUrlFromDisplay &&
+                             elements.realUrlDisplay &&
+                             elements.realUrlDisplay.style.display !== 'none';
+
+    // Determine which URL to use
+    const editorUrl = elements.wsUrlInput.value.trim();
+    const url = shouldUseRealUrl ? realUrlFromDisplay : editorUrl;
+
     if (!url) {
         addStatusMessage('Please enter a WebSocket URL', 'error');
         return;

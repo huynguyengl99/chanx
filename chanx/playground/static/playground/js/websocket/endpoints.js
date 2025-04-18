@@ -1,14 +1,18 @@
 // Module for handling WebSocket endpoints
 
-import {addStatusMessage} from './messages.js';
-import {loadPathParameters, updateTabVisibility, parseExistingQueryParams} from './parameters.js';
-import {loadMessageExamples} from './messages.js';
+import { addStatusMessage } from './messages.js';
+import { loadPathParameters, updateTabVisibility, parseExistingQueryParams } from './parameters.js';
+import { loadMessageExamples } from './messages.js';
 
 let websocketInfoUrl = '';
+let elements;
+let state;
 
 // Initialize the endpoints module
-export function initEndpoints(infoUrl, elements, state) {
+export function initEndpoints(infoUrl, domElements, appState) {
     websocketInfoUrl = infoUrl;
+    elements = domElements;
+    state = appState;
 
     // Add event listener for endpoint selection
     elements.wsEndpointSelect.addEventListener('change', () => {
@@ -42,7 +46,7 @@ export function initEndpoints(infoUrl, elements, state) {
     });
 
     // Add event listener for refresh endpoints button
-    elements.refreshEndpointsBtn.addEventListener('click', loadEndpoints);
+    elements.refreshEndpointsBtn.addEventListener('click', () => loadEndpoints(elements, state));
 }
 
 // Load WebSocket endpoints from the server

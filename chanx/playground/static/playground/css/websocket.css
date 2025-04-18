@@ -454,3 +454,67 @@ input[readonly] {
 .tab-button[data-tab="connection-path-params"].active {
     border-bottom-color: #4a6da7;
 }
+
+.real-url-display {
+    font-style: italic;
+    color: #666;
+    margin-top: 5px;
+    font-size: 0.9em;
+    padding-left: 2px;
+    word-break: break-all;
+}
+
+/* Path parameter specific styles */
+#pathParamsList .param-row:hover {
+    background-color: rgba(0, 0, 0, 0.03);
+}
+
+/* Styling for the "Add Path Parameter" button */
+.add-param-btn {
+    margin-top: 10px;
+    padding: 6px 12px;
+    background-color: #4CAF50;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+}
+
+.add-param-btn:hover {
+    background-color: #45a049;
+}
+
+/* Styling for the remove button in path parameters */
+.remove-param {
+    background-color: #f44336;
+    color: white;
+    border: none;
+    border-radius: 50%;
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    font-size: 16px;
+    line-height: 1;
+}
+
+.remove-param:hover {
+    background-color: #d32f2f;
+}
+
+/* Empty state styling */
+.empty-params-state {
+    padding: 15px;
+    text-align: center;
+    color: #888;
+    font-style: italic;
+}
+
+/* Added style for readonly fields */
+input[readonly] {
+    background-color: #f5f5f5;
+    cursor: not-allowed;
+}

@@ -1,6 +1,6 @@
 // Module for handling WebSocket messages
 
-import {formatFileSize, syntaxHighlightJson} from './utils.js';
+import { formatFileSize, syntaxHighlightJson } from './utils.js';
 
 // Module-scope references
 let elements;

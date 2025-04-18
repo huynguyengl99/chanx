@@ -23,7 +23,7 @@ import structlog
 from asgiref.sync import sync_to_async
 from pydantic import ValidationError
 
-from chanx.generics import ChanxAuthView
+from chanx.auth import ChanxAuthView
 from chanx.messages.base import BaseIncomingMessage, BaseMessage
 from chanx.messages.outgoing import (
     AuthenticationMessage,

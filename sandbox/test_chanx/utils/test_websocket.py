@@ -11,7 +11,6 @@ from channels.routing import URLRouter
 from django.http import HttpRequest
 from django.urls import path
 
-import pytest
 from chanx.utils.websocket import (
     RouteInfo,
     _extract_routes_from_router,
@@ -311,7 +310,6 @@ class TestExtractRoutesFromRouter:
             assert routes == []
 
 
-@pytest.mark.skip("# TODO update later")
 class TestGetPatternString:
     """Tests for the _get_pattern_string_and_params function."""
 
@@ -322,16 +320,42 @@ class TestGetPatternString:
         mock_pattern.pattern = "^test-pattern$"
         mock_route.pattern = mock_pattern
 
-        pattern = _get_pattern_string_and_params(mock_route)
+        pattern, params = _get_pattern_string_and_params(mock_route)
         assert pattern == "test-pattern"
+        assert params is None
 
     def test_get_pattern_with_pattern_attribute_no_nested(self):
         """Test extracting pattern string from route with non-nested pattern."""
         mock_route = MagicMock()
         mock_route.pattern = "^another-pattern$"
 
-        pattern = _get_pattern_string_and_params(mock_route)
+        pattern, params = _get_pattern_string_and_params(mock_route)
         assert pattern == "another-pattern"
+        assert params is None
+
+    def test_get_pattern_with_path_parameters(self):
+        """Test extracting pattern string with path parameters."""
+        mock_route = MagicMock()
+        mock_pattern = MagicMock()
+        mock_pattern.pattern = "^user/(?P<user_id>[0-9]+)/profile$"
+        mock_route.pattern = mock_pattern
+
+        pattern, params = _get_pattern_string_and_params(mock_route)
+        assert pattern == "user/(?P<user_id>[0-9]+)/profile"
+        assert params == {"user_id": "[0-9]+"}
+
+    def test_get_pattern_with_multiple_path_parameters(self):
+        """Test extracting pattern string with multiple path parameters."""
+        mock_route = MagicMock()
+        mock_pattern = MagicMock()
+        mock_pattern.pattern = (
+            "^projects/(?P<project_id>[0-9]+)/tasks/(?P<task_id>[a-z0-9]+)$"
+        )
+        mock_route.pattern = mock_pattern
+
+        pattern, params = _get_pattern_string_and_params(mock_route)
+        assert pattern == "projects/(?P<project_id>[0-9]+)/tasks/(?P<task_id>[a-z0-9]+)"
+        assert params == {"project_id": "[0-9]+", "task_id": "[a-z0-9]+"}
 
 
 class TestIntegration:

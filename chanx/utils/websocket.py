@@ -55,11 +55,6 @@ class RouteInfo:
             path = path.replace(f"(?P<{param_name}>{pattern})", f":{param_name}")
         return path
 
-    @property
-    def friendly_full_url(self) -> str:
-        """Get the full user-friendly WebSocket URL with :param format."""
-        return f"{self.base_url}/{self.friendly_path}"
-
 
 # Type variable for the transformation result
 T = TypeVar("T")

@@ -1,7 +1,7 @@
 from typing import Any
 
+from chanx.auth import ChanxAuthView
 from chanx.generic.websocket import AsyncJsonWebsocketConsumer
-from chanx.generics import ChanxAuthView
 from chanx.messages.base import BaseMessage
 
 from chat.messages.chat_message import ChatIncomingMessage

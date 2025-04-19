@@ -41,4 +41,4 @@ class GroupChatAdmin(admin.ModelAdmin):
         "description",
     )
     list_filter = ("created", "modified")
-    raw_id_fields = ("members",)
+    raw_id_fields = ("users",)

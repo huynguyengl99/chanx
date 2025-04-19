@@ -6,7 +6,7 @@ from chat.models import GroupChat
 from chat.serializers import (
     GroupChatSerializer,
 )
-from chat.utils import make_list_group_chat_layer_name
+from chat.utils import name_group_chat
 
 channel_layer = get_channel_layer()
 
@@ -14,7 +14,7 @@ channel_layer = get_channel_layer()
 def task_handle_new_chat_message(group_chat_id):
     group_chat = GroupChat.objects.get(id=group_chat_id)
     serializer = GroupChatSerializer(group_chat)
-    chat_list_layer_name = make_list_group_chat_layer_name(group_chat_id)
+    chat_list_layer_name = name_group_chat(group_chat_id)
 
     async_to_sync(channel_layer.group_send)(
         chat_list_layer_name,

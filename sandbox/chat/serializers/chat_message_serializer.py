@@ -5,12 +5,6 @@ from chat.models import ChatMessage
 from chat.serializers import ManageChatMemberSerializer
 
 
-class RawMessageSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = ChatMessage
-        fields = ["id", "content", "created"]
-
-
 class ChatMessageSerializer(serializers.ModelSerializer):
     sender = ManageChatMemberSerializer(read_only=True)
     is_me = SerializerMethodField(read_only=True)

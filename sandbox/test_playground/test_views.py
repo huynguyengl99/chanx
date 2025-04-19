@@ -66,7 +66,9 @@ class TestWebSocketInfoView(APITestCase):
                 "message_examples": [
                     {
                         "name": "NewMessage",
-                        "description": "Base websocket message",
+                        "description": (
+                            "Base websocket message.\n\nAll message types should inherit from this class and define\na unique 'action' field using a Literal type.\n\nAttributes:\n    action: Discriminator field identifying message type\n    payload: Optional message payload data"
+                        ),
                         "example": {
                             "action": "new_message",
                             "payload": {"content": ANY},
@@ -90,7 +92,9 @@ class TestWebSocketInfoView(APITestCase):
                 "message_examples": [
                     {
                         "name": "NewChatMessage",
-                        "description": "Base websocket message",
+                        "description": (
+                            "Base websocket message.\n\nAll message types should inherit from this class and define\na unique 'action' field using a Literal type.\n\nAttributes:\n    action: Discriminator field identifying message type\n    payload: Optional message payload data"
+                        ),
                         "example": {
                             "action": "new_chat_message",
                             "payload": {"content": ANY},

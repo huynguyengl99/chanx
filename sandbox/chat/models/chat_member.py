@@ -15,8 +15,12 @@ class ChatMember(TimeStampedModel):
         default=ChatMemberRole.MEMBER,
         help_text="Chat member roles prefix with 2xxx",
     )
-    group_chat = models.ForeignKey("chat.GroupChat", on_delete=models.CASCADE)
-    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    group_chat = models.ForeignKey(
+        "chat.GroupChat", on_delete=models.CASCADE, related_name="members"
+    )
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="members"
+    )
 
     nick_name = models.CharField(default="", blank=True)
 

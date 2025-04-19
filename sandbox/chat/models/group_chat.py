@@ -5,7 +5,7 @@ from django_extensions.db.models import TimeStampedModel, TitleDescriptionModel
 
 
 class GroupChat(TitleDescriptionModel, TimeStampedModel):
-    members = models.ManyToManyField(
+    users = models.ManyToManyField(
         settings.AUTH_USER_MODEL,
         related_name="chat_groups",
         through="chat.ChatMember",

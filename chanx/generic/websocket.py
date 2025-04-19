@@ -2,29 +2,38 @@ import asyncio
 import uuid
 from abc import ABC, abstractmethod
 from collections.abc import Iterable, Sequence
-from typing import Any, Literal, cast
+from typing import (
+    Any,
+    Generic,
+    Literal,
+    TypeVar,
+    cast,
+)
 
+from channels.exceptions import InvalidChannelLayerError
 from channels.generic.websocket import (
     AsyncJsonWebsocketConsumer as BaseAsyncJsonWebsocketConsumer,
 )
 from django.contrib.auth.base_user import AbstractBaseUser
 from django.contrib.auth.models import AnonymousUser
+from django.db.models import Model
 from django.http import HttpRequest
-from rest_framework import status
 from rest_framework.authentication import BaseAuthentication
 from rest_framework.permissions import (
     BasePermission,
     OperandHolder,
     SingleOperandHolder,
 )
-from rest_framework.response import Response
 
 import structlog
-from asgiref.sync import sync_to_async
 from pydantic import ValidationError
 
-from chanx.auth import ChanxAuthView
-from chanx.messages.base import BaseIncomingMessage, BaseMessage
+from chanx.generic.authenticator import ChanxWebsocketAuthenticator, QuerysetLike
+from chanx.messages.base import (
+    BaseIncomingMessage,
+    BaseMessage,
+    BaseOutgoingGroupMessage,
+)
 from chanx.messages.outgoing import (
     AuthenticationMessage,
     AuthenticationPayload,
@@ -32,12 +41,19 @@ from chanx.messages.outgoing import (
     ErrorMessage,
 )
 from chanx.settings import chanx_settings
+from chanx.types import GroupMemberEvent
 from chanx.utils.asyncio import create_task
 from chanx.utils.logging import logger
-from chanx.utils.request import request_from_scope
+
+_MT_co = TypeVar("_MT_co", bound=Model, covariant=True)
 
 
-class AsyncJsonWebsocketConsumer(BaseAsyncJsonWebsocketConsumer, ABC):  # type: ignore
+# Type for users that might have an ID
+class UserWithID(AbstractBaseUser):
+    id: int
+
+
+class AsyncJsonWebsocketConsumer(BaseAsyncJsonWebsocketConsumer, Generic[_MT_co], ABC):  # type: ignore
     """
     Base class for asynchronous JSON WebSocket consumers with authentication and permissions.
 
@@ -46,8 +62,11 @@ class AsyncJsonWebsocketConsumer(BaseAsyncJsonWebsocketConsumer, ABC):  # type: 
     `receive_message` and set `INCOMING_MESSAGE_SCHEMA`.
 
     Attributes:
-        permission_classes: DRF permission classes for connection authorization
         authentication_classes: DRF authentication classes for connection verification
+        permission_classes: DRF permission classes for connection authorization
+        queryset: QuerySet or Manager used for retrieving objects
+        auth_method: HTTP verb to emulate for authentication
+        authenticator_class: Class to use for authentication
         send_completion: Whether to send completion message after processing
         send_message_immediately: Whether to yield control after sending messages
         log_received_message: Whether to log received messages
@@ -55,13 +74,20 @@ class AsyncJsonWebsocketConsumer(BaseAsyncJsonWebsocketConsumer, ABC):  # type: 
         log_ignored_actions: Message actions that should not be logged
         send_authentication_message: Whether to send auth status after connection
         INCOMING_MESSAGE_SCHEMA: Pydantic model class for message validation
+        OUTGOING_GROUP_MESSAGE_SCHEMA: Pydantic model class for group messages
     """
 
+    # Authentication attributes
+    authentication_classes: Sequence[type[BaseAuthentication]] | None = None
     permission_classes: (
         Sequence[type[BasePermission] | OperandHolder | SingleOperandHolder] | None
     ) = None
-    authentication_classes: Sequence[type[BaseAuthentication]] | None = None
+    queryset: QuerysetLike = True
+    auth_method: Literal["get", "post", "put", "patch", "delete", "options"] = "get"
 
+    authenticator_class: type[Any] = ChanxWebsocketAuthenticator
+
+    # Message handling configuration
     send_completion: bool | None = None
     send_message_immediately: bool | None = None
     log_received_message: bool | None = None
@@ -69,19 +95,9 @@ class AsyncJsonWebsocketConsumer(BaseAsyncJsonWebsocketConsumer, ABC):  # type: 
     log_ignored_actions: Iterable[str] | None = None
     send_authentication_message: bool | None = None
 
+    # Message schemas
     INCOMING_MESSAGE_SCHEMA: type[BaseIncomingMessage]
-
-    auth_class = ChanxAuthView
-    auth_method: Literal[
-        "get",
-        "post",
-        "put",
-        "patch",
-        "delete",
-        "head",
-        "options",
-        "trace",
-    ] = "get"
+    OUTGOING_GROUP_MESSAGE_SCHEMA: type[BaseOutgoingGroupMessage]
 
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         """
@@ -95,6 +111,7 @@ class AsyncJsonWebsocketConsumer(BaseAsyncJsonWebsocketConsumer, ABC):  # type: 
             ValueError: If INCOMING_MESSAGE_SCHEMA is not set
         """
         super().__init__(*args, **kwargs)
+        # Initialize configuration from settings if not set
         if self.send_completion is None:
             self.send_completion = chanx_settings.SEND_COMPLETION
 
@@ -122,28 +139,123 @@ class AsyncJsonWebsocketConsumer(BaseAsyncJsonWebsocketConsumer, ABC):  # type: 
         if not hasattr(self, "INCOMING_MESSAGE_SCHEMA"):
             raise ValueError("INCOMING_MESSAGE_SCHEMA attribute is required.")
 
-        self._v = self.auth_class()
+        # Create authenticator
+        self.authenticator = self._create_authenticator()
 
-        if self.authentication_classes is not None:
-            self._v.authentication_classes = self.authentication_classes
-        if self.permission_classes is not None:
-            self._v.permission_classes = self.permission_classes
+        # Initialize instance attributes
+        self.user: UserWithID | AnonymousUser | None = None
+        self.obj: _MT_co | None = None
+        self.group_name: str | None = None
+        self.connecting: bool = False
+        self.request: HttpRequest | None = None
 
-        self.user: AbstractBaseUser | AnonymousUser | None = None
+    def _create_authenticator(self) -> Any:
+        """
+        Create and configure the authenticator for this consumer.
+
+        Returns:
+            Configured authenticator instance
+        """
+        authenticator = self.authenticator_class()
+
+        # Copy authentication attributes to the authenticator
+        for attr in [
+            "authentication_classes",
+            "permission_classes",
+            "queryset",
+            "auth_method",
+        ]:
+            if hasattr(self, attr):
+                setattr(authenticator, attr, getattr(self, attr))
+
+        # Validate configuration during initialization
+        authenticator.validate_configuration()
+
+        return authenticator
 
     # Connection lifecycle methods
 
     async def websocket_connect(self, message: dict[str, Any]) -> None:
         """
-        Handle WebSocket connection request.
+        Handle WebSocket connection request with authentication.
 
-        Accepts the connection and authenticates the user.
+        Accepts the connection, authenticates the user, and either
+        adds the user to appropriate groups or closes the connection.
 
         Args:
             message: The connection message from Channels
         """
         await self.accept()
-        await self._authenticate()
+        self.connecting = True
+
+        # Authenticate the connection
+        auth_result = await self.authenticator.authenticate(self.scope)
+
+        # Store authentication results
+        self.user = cast(UserWithID | AnonymousUser | None, auth_result.user)
+        self.obj = cast(_MT_co | None, auth_result.obj)
+        self.request = self.authenticator.request
+
+        # Send authentication status if configured
+        if self.send_authentication_message:
+            await self.send_message(
+                AuthenticationMessage(
+                    payload=AuthenticationPayload(
+                        status_code=auth_result.status_code,
+                        status_text=auth_result.status_text,
+                        data=auth_result.data,
+                    )
+                )
+            )
+
+        # Handle authentication result
+        if auth_result.is_authenticated:
+            await self.add_groups()
+            await self.post_authentication()
+        else:
+            self.connecting = False
+            await self.close()
+
+    async def post_authentication(self) -> None:
+        """
+        Hook for additional actions after successful authentication.
+
+        Subclasses can override this method to perform custom actions
+        after a successful authentication.
+        """
+        pass
+
+    async def add_groups(self) -> None:
+        """
+        Add the consumer to channel groups.
+
+        Retrieves groups from build_groups() and adds this consumer
+        to each channel group for broadcast messaging.
+
+        Raises:
+            InvalidChannelLayerError: If channel layer doesn't support groups
+        """
+        custom_groups = await self.build_groups()
+        self.groups.extend(custom_groups)
+        try:
+            for group in self.groups:
+                await self.channel_layer.group_add(group, self.channel_name)
+        except AttributeError as e:
+            raise InvalidChannelLayerError(
+                "BACKEND is unconfigured or doesn't support groups"
+            ) from e
+
+    async def build_groups(self) -> Iterable[str]:
+        """
+        Build list of channel groups to join.
+
+        Subclasses should override this method to define which groups
+        the consumer should join based on authentication results.
+
+        Returns:
+            Iterable of group names to join
+        """
+        return []
 
     async def websocket_disconnect(self, message: dict[str, Any]) -> None:
         """
@@ -194,6 +306,7 @@ class AsyncJsonWebsocketConsumer(BaseAsyncJsonWebsocketConsumer, ABC):  # type: 
             message: The validated message object
             **kwargs: Additional keyword arguments
         """
+        pass
 
     async def send_json(self, content: dict[str, Any], close: bool = False) -> None:
         """
@@ -226,76 +339,96 @@ class AsyncJsonWebsocketConsumer(BaseAsyncJsonWebsocketConsumer, ABC):  # type: 
         """
         await self.send_json(message.model_dump())
 
-    # Authentication methods
+    # Group operations methods
 
-    async def _authenticate(self) -> None:
+    async def send_to_group(
+        self,
+        content: dict[str, Any],
+        groups: list[str] | None = None,
+        *,
+        exclude_me: bool = True,
+        kind: Literal["json", "message"] = "json",
+    ) -> None:
         """
-        Authenticate the WebSocket connection.
-
-        Uses DRF authentication classes and sends status if configured.
-        Closes connection on authentication failure.
-        """
-        res, req = await self._perform_dispatch()
-
-        self.user = req.user
-
-        await logger.ainfo("Finished authenticating ws request")
-
-        # We need to check status_code attribute which exists on both HttpResponse and Response
-        status_code = getattr(res, "status_code", 500)
-        data = getattr(res, "data", {}) if status_code != status.HTTP_200_OK else "OK"
-        if self.send_authentication_message:
-            await self.send_message(
-                AuthenticationMessage(
-                    payload=AuthenticationPayload(status_code=status_code, data=data)
-                )
-            )
-        if status_code != status.HTTP_200_OK:
-            await self.close()
-
-    @sync_to_async
-    def _perform_dispatch(self) -> tuple[Response, HttpRequest]:
-        """
-        Perform authentication dispatch synchronously.
-
-        Creates request from WebSocket scope and runs it through
-        the DRF authentication pipeline.
-
-        Returns:
-            Tuple of (response, request) objects
-        """
-        req = request_from_scope(self.scope, self.auth_method.upper())
-        self._bind_structlog_request_context(req)
-
-        logger.info("Start to authenticate ws request")
-        url_route: dict[str, Any] = self.scope["url_route"]
-        res = cast(
-            Response, self._v.dispatch(req, *url_route["args"], **url_route["kwargs"])
-        )
-
-        # Assuming res has a render method (it does if it's a DRF Response)
-        res.render()
-
-        # For DRF Response objects, renderer_context would be available
-        req = res.renderer_context.get("request")  # type: ignore
-
-        return res, req
-
-    def _bind_structlog_request_context(self, raw_request: HttpRequest) -> None:
-        """
-        Bind structured logging context variables from request.
-
-        Extracts request ID, path and IP for consistent logging.
+        Send content to one or more channel groups.
 
         Args:
-            raw_request: The HTTP request object
+            content: Content to send
+            groups: Group names to send to (defaults to self.groups)
+            exclude_me: Whether to exclude the sending consumer
+            kind: Type of message ('json' or 'message')
         """
-        request_id = raw_request.headers.get("x-request-id") or str(uuid.uuid4())
+        if groups is None:
+            groups = self.groups
+        for group in groups:
+            user_id = None
+            if isinstance(self.user, UserWithID):
+                user_id = self.user.id
 
-        structlog.contextvars.bind_contextvars(request_id=request_id)
+            await self.channel_layer.group_send(
+                group,
+                {
+                    "type": "send_group_member",
+                    "content": content,
+                    "kind": kind,
+                    "exclude_me": exclude_me,
+                    "from_channel": self.channel_name,
+                    "from_user_id": user_id,
+                },
+            )
 
-        structlog.contextvars.bind_contextvars(path=raw_request.path)
-        structlog.contextvars.bind_contextvars(ip=self.scope.get("client", [None])[0])
+    async def send_group_message(
+        self,
+        message: BaseMessage,
+        groups: list[str] | None = None,
+        *,
+        exclude_me: bool = True,
+    ) -> None:
+        """
+        Send a BaseMessage object to one or more groups.
+
+        Args:
+            message: Message object to send
+            groups: Group names to send to (defaults to self.groups)
+            exclude_me: Whether to exclude the sending consumer
+        """
+        await self.send_to_group(
+            message.model_dump(), groups, kind="message", exclude_me=exclude_me
+        )
+
+    async def send_group_member(self, event: GroupMemberEvent) -> None:
+        """
+        Handle incoming group message and relay to client.
+
+        Processes group messages, adds metadata like is_mine and is_current,
+        and forwards to the client socket.
+
+        Args:
+            event: Group member event data
+        """
+        content = event["content"]
+        exclude_me = event["exclude_me"]
+        kind = event["kind"]
+        from_channel = event["from_channel"]
+        from_user_id = event["from_user_id"]
+
+        if exclude_me and self.channel_name == from_channel:
+            return
+
+        if kind == "message":
+            is_mine = False
+            if isinstance(self.user, UserWithID) and from_user_id is not None:
+                is_mine = self.user.id == from_user_id
+
+            content.update(
+                {"is_mine": is_mine, "is_current": self.channel_name == from_channel}
+            )
+            message = self.OUTGOING_GROUP_MESSAGE_SCHEMA.model_validate(
+                {"group_message": content}
+            ).group_message
+            await self.send_message(message)
+        else:
+            await self.send_json(content)
 
     # Helper methods
 

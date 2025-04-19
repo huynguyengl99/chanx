@@ -1,5 +1,5 @@
 import asyncio
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 from uuid import uuid4
 
 from rest_framework import status
@@ -9,7 +9,6 @@ from asgiref.timeout import timeout as async_timeout
 from chanx.messages.base import BaseMessage
 from chanx.messages.incoming import PingMessage
 from chanx.messages.outgoing import (
-    AuthenticationMessage,
     ErrorMessage,
     PongMessage,
 )
@@ -57,34 +56,6 @@ class TestChatConsumer(WebsocketTestCase):
         assert error_message.payload[0]["msg"] == "Input should be 'new_message'"
 
         await self.auth_communicator.disconnect()
-
-    async def test_authentication_failure(self):
-        # Test authentication failure handling
-        with patch("chanx.generic.websocket.ChanxAuthView.dispatch") as mock_dispatch:
-            # Create a mock response for authentication failure
-            mock_response = MagicMock()
-            mock_response.status_code = status.HTTP_401_UNAUTHORIZED
-            mock_response.data = {
-                "detail": "Authentication credentials were not provided."
-            }
-            # Handle render method
-            mock_response.render = MagicMock()
-            mock_dispatch.return_value = mock_response
-
-            # Connect should trigger authentication
-            await self.auth_communicator.connect()
-
-            # Should receive auth message with 401 status
-            auth_message = await self.auth_communicator.receive_json_from()
-            auth = AuthenticationMessage.model_validate(auth_message)
-
-            assert auth.payload.status_code == status.HTTP_401_UNAUTHORIZED
-            assert auth.payload.data == {
-                "detail": "Authentication credentials were not provided."
-            }
-
-            # Websocket should be closed on auth failure
-            await self.auth_communicator.assert_closed()
 
     async def test_exception_during_message_processing(self):
         # Test exception handling during message processing

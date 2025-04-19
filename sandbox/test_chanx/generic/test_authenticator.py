@@ -12,7 +12,7 @@ from rest_framework.request import Request
 from rest_framework.response import Response
 
 import pytest
-from chanx.auth import ChanxAuthView, ChanxSerializer
+from chanx.generic.authenticator import ChanxAuthView, ChanxSerializer
 
 
 class TestChanxSerializer:
@@ -45,7 +45,7 @@ class TestChanxAuthView:
 
     def test_get_response_without_detail(self):
         """Test get_response when detail is None and no lookup param."""
-        response = self.view.get_response()
+        response = self.view.get_response(self.view.request)
         assert isinstance(response, Response)
         assert response.data == {"detail": "ok"}
         assert response.status_code == 200
@@ -57,7 +57,7 @@ class TestChanxAuthView:
         # Mock get_object to prevent actual database lookup
         self.view.get_object = MagicMock()
 
-        response = self.view.get_response()
+        response = self.view.get_response(self.view.request)
         assert self.view.get_object.called
         assert response.data == {"detail": "ok"}
 
@@ -68,7 +68,7 @@ class TestChanxAuthView:
         # Mock get_object to prevent actual database lookup
         self.view.get_object = MagicMock()
 
-        response = self.view.get_response()
+        response = self.view.get_response(self.view.request)
         assert self.view.get_object.called
         assert response.data == {"detail": "ok"}
 
@@ -79,7 +79,7 @@ class TestChanxAuthView:
         # No need to mock get_object as it shouldn't be called
         self.view.get_object = MagicMock()
 
-        response = self.view.get_response()
+        response = self.view.get_response(self.view.request)
         assert not self.view.get_object.called
         assert response.data == {"detail": "ok"}
 
@@ -90,7 +90,7 @@ class TestChanxAuthView:
 
         self.view.get_object = MagicMock()
 
-        response = self.view.get_response()
+        response = self.view.get_response(self.view.request)
         assert not self.view.get_object.called
         assert response.data == {"detail": "ok"}
 
@@ -119,9 +119,10 @@ def test_http_method_calls_get_response(method_name):
     # Create a request for the specific method
     request_method = getattr(request_factory, method_name)
     request = request_method("/")
+    drf_request = Request(request)
 
     # Set up the view
-    view.request = Request(request)
+    view.request = drf_request
     view.kwargs = {}
 
     with patch.object(view, "get_response") as mock_get_response:
@@ -129,8 +130,8 @@ def test_http_method_calls_get_response(method_name):
 
         # Call the method
         method = getattr(view, method_name)
-        response = method(view.request)
+        response = method(drf_request)
 
         # Verify get_response was called and its return value was returned
-        mock_get_response.assert_called_once()
+        mock_get_response.assert_called_once_with(drf_request)
         assert response == mock_get_response.return_value

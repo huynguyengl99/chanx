@@ -1,14 +1,19 @@
 import asyncio
-from typing import Any
+from typing import Any, cast
 
 from channels.testing import WebsocketCommunicator as BaseWebsocketCommunicator
 from django.test import TransactionTestCase
+from rest_framework import status
 
 from asgiref.sync import async_to_sync
 from asgiref.timeout import timeout as async_timeout
 
 from chanx.messages.base import BaseMessage
-from chanx.messages.outgoing import ACTION_COMPLETE, AuthenticationMessage
+from chanx.messages.outgoing import (
+    ACTION_COMPLETE,
+    GROUP_ACTION_COMPLETE,
+    AuthenticationMessage,
+)
 from chanx.settings import chanx_settings
 from chanx.utils.asgi import get_websocket_application
 
@@ -30,15 +35,18 @@ class WebsocketCommunicator(BaseWebsocketCommunicator):  # type: ignore
         spec_version: str | None = None,
     ) -> None:
         super().__init__(application, path, headers, subprotocols, spec_version)
-        self.connected = False
+        self._connected = False
 
-    async def receive_all_json(self, timeout: int = 5) -> list[dict[str, Any]]:
+    async def receive_all_json(
+        self, timeout: int = 5, *, wait_group: bool = False
+    ) -> list[dict[str, Any]]:
         """
         Receives and collects all JSON messages until an ACTION_COMPLETE message
         is received or timeout occurs.
 
         Args:
             timeout: Maximum time to wait for messages (in seconds)
+            wait_group: wait until the complete group messages are received
 
         Returns:
             List of received JSON messages
@@ -49,6 +57,11 @@ class WebsocketCommunicator(BaseWebsocketCommunicator):  # type: ignore
                 message = await self.receive_json_from(timeout)
                 message_action = message.get(chanx_settings.MESSAGE_ACTION_KEY)
                 if message_action == ACTION_COMPLETE:
+                    if not wait_group:
+                        break
+                    else:
+                        continue
+                elif wait_group and message_action == GROUP_ACTION_COMPLETE:
                     break
                 messages.append(message)
         return messages
@@ -63,7 +76,10 @@ class WebsocketCommunicator(BaseWebsocketCommunicator):  # type: ignore
         await self.send_json_to(message.model_dump())
 
     async def wait_for_auth(
-        self, send_authentication_message: bool | None = None, max_auth_time: float = 1
+        self,
+        send_authentication_message: bool | None = None,
+        max_auth_time: float = 0.5,
+        after_auth_time: float = 0.1,
     ) -> AuthenticationMessage | None:
         """
         Waits for and returns an authentication message if enabled in settings.
@@ -80,10 +96,16 @@ class WebsocketCommunicator(BaseWebsocketCommunicator):  # type: ignore
 
         if send_authentication_message:
             json_message = await self.receive_json_from(max_auth_time)
+            # make sure any other pending work still have chance to done after that
+            await asyncio.sleep(after_auth_time)
             return AuthenticationMessage.model_validate(json_message)
         else:
             await asyncio.sleep(max_auth_time)
             return None
+
+    async def assert_authenticated_status_ok(self) -> None:
+        auth_message = cast(AuthenticationMessage, await self.wait_for_auth())
+        assert auth_message.payload.status_code == status.HTTP_200_OK
 
     async def assert_closed(self) -> None:
         """Asserts that the WebSocket has been closed."""
@@ -102,15 +124,10 @@ class WebsocketCommunicator(BaseWebsocketCommunicator):  # type: ignore
         """
         try:
             res: tuple[bool, int] = await super().connect(timeout)
-            self.connected = True
+            self._connected = True
             return res
         except:
             raise
-
-    @property
-    def is_alive(self) -> bool:
-        """Returns whether the WebSocket connection is still alive."""
-        return self.future.done() and self.connected
 
 
 class WebsocketTestCase(TransactionTestCase):
@@ -122,21 +139,14 @@ class WebsocketTestCase(TransactionTestCase):
     from the ASGI application.
     """
 
-    ws_path: str
+    ws_path: str = ""
     router: Any = None
-
-    @classmethod
-    def setUpClass(cls) -> None:
-        """Ensures ws_path is set in the subclass."""
-        super().setUpClass()
-        if not hasattr(cls, "ws_path"):
-            raise AttributeError(f"ws_path is not set in {cls.__name__}")
 
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         """Initializes the test case and discovers the WebSocket router."""
         super().__init__(*args, **kwargs)
 
-        self._auth_communicator_instance: WebsocketCommunicator | None = None
+        self._communicators: list[WebsocketCommunicator] = []
 
         if not self.router:
             # First try to get the complete WebSocket application with middleware
@@ -168,29 +178,68 @@ class WebsocketTestCase(TransactionTestCase):
         super().setUp()
         self.ws_headers: list[tuple[bytes, bytes]] = self.get_ws_headers()
         self.subprotocols: list[str] = self.get_subprotocols()
-        self._auth_communicator_instance = None
+        self._communicators = []
 
     def tearDown(self) -> None:
-        """Cleans up after each test, ensuring WebSocket connections are closed."""
-        if (
-            self._auth_communicator_instance
-            and self._auth_communicator_instance.is_alive
-        ):
-            async_to_sync(self._auth_communicator_instance.disconnect)()
-        self._auth_communicator_instance = None
+        """Cleans up after each test, ensuring all WebSocket connections are closed."""
+        for communicator in self._communicators:
+            try:
+                async_to_sync(communicator.disconnect)()
+            except Exception:  # noqa
+                pass
+        self._communicators = []
+
+    def create_communicator(
+        self,
+        *,
+        router: Any | None = None,
+        ws_path: str | None = None,
+        headers: list[tuple[bytes, bytes]] | None = None,
+        subprotocols: list[str] | None = None,
+    ) -> WebsocketCommunicator:
+        """
+        Creates a WebsocketCommunicator with the given parameters.
+
+        Args:
+            router: Application to use (defaults to self.router)
+            ws_path: WebSocket path to connect to (defaults to self.ws_path)
+            headers: HTTP headers to include (defaults to self.ws_headers)
+            subprotocols: WebSocket subprotocols to use (defaults to self.subprotocols)
+
+        Returns:
+            A configured WebsocketCommunicator instance
+        """
+        if router is None:
+            router = self.router
+        if ws_path is None:
+            ws_path = self.ws_path
+        if headers is None:
+            headers = self.ws_headers
+        if subprotocols is None:
+            subprotocols = self.subprotocols
+
+        if not ws_path:
+            raise AttributeError(f"ws_path is not set in {self.__class__.__name__}")
+
+        communicator = WebsocketCommunicator(
+            router,
+            ws_path,
+            headers=headers,
+            subprotocols=subprotocols,
+        )
+
+        # Track communicator for cleanup
+        self._communicators.append(communicator)
+
+        return communicator
 
     @property
     def auth_communicator(self) -> WebsocketCommunicator:
         """
         Returns a connected WebsocketCommunicator instance.
-        The instance is created only once per test method.
+        The instance is created using create_communicator if not already exists.
         """
-        if not self._auth_communicator_instance:
-            self._auth_communicator_instance = WebsocketCommunicator(
-                self.router,
-                self.ws_path,
-                headers=self.ws_headers,
-                subprotocols=self.subprotocols,
-            )
+        if not self._communicators:
+            self.create_communicator()
 
-        return self._auth_communicator_instance
+        return self._communicators[0]

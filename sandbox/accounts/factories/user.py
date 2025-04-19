@@ -10,4 +10,3 @@ class UserFactory(DjangoModelFactory):
 
     email = factory.Faker("email")
     password = factory.PostGenerationMethodCall("set_password", "password")
-    is_active = True

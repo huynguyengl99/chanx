@@ -72,3 +72,11 @@ class CompleteMessage(BaseMessage):
     """
 
     action: Literal["complete"] = ACTION_COMPLETE
+
+
+GROUP_ACTION_COMPLETE: Literal["group_complete"] = "group_complete"
+
+
+class GroupCompleteMessage(BaseMessage):
+
+    action: Literal["group_complete"] = GROUP_ACTION_COMPLETE

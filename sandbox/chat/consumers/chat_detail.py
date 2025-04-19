@@ -3,6 +3,8 @@ from typing import Any, cast
 
 from chanx.generic.websocket import AsyncJsonWebsocketConsumer
 from chanx.messages.base import BaseMessage
+from chanx.messages.incoming import PingMessage
+from chanx.messages.outgoing import PongMessage
 
 from chat.messages.chat import ChatIncomingMessage, MessagePayload, NewChatMessage
 from chat.messages.group import MemberMessage, OutgoingGroupMessage
@@ -34,6 +36,8 @@ class ChatDetailConsumer(AsyncJsonWebsocketConsumer):
 
     async def receive_message(self, message: BaseMessage, **kwargs: Any) -> None:
         match message:
+            case PingMessage():
+                await self.send_message(PongMessage())
             case NewChatMessage():
                 payload: MessagePayload = message.payload
                 new_message = await ChatMessage.objects.acreate(
@@ -43,5 +47,5 @@ class ChatDetailConsumer(AsyncJsonWebsocketConsumer):
                 message = ChatMessageSerializer(new_message).data
 
                 await self.send_group_message(
-                    MemberMessage(payload=message), exclude_me=False
+                    MemberMessage(payload=message), exclude_current=False
                 )

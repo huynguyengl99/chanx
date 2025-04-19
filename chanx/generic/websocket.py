@@ -14,8 +14,7 @@ from channels.exceptions import InvalidChannelLayerError
 from channels.generic.websocket import (
     AsyncJsonWebsocketConsumer as BaseAsyncJsonWebsocketConsumer,
 )
-from django.contrib.auth.base_user import AbstractBaseUser
-from django.contrib.auth.models import AnonymousUser
+from django.contrib.auth.models import AnonymousUser, User
 from django.db.models import Model
 from django.http import HttpRequest
 from rest_framework.authentication import BaseAuthentication
@@ -39,6 +38,7 @@ from chanx.messages.outgoing import (
     AuthenticationPayload,
     CompleteMessage,
     ErrorMessage,
+    GroupCompleteMessage,
 )
 from chanx.settings import chanx_settings
 from chanx.types import GroupMemberEvent
@@ -46,11 +46,6 @@ from chanx.utils.asyncio import create_task
 from chanx.utils.logging import logger
 
 _MT_co = TypeVar("_MT_co", bound=Model, covariant=True)
-
-
-# Type for users that might have an ID
-class UserWithID(AbstractBaseUser):
-    id: int
 
 
 class AsyncJsonWebsocketConsumer(BaseAsyncJsonWebsocketConsumer, Generic[_MT_co], ABC):  # type: ignore
@@ -143,7 +138,7 @@ class AsyncJsonWebsocketConsumer(BaseAsyncJsonWebsocketConsumer, Generic[_MT_co]
         self.authenticator = self._create_authenticator()
 
         # Initialize instance attributes
-        self.user: UserWithID | AnonymousUser | None = None
+        self.user: User | AnonymousUser | None = None
         self.obj: _MT_co | None = None
         self.group_name: str | None = None
         self.connecting: bool = False
@@ -192,7 +187,7 @@ class AsyncJsonWebsocketConsumer(BaseAsyncJsonWebsocketConsumer, Generic[_MT_co]
         auth_result = await self.authenticator.authenticate(self.scope)
 
         # Store authentication results
-        self.user = cast(UserWithID | AnonymousUser | None, auth_result.user)
+        self.user = auth_result.user
         self.obj = cast(_MT_co | None, auth_result.obj)
         self.request = self.authenticator.request
 
@@ -341,12 +336,12 @@ class AsyncJsonWebsocketConsumer(BaseAsyncJsonWebsocketConsumer, Generic[_MT_co]
 
     # Group operations methods
 
-    async def send_to_group(
+    async def send_to_groups(
         self,
         content: dict[str, Any],
         groups: list[str] | None = None,
         *,
-        exclude_me: bool = True,
+        exclude_current: bool = True,
         kind: Literal["json", "message"] = "json",
     ) -> None:
         """
@@ -355,15 +350,15 @@ class AsyncJsonWebsocketConsumer(BaseAsyncJsonWebsocketConsumer, Generic[_MT_co]
         Args:
             content: Content to send
             groups: Group names to send to (defaults to self.groups)
-            exclude_me: Whether to exclude the sending consumer
+            exclude_current: Whether to exclude the sending consumer
             kind: Type of message ('json' or 'message')
         """
         if groups is None:
             groups = self.groups
         for group in groups:
-            user_id = None
-            if isinstance(self.user, UserWithID):
-                user_id = self.user.id
+            user_pk = None
+            if isinstance(self.user, User):
+                user_pk = self.user.pk
 
             await self.channel_layer.group_send(
                 group,
@@ -371,9 +366,9 @@ class AsyncJsonWebsocketConsumer(BaseAsyncJsonWebsocketConsumer, Generic[_MT_co]
                     "type": "send_group_member",
                     "content": content,
                     "kind": kind,
-                    "exclude_me": exclude_me,
+                    "exclude_current": exclude_current,
                     "from_channel": self.channel_name,
-                    "from_user_id": user_id,
+                    "from_user_pk": user_pk,
                 },
             )
 
@@ -382,7 +377,7 @@ class AsyncJsonWebsocketConsumer(BaseAsyncJsonWebsocketConsumer, Generic[_MT_co]
         message: BaseMessage,
         groups: list[str] | None = None,
         *,
-        exclude_me: bool = True,
+        exclude_current: bool = True,
     ) -> None:
         """
         Send a BaseMessage object to one or more groups.
@@ -390,10 +385,13 @@ class AsyncJsonWebsocketConsumer(BaseAsyncJsonWebsocketConsumer, Generic[_MT_co]
         Args:
             message: Message object to send
             groups: Group names to send to (defaults to self.groups)
-            exclude_me: Whether to exclude the sending consumer
+            exclude_current: Whether to exclude the sending consumer
         """
-        await self.send_to_group(
-            message.model_dump(), groups, kind="message", exclude_me=exclude_me
+        await self.send_to_groups(
+            message.model_dump(),
+            groups,
+            kind="message",
+            exclude_current=exclude_current,
         )
 
     async def send_group_member(self, event: GroupMemberEvent) -> None:
@@ -407,18 +405,18 @@ class AsyncJsonWebsocketConsumer(BaseAsyncJsonWebsocketConsumer, Generic[_MT_co]
             event: Group member event data
         """
         content = event["content"]
-        exclude_me = event["exclude_me"]
+        exclude_current = event["exclude_current"]
         kind = event["kind"]
         from_channel = event["from_channel"]
-        from_user_id = event["from_user_id"]
+        from_user_pk = event["from_user_pk"]
 
-        if exclude_me and self.channel_name == from_channel:
+        if exclude_current and self.channel_name == from_channel:
             return
 
         if kind == "message":
             is_mine = False
-            if isinstance(self.user, UserWithID) and from_user_id is not None:
-                is_mine = self.user.id == from_user_id
+            if isinstance(self.user, User) and from_user_pk is not None:
+                is_mine = self.user.pk == from_user_pk
 
             content.update(
                 {"is_mine": is_mine, "is_current": self.channel_name == from_channel}
@@ -429,6 +427,9 @@ class AsyncJsonWebsocketConsumer(BaseAsyncJsonWebsocketConsumer, Generic[_MT_co]
             await self.send_message(message)
         else:
             await self.send_json(content)
+
+        if self.send_completion:
+            await self.send_message(GroupCompleteMessage())
 
     # Helper methods
 

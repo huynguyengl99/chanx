@@ -61,11 +61,6 @@ class MyConsumerTestCase(WebsocketTestCase):
             assert all_messages == [PongMessage().model_dump()]
 
         assert cap_logs == [
-            {
-                "sent_action": "authentication",
-                "event": "Sent websocket json",
-                "log_level": "info",
-            },
             {"event": "Received websocket json", "log_level": "info"},
             {
                 "sent_action": "pong",

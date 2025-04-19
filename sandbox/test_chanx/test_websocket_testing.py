@@ -15,7 +15,9 @@ class TestWebsocketTesting(TestCase):
             class ImplementedWebsocketTestCase(WebsocketTestCase):
                 pass
 
-            ImplementedWebsocketTestCase.setUpClass()
+            test_case = ImplementedWebsocketTestCase()
+            test_case.setUp()
+            test_case.create_communicator()
 
     def test_websocket_application_not_found(self):
         # Mock get_websocket_application to return None

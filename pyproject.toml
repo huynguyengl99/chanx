@@ -82,7 +82,7 @@ license = {file = "LICENSE"}
 name = "chanx"
 readme = "README.md"
 requires-python = ">=3.11,<4.0"
-version = "0.0.0"
+version = "0.1.0"
 
 [project.optional-dependencies]
 jwt = [
@@ -113,6 +113,7 @@ line-length = 88
 preview = true
 
 [tool.commitizen]
+major_version_zero = true
 name = "cz_conventional_commits"
 tag_format = "v$version"
 update_changelog_on_bump = true

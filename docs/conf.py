@@ -10,9 +10,15 @@ import sys
 from importlib.metadata import version
 from pathlib import Path
 
+import django
+
 sys.path.append(os.path.abspath("."))
 sys.path.append(os.path.abspath(".."))
-sys.path.append(os.path.abspath("../tests"))
+sys.path.append(os.path.abspath("../sandbox"))
+
+os.environ["DJANGO_SETTINGS_MODULE"] = "config.settings.dev"
+
+django.setup()
 
 project = "chanx"
 copyright = "2025, Huy Nguyen"
@@ -28,13 +34,13 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
 
 extensions = [
+    "myst_parser",
     "sphinx.ext.duration",
     "sphinx.ext.doctest",
     "sphinx.ext.autodoc",
     "sphinx.ext.autosummary",
     "sphinx.ext.intersphinx",
     "sphinx.ext.napoleon",
-    "sphinx.ext.autosectionlabel",
 ]
 
 templates_path = ["_templates"]

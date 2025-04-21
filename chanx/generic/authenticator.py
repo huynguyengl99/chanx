@@ -1,3 +1,4 @@
+import re
 import uuid
 import warnings
 from collections.abc import Sequence
@@ -133,7 +134,7 @@ class ChanxWebsocketAuthenticator(Generic[_MT_co]):
 
     def __init__(self) -> None:
         """Initialize the authenticator."""
-        self._view: ChanxAuthView | None = None
+        self._view: ChanxAuthView
         self.request: HttpRequest | None = None
 
     # Main public methods
@@ -170,19 +171,10 @@ class ChanxWebsocketAuthenticator(Generic[_MT_co]):
             is_authenticated = status_code == status.HTTP_200_OK
 
             # Parse response data
-            response_data = {}
-            if hasattr(response, "data"):
-                if (
-                    status_code < status.HTTP_500_INTERNAL_SERVER_ERROR
-                ):  # Only include detailed data for non-server errors
-                    response_data = (
-                        response.data
-                        if isinstance(response.data, dict)
-                        else {"detail": response.data}
-                    )
+            response_data = response.data
 
             # Success message
-            if is_authenticated and not response_data:
+            if is_authenticated:
                 response_data = {"detail": "OK"}
 
             user = request.user
@@ -221,23 +213,15 @@ class ChanxWebsocketAuthenticator(Generic[_MT_co]):
         """
         # Check if we might need object retrieval
         needs_object = False
+        regex = r"(^|\.)BasePermission."
         if self.permission_classes:
             # Check if any permission class might need an object
             for perm_class in self.permission_classes:
-                perm_name = getattr(perm_class, "__name__", str(perm_class))
-
-                # Check if "Object" in name
-                if "Object" in perm_name:
-                    needs_object = True
-                    break
-
-                # Check if has_object_permission is overridden
                 if hasattr(perm_class, "has_object_permission"):
-                    # Get the method from this class directly (not from parent)
-                    method = perm_class.__dict__.get("has_object_permission")
-                    if (
-                        method is not None
-                    ):  # The method is defined in this class, not inherited
+                    meth = perm_class.has_object_permission
+                    qname = meth.__qualname__
+
+                    if not re.match(regex, qname):
                         needs_object = True
                         break
 
@@ -274,27 +258,22 @@ class ChanxWebsocketAuthenticator(Generic[_MT_co]):
 
     # Helper methods
 
-    def _get_auth_view(self) -> ChanxAuthView:
+    def _setup_auth_view(self) -> None:
         """
         Get or create the ChanxAuthView instance.
 
         Returns:
             Configured ChanxAuthView instance
         """
-        if self._view is None:
-            self._view = ChanxAuthView()
+        self._view = ChanxAuthView()
 
-            # Apply configuration from consumer
-            if self.authentication_classes is not None:
-                self._view.authentication_classes = self.authentication_classes
-            if self.permission_classes is not None:
-                self._view.permission_classes = self.permission_classes
-            if not isinstance(
-                self.queryset, bool
-            ):  # Only set if it's not a boolean value
-                self._view.queryset = self.queryset
-
-        return self._view
+        # Apply configuration from consumer
+        if self.authentication_classes is not None:
+            self._view.authentication_classes = self.authentication_classes
+        if self.permission_classes is not None:
+            self._view.permission_classes = self.permission_classes
+        if not isinstance(self.queryset, bool):  # Only set if it's not a boolean value
+            self._view.queryset = self.queryset
 
     @sync_to_async
     def _perform_dispatch(
@@ -314,7 +293,7 @@ class ChanxWebsocketAuthenticator(Generic[_MT_co]):
         self._validate_scope_configuration(scope)
 
         # Get the authentication view
-        view = self._get_auth_view()
+        self._setup_auth_view()
 
         # Extract URL route arguments
         url_route: dict[str, Any] = scope.get("url_route", {})
@@ -322,7 +301,7 @@ class ChanxWebsocketAuthenticator(Generic[_MT_co]):
         kwargs = url_route.get("kwargs", {})
 
         # Dispatch to the view
-        res = cast(Response, view.dispatch(req, *args, **kwargs))
+        res = cast(Response, self._view.dispatch(req, *args, **kwargs))
 
         # Ensure response is rendered
         res.render()

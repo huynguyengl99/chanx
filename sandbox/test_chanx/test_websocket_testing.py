@@ -1,4 +1,4 @@
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 from django.test import TestCase
 
@@ -31,3 +31,25 @@ class TestWebsocketTesting(TestCase):
                 ValueError, match=r"Could not obtain a WebSocket application"
             ):
                 TestWebsocketCase()
+
+    def test_websocket_create_communicator_prepopulate(self):
+        with patch("chanx.testing.WebsocketCommunicator") as mock_communicator:
+
+            class ImplementedWebsocketTestCase(WebsocketTestCase):
+                ws_path = "/test/"
+
+            test_case = ImplementedWebsocketTestCase()
+            test_case.setUp()
+            mock_sub_protocols = MagicMock()
+            test_case.create_communicator(
+                router="mock_router",
+                ws_path="mock_path",
+                headers=[],
+                subprotocols=mock_sub_protocols,
+            )
+            mock_communicator.assert_called_with(
+                "mock_router",
+                "mock_path",
+                headers=[],
+                subprotocols=mock_sub_protocols,
+            )

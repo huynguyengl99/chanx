@@ -7,6 +7,7 @@ from pydantic import BaseModel
 
 class MessagePayload(BaseModel):
     content: str
+    groups: list[str] | None = None
 
 
 class NewChatMessage(BaseMessage):
@@ -19,5 +20,14 @@ class ReplyChatMessage(BaseMessage):
     payload: MessagePayload
 
 
+class JoinGroupPayload(BaseModel):
+    group_name: str
+
+
+class JoinGroupMessage(BaseMessage):
+    action: Literal["join_group"] = "join_group"
+    payload: JoinGroupPayload
+
+
 class ChatIncomingMessage(BaseIncomingMessage):
-    message: NewChatMessage | PingMessage
+    message: NewChatMessage | PingMessage | JoinGroupMessage

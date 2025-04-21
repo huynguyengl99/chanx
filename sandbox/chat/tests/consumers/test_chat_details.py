@@ -8,7 +8,12 @@ from chanx.messages.outgoing import (
     ErrorMessage,
 )
 from chanx.utils.settings import override_chanx_settings
-from chat.messages.chat import MessagePayload, NewChatMessage
+from chat.messages.chat import (
+    JoinGroupMessage,
+    JoinGroupPayload,
+    MessagePayload,
+    NewChatMessage,
+)
 from chat.models import ChatMember, ChatMessage, GroupChat
 from test_utils.testing import WebsocketTestCase
 
@@ -186,3 +191,74 @@ class TestChatDetailConsumer(WebsocketTestCase):
 
             # Should log "Received websocket json"
             assert "Received websocket json" in str(mock_logger.call_args_list)
+
+    async def test_group_message_broadcast_to_specific_groups(self):
+        """Test that messages are broadcast to all group members"""
+        # Create a second user and make them a member
+        second_user, second_ws_headers = await self.acreate_user_and_ws_headers()
+        third_user, third_ws_headers = await self.acreate_user_and_ws_headers()
+
+        await ChatMember.objects.acreate(
+            user=second_user,
+            group_chat=self.group_chat,
+            chat_role=ChatMember.ChatMemberRole.MEMBER,
+        )
+        await ChatMember.objects.acreate(
+            user=third_user,
+            group_chat=self.group_chat,
+            chat_role=ChatMember.ChatMemberRole.MEMBER,
+        )
+
+        # Create two communicators - one for each user
+        first_communicator = self.auth_communicator
+
+        second_communicator = self.create_communicator(
+            headers=second_ws_headers,
+        )
+        third_communicator = self.create_communicator(
+            headers=third_ws_headers,
+        )
+
+        # Connect both users
+        await first_communicator.connect()
+        await first_communicator.assert_authenticated_status_ok()
+
+        await second_communicator.connect()
+        await second_communicator.assert_authenticated_status_ok()
+
+        await third_communicator.connect()
+        await third_communicator.assert_authenticated_status_ok()
+
+        custom_group = "custom_group"
+
+        await first_communicator.send_message(
+            JoinGroupMessage(payload=JoinGroupPayload(group_name=custom_group))
+        )
+        await first_communicator.receive_all_json()
+        await third_communicator.send_message(
+            JoinGroupMessage(payload=JoinGroupPayload(group_name=custom_group))
+        )
+        await third_communicator.receive_all_json()
+
+        # Send a message from the first user
+        message_content = "This is a group message"
+        await first_communicator.send_message(
+            NewChatMessage(
+                payload=MessagePayload(content=message_content, groups=[custom_group])
+            )
+        )
+
+        # Get message on first communicator (sender)
+        first_messages = await first_communicator.receive_all_json(wait_group=True)
+        assert len(first_messages) == 1
+        assert first_messages[0].get("action") == "member_message"
+        assert first_messages[0].get("payload", {}).get("content") == message_content
+
+        # Second user should not receive the message
+        await second_communicator.receive_nothing()
+
+        # Third user should receive the message
+        third_messages = await third_communicator.receive_all_json(wait_group=True)
+        assert len(third_messages) == 1
+        assert third_messages[0].get("action") == "member_message"
+        assert third_messages[0].get("payload", {}).get("content") == message_content

@@ -87,6 +87,7 @@ class WebsocketCommunicator(BaseWebsocketCommunicator):  # type: ignore
         Args:
             send_authentication_message: Whether to expect auth message, defaults to setting
             max_auth_time: Maximum time to wait for authentication (in seconds)
+            after_auth_time: Wait time sleep after authentication (in seconds)
 
         Returns:
             Authentication message or None if auth is disabled
@@ -103,8 +104,10 @@ class WebsocketCommunicator(BaseWebsocketCommunicator):  # type: ignore
             await asyncio.sleep(max_auth_time)
             return None
 
-    async def assert_authenticated_status_ok(self) -> None:
-        auth_message = cast(AuthenticationMessage, await self.wait_for_auth())
+    async def assert_authenticated_status_ok(self, max_auth_time: float = 0.5) -> None:
+        auth_message = cast(
+            AuthenticationMessage, await self.wait_for_auth(max_auth_time=max_auth_time)
+        )
         assert auth_message.payload.status_code == status.HTTP_200_OK
 
     async def assert_closed(self) -> None:

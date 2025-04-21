@@ -5,14 +5,23 @@ This module tests the ChanxSerializer and ChanxAuthView classes
 to ensure they work as expected for authentication.
 """
 
+import warnings
 from unittest.mock import MagicMock, patch
 
-from django.test import RequestFactory
+from django.test import RequestFactory, TransactionTestCase
+from rest_framework import status
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.request import Request
 from rest_framework.response import Response
 
 import pytest
-from chanx.generic.authenticator import ChanxAuthView, ChanxSerializer
+from chanx.generic.authenticator import (
+    ChanxAuthView,
+    ChanxSerializer,
+    ChanxWebsocketAuthenticator,
+)
+from chat.factories.group_chat import GroupChatFactory
+from chat.models import GroupChat
 
 
 class TestChanxSerializer:
@@ -135,3 +144,164 @@ def test_http_method_calls_get_response(method_name):
         # Verify get_response was called and its return value was returned
         mock_get_response.assert_called_once_with(drf_request)
         assert response == mock_get_response.return_value
+
+
+class TestChanxWebsocketAuthenticator(TransactionTestCase):
+    """Tests for the ChanxWebsocketAuthenticator class."""
+
+    def setUp(self):
+        """Set up test environment before each test method."""
+        self.factory = RequestFactory()
+        self.authenticator = ChanxWebsocketAuthenticator()
+        self.default_scope = {
+            "type": "websocket",
+            "path": "/ws/test/",
+            "headers": [
+                (b"host", b"localhost:8000"),
+                (b"x-request-id", b"test-request-id"),
+            ],
+            "query_string": b"",
+            "client": ("127.0.0.1", 43210),
+            "url_route": {
+                "args": [],
+                "kwargs": {},
+            },
+        }
+
+    def _create_scope_with_pk(self, pk):
+        return {
+            "type": "websocket",
+            "path": "/ws/chat/1/",
+            "headers": [(b"host", b"localhost:8000")],
+            "query_string": b"",
+            "client": ("127.0.0.1", 43210),
+            "url_route": {
+                "args": [],
+                "kwargs": {"pk": str(pk)},
+            },
+        }
+
+    def test_validate_configuration_check_has_object_permission_method(self):
+        """Test validate_configuration checks for has_object_permission method."""
+
+        self.authenticator.permission_classes = [IsAuthenticated]
+        self.authenticator.queryset = True
+        with warnings.catch_warnings(record=True) as w:
+            self.authenticator.validate_configuration()
+            assert len(w) == 0
+
+        self.authenticator.permission_classes = None
+        self.authenticator.queryset = True
+
+        with warnings.catch_warnings(record=True) as w:
+            self.authenticator.validate_configuration()
+            assert len(w) == 0
+
+        # Create permission class with has_object_permission defined in parent class
+        class BaseObjectPermission(IsAuthenticated):
+            def has_object_permission(self, request, view, obj):
+                return True
+
+        class ChildPermission(BaseObjectPermission):
+            # Inherits has_object_permission from parent
+            pass
+
+        # Create permission class with has_object_permission defined in this class
+        class DirectObjectPermission(IsAuthenticated):
+            def has_object_permission(self, request, view, obj):
+                return True
+
+        self.authenticator.permission_classes = [ChildPermission]
+        self.authenticator.queryset = True
+
+        with warnings.catch_warnings(record=True) as w:
+            self.authenticator.validate_configuration()
+            assert len(w) == 1
+            assert "may require object access" in str(w[0].message)
+
+        self.authenticator.permission_classes = [DirectObjectPermission]
+        with warnings.catch_warnings(record=True) as w:
+            self.authenticator.validate_configuration()
+            assert len(w) == 1
+            assert "may require object access" in str(w[0].message)
+
+        # Will not warn for and operand
+        self.authenticator.permission_classes = [
+            DirectObjectPermission & IsAuthenticated
+        ]
+        with warnings.catch_warnings(record=True) as w:
+            self.authenticator.validate_configuration()
+            assert len(w) == 0
+
+    def test_validate_scope_configuration_no_lookup(self):
+        """Test _validate_scope_configuration with no lookup parameters."""
+        # Create a scope with no URL lookup parameters
+        scope = {"url_route": {"kwargs": {}}}
+
+        # Should not raise any exceptions
+        self.authenticator._validate_scope_configuration(scope)
+
+    def test_validate_scope_configuration_with_lookup_no_queryset(self):
+        """Test _validate_scope_configuration with lookup but no queryset raises error."""
+        # Create a scope with a URL lookup parameter
+        scope = {"url_route": {"kwargs": {"pk": "1"}}}
+
+        # Should raise ValueError
+        with pytest.raises(ValueError) as context:
+            self.authenticator._validate_scope_configuration(scope)
+
+        assert "Object retrieval requires a queryset" in str(context.value)
+
+    async def test_authenticate_no_permission(self):
+        """Test that authentication works."""
+        result = await self.authenticator.authenticate(self.default_scope)
+        assert result.is_authenticated
+
+    async def test_authenticate_failed_permission(self):
+        class IsAuthenticatedCWebsocketAuthenticator(ChanxWebsocketAuthenticator):
+            permission_classes = (IsAuthenticated,)
+
+        authenticator = IsAuthenticatedCWebsocketAuthenticator()
+
+        result = await authenticator.authenticate(self.default_scope)
+        assert not result.is_authenticated
+        assert result.status_code == status.HTTP_401_UNAUTHORIZED
+
+    async def test_authenticate_exception(self):
+        """Test authenticate handles exceptions gracefully."""
+        # Configure authenticator that will raise an exception
+        with patch.object(self.authenticator, "_perform_dispatch") as mock_dispatch:
+            mock_dispatch.side_effect = Exception("Test exception")
+
+            # Authenticate
+            result = await self.authenticator.authenticate(self.default_scope)
+
+            # Assert the result is a generic error
+            assert not result.is_authenticated
+            assert result.status_code == 500
+            assert result.status_text == "Internal Server Error"
+            assert result.data == {"detail": "Internal server error"}
+            assert result.user is None
+
+    async def test_authenticate_with_object(self):
+        """Test authenticate with object retrieval from URL parameter."""
+        # Create a real GroupChat object
+        group_chat = await GroupChatFactory.acreate()
+
+        # Create a user with UserFactory
+        # Configure authenticator with GroupChat queryset
+        class GroupChatAuthenticator(ChanxWebsocketAuthenticator):
+            def __init__(self):
+                super().__init__()
+                self.queryset = GroupChat.objects.all()
+
+        authenticator = GroupChatAuthenticator()
+
+        # Update the scope with the real group_chat id
+        scope_with_real_pk = self._create_scope_with_pk(group_chat.id)
+
+        result = await authenticator.authenticate(scope_with_real_pk)
+
+        # Verify object was included in result
+        assert result.is_authenticated
+        assert result.obj == group_chat

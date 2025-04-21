@@ -1,8 +1,8 @@
 import factory
-from factory.django import DjangoModelFactory
+from test_utils.async_factory import AsyncDjangoModelFactory
 
 
-class UserFactory(DjangoModelFactory):
+class UserFactory(AsyncDjangoModelFactory):
     class Meta:
         model = "accounts.User"
         django_get_or_create = ("email",)

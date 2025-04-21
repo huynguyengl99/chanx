@@ -1,4 +1,5 @@
-from typing import Any
+import asyncio
+from typing import Any, Literal
 
 from channels.routing import URLRouter
 from django.urls import path
@@ -8,7 +9,7 @@ from rest_framework.permissions import AllowAny
 
 import pytest
 from chanx.generic.websocket import AsyncJsonWebsocketConsumer
-from chanx.messages.base import BaseMessage
+from chanx.messages.base import BaseGroupMessage, BaseMessage, BaseOutgoingGroupMessage
 from chanx.messages.incoming import IncomingMessage, PingMessage
 from chanx.messages.outgoing import PongMessage
 from chanx.testing import WebsocketTestCase
@@ -109,3 +110,59 @@ class NotImplementedConsumerTestCase(WebsocketTestCase):
             TypeError, match=r"Can't instantiate abstract class NotImplementedConsumer"
         ):
             await self.auth_communicator.connect(0.1)
+
+
+class AnonymousGroupMemberMessage(BaseGroupMessage):
+    action: Literal["member_message"] = "member_message"
+    payload: Any
+
+
+class AnonymousGroupMessage(BaseOutgoingGroupMessage):
+    group_message: AnonymousGroupMemberMessage
+
+
+class AnonymousGroupConsumer(AsyncJsonWebsocketConsumer):
+    permission_classes = [AllowAny]
+    authentication_classes = []
+    send_completion = False
+    send_message_immediately = True
+    silent_actions = {}
+    log_received_message = True
+    log_sent_message = True
+    log_ignored_actions = {}
+    send_authentication_message = True
+    INCOMING_MESSAGE_SCHEMA = IncomingMessage
+    OUTGOING_GROUP_MESSAGE_SCHEMA = AnonymousGroupMessage
+
+    groups = ["anonymous_group"]
+
+    async def receive_message(self, message: BaseMessage, **kwargs: Any) -> None:
+        match message:
+            case PingMessage():
+                await self.send_group_message(
+                    AnonymousGroupMemberMessage(payload=PongMessage()),
+                    exclude_current=False,
+                )
+
+
+class MyAnonymousGroupTestCase(WebsocketTestCase):
+    ws_path = "/anonymous-group/"
+
+    router = URLRouter([path("anonymous-group/", AnonymousGroupConsumer.as_asgi())])
+
+    async def test_send_anonymous_group_message_without_completion(self):
+        await self.auth_communicator.connect()
+        await self.auth_communicator.assert_authenticated_status_ok()
+
+        await self.auth_communicator.send_message(PingMessage())
+
+        message = await self.auth_communicator.receive_json_from()
+        await asyncio.sleep(0.05)  # give some extra time to process any extra thing
+        raw_res = AnonymousGroupMemberMessage(payload=PongMessage()).model_dump()
+        extended_res = {
+            **raw_res,
+            "is_current": True,
+            "is_mine": False,
+        }
+
+        assert message == extended_res

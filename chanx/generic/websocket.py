@@ -10,7 +10,6 @@ from typing import (
     cast,
 )
 
-from channels.exceptions import InvalidChannelLayerError
 from channels.generic.websocket import (
     AsyncJsonWebsocketConsumer as BaseAsyncJsonWebsocketConsumer,
 )
@@ -160,7 +159,7 @@ class AsyncJsonWebsocketConsumer(BaseAsyncJsonWebsocketConsumer, Generic[_MT_co]
             "queryset",
             "auth_method",
         ]:
-            if hasattr(self, attr):
+            if getattr(self, attr) is not None:
                 setattr(authenticator, attr, getattr(self, attr))
 
         # Validate configuration during initialization
@@ -227,18 +226,11 @@ class AsyncJsonWebsocketConsumer(BaseAsyncJsonWebsocketConsumer, Generic[_MT_co]
         Retrieves groups from build_groups() and adds this consumer
         to each channel group for broadcast messaging.
 
-        Raises:
-            InvalidChannelLayerError: If channel layer doesn't support groups
         """
         custom_groups = await self.build_groups()
         self.groups.extend(custom_groups)
-        try:
-            for group in self.groups:
-                await self.channel_layer.group_add(group, self.channel_name)
-        except AttributeError as e:
-            raise InvalidChannelLayerError(
-                "BACKEND is unconfigured or doesn't support groups"
-            ) from e
+        for group in self.groups:
+            await self.channel_layer.group_add(group, self.channel_name)
 
     async def build_groups(self) -> Iterable[str]:
         """
@@ -301,7 +293,6 @@ class AsyncJsonWebsocketConsumer(BaseAsyncJsonWebsocketConsumer, Generic[_MT_co]
             message: The validated message object
             **kwargs: Additional keyword arguments
         """
-        pass
 
     async def send_json(self, content: dict[str, Any], close: bool = False) -> None:
         """
@@ -356,9 +347,7 @@ class AsyncJsonWebsocketConsumer(BaseAsyncJsonWebsocketConsumer, Generic[_MT_co]
         if groups is None:
             groups = self.groups
         for group in groups:
-            user_pk = None
-            if isinstance(self.user, User):
-                user_pk = self.user.pk
+            user_pk = getattr(self.user, "pk", None)
 
             await self.channel_layer.group_send(
                 group,
@@ -414,9 +403,8 @@ class AsyncJsonWebsocketConsumer(BaseAsyncJsonWebsocketConsumer, Generic[_MT_co]
             return
 
         if kind == "message":
-            is_mine = False
-            if isinstance(self.user, User) and from_user_pk is not None:
-                is_mine = self.user.pk == from_user_pk
+            user_pk = getattr(self.user, "pk", None)
+            is_mine = bool(from_user_pk) and from_user_pk == user_pk
 
             content.update(
                 {"is_mine": is_mine, "is_current": self.channel_name == from_channel}

@@ -6,7 +6,13 @@ from chanx.messages.base import BaseMessage
 from chanx.messages.incoming import PingMessage
 from chanx.messages.outgoing import PongMessage
 
-from chat.messages.chat import ChatIncomingMessage, MessagePayload, NewChatMessage
+from chat.messages.chat import (
+    ChatIncomingMessage,
+    JoinGroupMessage,
+    JoinGroupPayload,
+    MessagePayload,
+    NewChatMessage,
+)
 from chat.messages.group import MemberMessage, OutgoingGroupMessage
 from chat.models import ChatMessage, GroupChat
 from chat.permissions import IsGroupChatMember
@@ -43,9 +49,16 @@ class ChatDetailConsumer(AsyncJsonWebsocketConsumer):
                 new_message = await ChatMessage.objects.acreate(
                     content=payload.content, group_chat=self.obj, sender=self.member
                 )
+                groups = payload.groups
 
                 message = ChatMessageSerializer(new_message).data
 
                 await self.send_group_message(
-                    MemberMessage(payload=message), exclude_current=False
+                    MemberMessage(payload=message), groups=groups, exclude_current=False
                 )
+            case JoinGroupMessage():
+                payload: JoinGroupPayload = message.payload
+                await self.channel_layer.group_add(
+                    payload.group_name, self.channel_name
+                )
+                self.groups.extend(payload.group_name)

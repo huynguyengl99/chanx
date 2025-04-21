@@ -9,3 +9,4 @@ MEDIA_ROOT = str(ROOT_DIR / "media-testing/")
 CHANX = {
     "SEND_COMPLETION": True,
 }
+CHANNEL_LAYERS = {"default": {"BACKEND": "channels.layers.InMemoryChannelLayer"}}

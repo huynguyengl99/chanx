@@ -7,6 +7,7 @@ ws_router = URLRouter(
     [
         # Use ws_include which returns a URLRouter
         path("assistants/", include("assistants.routing")),
+        path("discussion/", include("discussion.routing")),
         re_path("chat/", include("chat.routing")),
     ]
 )

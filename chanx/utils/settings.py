@@ -1,3 +1,11 @@
+"""
+Settings override utilities for Chanx.
+
+This module provides utilities for temporarily overriding Chanx settings,
+primarily useful for testing scenarios where different configurations need
+to be tested without permanently changing settings.
+"""
+
 import contextlib
 import functools
 import inspect
@@ -25,10 +33,35 @@ def override_chanx_settings(**settings: Any) -> Callable[[T], T]:
     """
 
     def decorator(func: T) -> T:
+        """
+        Inner decorator function that wraps the target function.
+
+        Selects the appropriate wrapper based on whether the target function
+        is synchronous or asynchronous. Both wrappers establish a settings context
+        around the function execution.
+
+        Args:
+            func: The function to be wrapped, can be either sync or async
+
+        Returns:
+            A wrapped version of the function that applies temporary settings
+        """
         if inspect.iscoroutinefunction(func):
             # Handle async functions
             @functools.wraps(func)
             async def async_wrapper(*args: Any, **kwargs: Any) -> Any:
+                """
+                Wrapper for asynchronous functions.
+
+                Creates a settings context and awaits the wrapped coroutine function.
+
+                Args:
+                    *args: Positional arguments to pass to the wrapped function
+                    **kwargs: Keyword arguments to pass to the wrapped function
+
+                Returns:
+                    The result of the wrapped coroutine function
+                """
                 with settings_context(**settings):
                     return await func(*args, **kwargs)
 
@@ -37,6 +70,18 @@ def override_chanx_settings(**settings: Any) -> Callable[[T], T]:
             # Handle synchronous functions
             @functools.wraps(func)
             def sync_wrapper(*args: Any, **kwargs: Any) -> Any:
+                """
+                Wrapper for synchronous functions.
+
+                Creates a settings context and calls the wrapped function.
+
+                Args:
+                    *args: Positional arguments to pass to the wrapped function
+                    **kwargs: Keyword arguments to pass to the wrapped function
+
+                Returns:
+                    The result of the wrapped function
+                """
                 with settings_context(**settings):
                     return func(*args, **kwargs)
 

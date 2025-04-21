@@ -1,3 +1,20 @@
+"""
+Views for the Chanx WebSocket Playground interface.
+
+This module provides the web interface and API views for the WebSocket playground,
+a developer tool for exploring and testing WebSocket endpoints. The playground offers
+a visual interface where developers can:
+
+1. Browse available WebSocket endpoints
+2. Connect to endpoints and test authentication
+3. Send and receive messages with syntax highlighting
+4. View message examples and documentation
+
+The module includes both the HTML template view (WebSocketPlaygroundView) for the
+interactive interface and the API view (WebSocketInfoView) that provides the WebSocket
+route information to the frontend.
+"""
+
 from typing import Any
 
 from django.http import HttpRequest
@@ -20,6 +37,18 @@ class WebSocketPlaygroundView(TemplateView):
     template_name = "playground/websocket.html"
 
     def get_context_data(self, **kwargs: Any) -> dict[str, Any]:
+        """
+        Enhance the template context with WebSocket playground-specific data.
+
+        Adds the WebSocket info API URL to the template context to allow
+        the frontend to dynamically load available WebSocket endpoints.
+
+        Args:
+            **kwargs: Additional keyword arguments passed to the template
+
+        Returns:
+            Enhanced context dictionary with playground-specific variables
+        """
         context = super().get_context_data(**kwargs)
         # Add the API endpoint URL to the context
         context["websocket_info_url"] = reverse("websocket_info")
@@ -58,6 +87,25 @@ class WebSocketInfoView(APIView):
     serializer_class = WebSocketRouteListSerializer
 
     def get(self, request: HttpRequest) -> Response:
+        """
+        Retrieve information about available WebSocket endpoints.
+
+        This method fetches all discoverable WebSocket routes from the application,
+        serializes them, and returns a structured response. The response includes
+        endpoint URLs, descriptions, message examples, and path parameters for
+        each WebSocket consumer.
+
+        Args:
+            request: The HTTP request object used to determine the current domain
+                    for WebSocket URL construction
+
+        Returns:
+            Response with serialized WebSocket route information
+
+        Raises:
+            Any exceptions are caught and returned as a 500 error response with details
+        """
+
         try:
             # Get available WebSocket endpoints using the new playground utility function
             available_endpoints: list[WebSocketRoute] = get_playground_websocket_routes(

@@ -1,3 +1,10 @@
+"""
+Standard outgoing message types for Chanx websockets.
+
+This module defines the standard outgoing message types sent from the server
+to clients, including status messages, error responses, and completion signals.
+"""
+
 from typing import Any, Literal
 
 from pydantic import BaseModel
@@ -78,5 +85,15 @@ GROUP_ACTION_COMPLETE: Literal["group_complete"] = "group_complete"
 
 
 class GroupCompleteMessage(BaseMessage):
+    """
+    Confirmation message indicating group message processing is complete.
+
+    Sent after a group message has been fully processed and distributed to all
+    consumers in the group to signal completion of the group broadcast operation.
+    This allows clients to know when all intended recipients have received the message.
+
+    Attributes:
+        action: Literal string 'group_complete' as the discriminator value
+    """
 
     action: Literal["group_complete"] = GROUP_ACTION_COMPLETE

@@ -1,3 +1,10 @@
+"""
+Type definitions for Chanx websocket components.
+
+This module provides TypedDict and other type definitions that represent
+the structure of complex objects used throughout the Chanx framework.
+"""
+
 from typing import Any, Literal, TypedDict
 
 

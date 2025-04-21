@@ -1,3 +1,22 @@
+"""
+WebSocket authentication system for Chanx using Django REST Framework.
+
+This module provides a bridge between WebSocket connections and Django REST
+Framework's authentication and permission systems. It enables WebSocket
+connections to be authenticated and authorized using the same mechanisms
+as RESTful APIs, ensuring consistency across your application.
+
+The authenticator translates ASGI WebSocket connection scopes into Django HTTP
+requests that can be processed by DRF authentication classes and permission
+checks. It supports object-level permissions and handles validation of
+configuration to prevent common errors.
+
+Key components:
+- AuthenticationResult: Dataclass for authentication outcomes
+- ChanxAuthView: DRF-compatible view for processing authentication
+- ChanxWebsocketAuthenticator: Main authenticator that processes WebSocket connections
+"""
+
 import re
 import uuid
 import warnings
@@ -91,18 +110,27 @@ class ChanxAuthView(GenericAPIView[Model]):
         return Response({"detail": "ok"})
 
     def get(self, request: ExtendedRequest, *args: Any, **kwargs: Any) -> Response:
+        """Stub get method"""
         return self.get_response(request)
 
     def post(self, request: ExtendedRequest, *args: Any, **kwargs: Any) -> Response:
+        """Stub post method"""
+
         return self.get_response(request)
 
     def put(self, request: ExtendedRequest, *args: Any, **kwargs: Any) -> Response:
+        """Stub put method"""
+
         return self.get_response(request)
 
     def patch(self, request: ExtendedRequest, *args: Any, **kwargs: Any) -> Response:
+        """Stub patch method"""
+
         return self.get_response(request)
 
     def delete(self, request: ExtendedRequest, *args: Any, **kwargs: Any) -> Response:
+        """Stub delete method"""
+
         return self.get_response(request)
 
 

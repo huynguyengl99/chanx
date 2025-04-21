@@ -1,27 +1,95 @@
-# chanx
+# CHANX (CHANnels-eXtension)
+![Image](./interrogate_badge.svg)
+[![codecov](https://codecov.io/gh/huynguyengl99/chanx/branch/main/graph/badge.svg?token=X8R3BDPTY6)](https://codecov.io/gh/huynguyengl99/chanx)
 
-The missing toolkit for Django Channels — auth, logging, consumers, and more.
+The missing toolkit for Django Channels — authentication, logging, structured messaging, and more.
 
 ## Installation
-
-The module can be installed from [PyPI](https://pypi.org/project/chanx/):
 
 ```bash
 pip install chanx
 ```
 
-## Document
-Please visit [chanx doc](https://chanx.readthedocs.io/) for
-documentation.
+For complete documentation, visit [chanx docs](https://chanx.readthedocs.io/).
 
 ## Introduction
 
-### Why Choose chanx?
-Due to the lack of some features of the great package `django-channels`, this one will
-fill the missing gap for users
+Django Channels provides excellent WebSocket support for Django applications, but leaves gaps in authentication,
+ structured messaging, and developer tooling. Chanx fills these gaps with a comprehensive toolkit that makes
+ building WebSocket applications simpler and more maintainable.
 
-### Features
-- Playground for websocket, with automatically discover websocket routes.
-- JWTAuthentication + Permission for websocket connection, with the help of `dj-rest-auth` + `restframework-simplejwt`.
-- Logging for websocket json message, in order to help you trace the in and out message flow.
-### Dependencies
+### Key Features
+
+- **REST Framework Integration**: Use DRF authentication and permission classes with WebSockets
+- **Structured Messaging**: Type-safe message handling with Pydantic validation
+- **WebSocket Playground**: Interactive UI for testing WebSocket endpoints
+- **Group Management**: Simplified pub/sub messaging with automatic group handling
+- **Comprehensive Logging**: Structured logging for WebSocket connections and messages
+- **Error Handling**: Robust error reporting and client feedback
+- **Testing Utilities**: Specialized tools for testing WebSocket consumers
+
+### Core Components
+
+- **AsyncJsonWebsocketConsumer**: Base consumer with authentication and structured messaging
+- **ChanxWebsocketAuthenticator**: Bridges WebSockets with DRF authentication
+- **Message System**: Type-safe message classes with automatic validation
+- **WebSocketTestCase**: Test utilities for WebSocket consumers
+
+## Configuration
+
+Chanx can be configured through the `CHANX` dictionary in your Django settings. Below is a complete list
+ of available settings with their default values and descriptions:
+
+```python
+# settings.py
+CHANX = {
+    # Message configuration
+    'MESSAGE_ACTION_KEY': 'action',  # Key name for action field in messages
+
+    # Completion messages
+    'SEND_COMPLETION': False,  # Whether to send completion message after processing messages
+
+    # Messaging behavior
+    'SEND_MESSAGE_IMMEDIATELY': True,  # Whether to yield control after sending messages
+    'SEND_AUTHENTICATION_MESSAGE': True,  # Whether to send auth status after connection
+
+    # Logging configuration
+    'LOG_RECEIVED_MESSAGE': True,  # Whether to log received messages
+    'LOG_SENT_MESSAGE': True,  # Whether to log sent messages
+    'LOG_IGNORED_ACTIONS': [],  # Message actions that should not be logged
+
+    # Playground configuration
+    'WEBSOCKET_BASE_URL': 'ws://localhost:8000'  # Default WebSocket URL for discovery
+}
+```
+
+## WebSocket Playground
+
+Add the playground to your URLs:
+
+```python
+urlpatterns = [
+    path('playground/', include('chanx.playground.urls')),
+]
+```
+
+Then visit `/playground/websocket/` to explore and test your WebSocket endpoints.
+
+## Testing
+
+Write tests for your WebSocket consumers:
+
+```python
+from chanx.testing import WebsocketTestCase
+
+class TestChatConsumer(WebsocketTestCase):
+    ws_path = "/ws/chat/room1/"
+
+    async def test_connect(self):
+        communicator = self.create_communicator()
+        connected, _ = await communicator.connect()
+        self.assertTrue(connected)
+```
+
+## License
+MIT

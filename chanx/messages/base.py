@@ -1,3 +1,25 @@
+"""
+Base message types and containers for Chanx WebSocket communication.
+
+This module defines the foundational message structure for the Chanx WebSocket framework,
+providing a type-safe, validated message system built on Pydantic. The architecture
+uses discriminated unions to enable type-safe message handling with runtime validation.
+
+Key components:
+- BaseMessage: Abstract base class for all message types with action discriminator
+- BaseGroupMessage: Extends base messages with group-specific metadata
+- MessageContainerMixin: Provides validation for message container classes
+- BaseIncomingMessage: Container for incoming messages from clients
+- BaseOutgoingGroupMessage: Container for outgoing group messages
+
+The message system enforces that all concrete message types must define a unique 'action'
+field using a Literal type, which serves as the discriminator for message type identification.
+This enables both static type checking and runtime validation of message structures.
+
+Message containers use Pydantic's discriminated union pattern to automatically deserialize
+JSON messages into the correct message type based on the 'action' field.
+"""
+
 import abc
 from types import UnionType
 from typing import (

@@ -1,3 +1,22 @@
+"""
+Asyncio task management utilities for Chanx.
+
+This module provides enhanced task management for asynchronous operations
+in Django Channels WebSocket consumers. It offers utilities to safely create
+and manage background tasks with proper error handling, database connection
+cleanup, and task tracking.
+
+Key features:
+- Automatic cleanup of database connections to prevent connection leaks
+- Structured error logging for background tasks
+- Task tracking to prevent memory leaks from forgotten tasks
+- Support for context variables to maintain context across task boundaries
+
+The module helps maintain a clean and reliable asynchronous execution environment
+for WebSocket consumers, which often need to perform background operations while
+maintaining an active connection.
+"""
+
 import asyncio
 from collections.abc import Coroutine
 from contextvars import Context

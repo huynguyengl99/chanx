@@ -16,6 +16,7 @@ dev = [
   "drf-spectacular>=0.28.0,<1",
   "factory-boy>=3.3.3,<4",
   "freezegun>=1.5.1,<2",
+  "interrogate>=1.7.0",
   "ipython>=8.35.0",
   "mock>=5.2.0,<6",
   "psycopg-pool>=3.2.6,<4",
@@ -127,6 +128,27 @@ include = ["chanx"]
 
 [tool.hatch.build.targets.wheel]
 include = ["chanx"]
+
+[tool.interrogate]
+badge-format = "svg"
+color = true
+# example values
+exclude = ["build", "docs", "setup.py"]
+ext = []
+fail-under = 80
+# output file logation
+generate-badge = "."
+ignore-init-method = true
+ignore-init-module = true
+ignore-module = false
+ignore-nested-classes = false
+ignore-nested-functions = false
+ignore-overloaded-functions = false
+ignore-private = false
+ignore-property-decorators = false
+style = "sphinx"
+verbose = 0
+whitelist-regex = []
 
 [tool.tomlsort]
 all = true

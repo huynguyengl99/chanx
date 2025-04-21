@@ -1,3 +1,26 @@
+"""
+Authenticated WebSocket consumer system for Chanx.
+
+This module provides the core WebSocket consumer implementation for Chanx,
+offering a robust framework for building real-time applications with Django
+Channels and Django REST Framework. The AsyncJsonWebsocketConsumer serves as the
+foundation for WebSocket connections with integrated authentication, permissions,
+structured message handling, and group messaging capabilities.
+
+Key features:
+- DRF-style authentication and permission checking
+- Structured message handling with Pydantic validation
+- Automatic group management for pub/sub messaging
+- Comprehensive error handling and reporting
+- Configurable logging and message completion signals
+- Support for object-level permissions and retrieval
+
+Developers should subclass AsyncJsonWebsocketConsumer and implement the
+receive_message method to handle incoming messages. The consumer automatically
+handles connection lifecycle, authentication, message validation, and group
+messaging.
+"""
+
 import asyncio
 import uuid
 from abc import ABC, abstractmethod
@@ -387,11 +410,17 @@ class AsyncJsonWebsocketConsumer(BaseAsyncJsonWebsocketConsumer, Generic[_MT_co]
         """
         Handle incoming group message and relay to client.
 
-        Processes group messages, adds metadata like is_mine and is_current,
-        and forwards to the client socket.
+        Processes group messages from the channel layer, adds metadata like is_mine and is_current,
+        and forwards to the client socket. This method is called by the Channels system when
+        a message is sent to a group this consumer is part of.
+
+        If the message is from the current channel and exclude_current is True, the message
+        is not relayed to avoid echo effects. For message-type events, user ownership is tracked.
+        If configured, a GroupCompleteMessage is sent after successful processing.
 
         Args:
-            event: Group member event data
+            event: Group member event data containing the content, kind, source channel,
+                   user ID, and control flags
         """
         content = event["content"]
         exclude_current = event["exclude_current"]

@@ -1,3 +1,18 @@
+"""
+Request utilities for translating between ASGI and Django.
+
+This module provides utilities for working with HTTP request objects
+in an ASGI context, particularly for converting WebSocket connection
+scopes into Django HTTP requests. This bridge enables WebSocket
+consumers to leverage Django's authentication, permissions, and
+request processing infrastructure.
+
+The primary use case is to allow WebSocket connections to be authenticated
+and authorized using the same mechanisms as regular HTTP requests,
+ensuring consistency across both synchronous and asynchronous parts
+of a Django application.
+"""
+
 from typing import Any
 
 from django.contrib.auth.models import AnonymousUser

@@ -38,6 +38,12 @@ repos:
     rev: 0.6.12
     hooks:
       - id: uv-lock
+-   repo: https://github.com/econchick/interrogate
+    rev: 1.7.0  # or master if you're bold
+    hooks:
+      - id: interrogate
+        args: [--quiet, --fail-under=95, chanx]
+        pass_filenames: false
 ci:
     autofix_commit_msg: 🎨 [pre-commit.ci] Auto format from pre-commit.com hooks
     autoupdate_commit_msg: ⬆ [pre-commit.ci] pre-commit autoupdate

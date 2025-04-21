@@ -1,3 +1,14 @@
+"""
+WebSocket testing utilities for Chanx.
+
+This module provides specialized test infrastructure for WebSocket consumers,
+including an extended WebsocketCommunicator and a base WebsocketTestCase class.
+These utilities make it easier to write tests for WebSocket consumers by
+providing helper methods for authentication handling, message sending/receiving,
+and automatic cleanup. The module builds on Django's test framework and Channels'
+testing components.
+"""
+
 import asyncio
 from typing import Any, cast
 
@@ -105,6 +116,17 @@ class WebsocketCommunicator(BaseWebsocketCommunicator):  # type: ignore
             return None
 
     async def assert_authenticated_status_ok(self, max_auth_time: float = 0.5) -> None:
+        """
+        Assert that the WebSocket connection was authenticated successfully.
+
+        Waits for an authentication message and verifies that its status code is 200 OK.
+
+        Args:
+            max_auth_time: Maximum time to wait for authentication message (in seconds)
+
+        Raises:
+            AssertionError: If the authentication status is not 200 OK
+        """
         auth_message = cast(
             AuthenticationMessage, await self.wait_for_auth(max_auth_time=max_auth_time)
         )

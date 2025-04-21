@@ -3,6 +3,10 @@ build-backend = "hatchling.build"
 requires = ["hatchling"]
 
 [dependency-groups]
+build = [
+  "build>=1.2.2.post1",
+  "twine>=6.1.0"
+]
 dev = [
   "Faker>=37.1.0,<38",
   "commitizen>=4.5.0,<5",

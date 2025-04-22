@@ -1,3 +1,9 @@
+## v0.2.3 (2025-04-22)
+
+### Fix
+
+- **interrogate**: move interrogate badge to docs _static folder to serve on readthedocs
+
 ## v0.2.2 (2025-04-22)
 
 ### Refactor

@@ -124,11 +124,6 @@ update_changelog_on_bump = true
 version_provider = "pep621"
 version_scheme = "pep440"
 
-[tool.commitizen.customize]
-bump_map = {build = "PATCH", ci = "PATCH", docs = "PATCH", feat = "MINOR", fix = "PATCH", perf = "PATCH", refactor = "PATCH"}
-bump_pattern = '^(feat|fix|ci|build|perf|refactor|docs)'
-schema_pattern = '^(build|ci|docs|feat|fix|perf|refactor|style|test|chore|revert|bump)(\(\S+\))?\:?\s.*'
-
 [tool.hatch.build.targets.sdist]
 include = ["chanx"]
 

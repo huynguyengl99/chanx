@@ -1,3 +1,13 @@
+## v0.2.1 (2025-04-22)
+
+### Fix
+
+- **commitizen**: add update uv.lock before bump and use shortcuts option
+
+### Refactor
+
+- **commitizen**: remove unused section
+
 ## v0.2.0 (2025-04-22)
 
 ## v0.1.0 (2025-04-21)

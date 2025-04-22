@@ -119,8 +119,12 @@ preview = true
 [tool.commitizen]
 major_version_zero = true
 name = "cz_conventional_commits"
+pre_bump_hooks = [
+  "scripts/update_lock.sh"
+]
 tag_format = "v$version"
 update_changelog_on_bump = true
+use_shortcuts = true
 version_provider = "pep621"
 version_scheme = "pep440"
 

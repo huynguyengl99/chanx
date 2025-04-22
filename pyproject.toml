@@ -35,6 +35,10 @@ docs = [
   "myst-parser>=4.0.1",
   "sphinx_rtd_theme"
 ]
+jwt = [
+  "dj-rest-auth[with-social]>=7.0.1",
+  "djangorestframework-simplejwt>=5.5.0"
+]
 lint = [
   "black>=25.1.0,<26",
   "django-stubs[compatible-mypy]>=5.1.3",
@@ -87,13 +91,6 @@ name = "chanx"
 readme = "README.md"
 requires-python = ">=3.11,<4.0"
 version = "0.2.3"
-
-[project.optional-dependencies]
-jwt = [
-  "dj-rest-auth[with-social]>=7.0.1",
-  "djangorestframework-simplejwt>=5.5.0"
-]
-logging = []
 
 [project.urls]
 Documentation = "https://chanx.readthedocs.io/"

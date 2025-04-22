@@ -255,12 +255,6 @@ dependencies = [
     { name = "structlog" },
 ]
 
-[package.optional-dependencies]
-jwt = [
-    { name = "dj-rest-auth", extra = ["with-social"] },
-    { name = "djangorestframework-simplejwt" },
-]
-
 [package.dev-dependencies]
 build = [
     { name = "build" },
@@ -294,6 +288,10 @@ docs = [
     { name = "sphinx" },
     { name = "sphinx-rtd-theme" },
 ]
+jwt = [
+    { name = "dj-rest-auth", extra = ["with-social"] },
+    { name = "djangorestframework-simplejwt" },
+]
 lint = [
     { name = "black" },
     { name = "django-stubs", extra = ["compatible-mypy"] },
@@ -315,16 +313,13 @@ test = [
 requires-dist = [
     { name = "channels", specifier = ">=4,<5" },
     { name = "channels-redis", specifier = ">=4,<5" },
-    { name = "dj-rest-auth", extras = ["with-social"], marker = "extra == 'jwt'", specifier = ">=7.0.1" },
     { name = "django", specifier = ">=5,<6" },
     { name = "djangorestframework", specifier = ">=3,<4" },
-    { name = "djangorestframework-simplejwt", marker = "extra == 'jwt'", specifier = ">=5.5.0" },
     { name = "polyfactory", specifier = ">=2.20.0" },
     { name = "pydantic", specifier = ">=2,<3" },
     { name = "redis", extras = ["hiredis"], specifier = ">=5.2.1,<6" },
     { name = "structlog", specifier = ">=25.2.0" },
 ]
-provides-extras = ["jwt", "logging"]
 
 [package.metadata.requires-dev]
 build = [
@@ -358,6 +353,10 @@ docs = [
     { name = "myst-parser", specifier = ">=4.0.1" },
     { name = "sphinx", specifier = ">=7.0.0,<8" },
     { name = "sphinx-rtd-theme" },
+]
+jwt = [
+    { name = "dj-rest-auth", extras = ["with-social"], specifier = ">=7.0.1" },
+    { name = "djangorestframework-simplejwt", specifier = ">=5.5.0" },
 ]
 lint = [
     { name = "black", specifier = ">=25.1.0,<26" },

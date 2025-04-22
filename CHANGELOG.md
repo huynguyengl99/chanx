@@ -1,3 +1,9 @@
+## v0.2.2 (2025-04-22)
+
+### Refactor
+
+- **readthedocs**: force readthedocs to install the extras package
+
 ## v0.2.1 (2025-04-22)
 
 ### Fix

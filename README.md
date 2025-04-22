@@ -90,6 +90,3 @@ class TestChatConsumer(WebsocketTestCase):
         connected, _ = await communicator.connect()
         self.assertTrue(connected)
 ```
-
-## License
-MIT

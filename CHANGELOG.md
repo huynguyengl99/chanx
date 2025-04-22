@@ -1,3 +1,13 @@
+## v0.3.0 (2025-04-22)
+
+### Feat
+
+- **camelize**: add ability to auto convert incoming and outgoing message between snake and camelcase for fe compatibility
+
+### Fix
+
+- **jwt**: migrate jwt packages from extra dependencies to jwt group
+
 ## v0.2.3 (2025-04-22)
 
 ### Fix

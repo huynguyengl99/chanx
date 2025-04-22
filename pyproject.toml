@@ -137,12 +137,10 @@ include = ["chanx"]
 [tool.interrogate]
 badge-format = "svg"
 color = true
-# example values
 exclude = ["build", "docs", "setup.py"]
 ext = []
 fail-under = 80
-# output file logation
-generate-badge = "."
+generate-badge = "docs/_static/"
 ignore-init-method = true
 ignore-init-module = true
 ignore-module = false

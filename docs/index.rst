@@ -6,6 +6,10 @@ Chanx provides a robust framework for building WebSocket applications in Django 
 structured messaging, and testing capabilities. It builds on Django Channels to offer a more complete
 solution for real-time features.
 
+.. image:: /_static/interrogate_badge.svg
+   :target: https://github.com/huynguyengl99/chanx
+   :alt: Documentation Coverage
+
 
 Key Features
 ------------

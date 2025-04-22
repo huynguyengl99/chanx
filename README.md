@@ -1,5 +1,5 @@
 # CHANX (CHANnels-eXtension)
-![Image](./interrogate_badge.svg)
+![Image](https://chanx.readthedocs.io/en/latest/_static/interrogate_badge.svg)
 [![codecov](https://codecov.io/gh/huynguyengl99/chanx/branch/main/graph/badge.svg?token=X8R3BDPTY6)](https://codecov.io/gh/huynguyengl99/chanx)
 
 The missing toolkit for Django Channels — authentication, logging, structured messaging, and more.

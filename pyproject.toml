@@ -92,6 +92,11 @@ readme = "README.md"
 requires-python = ">=3.11,<4.0"
 version = "0.2.3"
 
+[project.optional-dependencies]
+camel-case = [
+  "pyhumps>=3.8.0"
+]
+
 [project.urls]
 Documentation = "https://chanx.readthedocs.io/"
 Homepage = "https://github.com/huynguyengl99/chanx"

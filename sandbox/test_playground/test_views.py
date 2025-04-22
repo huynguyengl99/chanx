@@ -4,7 +4,9 @@ from django.test import TestCase
 from django.urls import reverse
 from rest_framework.test import APITestCase
 
+from chanx.constants import MISSING_PYHUMPS_ERROR
 from chanx.playground.views import WebSocketPlaygroundView
+from chanx.utils.settings import override_chanx_settings
 
 
 class TestWebSocketPlaygroundView(TestCase):
@@ -87,3 +89,25 @@ class TestWebSocketInfoView(APITestCase):
         assert "detail" in response.data
         assert response.data["error"] == "Failed to retrieve WebSocket routes"
         assert response.data["detail"] == "Type error"
+
+    @override_chanx_settings(CAMELIZE=True)
+    def test_websocket_info_with_camelize(self):
+        """Test error handling when humps is missing but CAMELIZE is True."""
+        response = self.client.get(self.url)
+
+        # Check the response status and data
+        assert response.status_code == 200
+        assert len(response.data) == 3
+
+    @mock.patch("chanx.playground.utils.humps", None)
+    @override_chanx_settings(CAMELIZE=True)
+    def test_missing_humps_in_websocket_info_view(self):
+        """Test error handling when humps is missing but CAMELIZE is True."""
+        response = self.client.get(self.url)
+
+        # Check the error response
+        assert response.status_code == 500
+        assert "error" in response.data
+        assert "detail" in response.data
+        assert response.data["error"] == "Failed to retrieve WebSocket routes"
+        assert MISSING_PYHUMPS_ERROR in response.data["detail"]

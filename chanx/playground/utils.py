@@ -21,8 +21,15 @@ from django.http import HttpRequest
 from polyfactory.factories.pydantic_factory import ModelFactory
 from pydantic import BaseModel
 
+from chanx.constants import MISSING_PYHUMPS_ERROR
 from chanx.messages.base import BaseIncomingMessage
+from chanx.settings import chanx_settings
 from chanx.utils.websocket import RouteInfo, get_websocket_routes, transform_routes
+
+try:
+    import humps
+except ImportError:  # pragma: no cover
+    humps = None  # type: ignore  # pragma: no cover
 
 
 class MessageExample(TypedDict):
@@ -145,6 +152,11 @@ def _get_handler_info(
     message_examples = (
         get_message_examples(incoming_message_schema) if incoming_message_schema else []
     )
+
+    if chanx_settings.CAMELIZE:
+        if not humps:
+            raise RuntimeError(MISSING_PYHUMPS_ERROR)
+        message_examples = humps.camelize(message_examples)
 
     # Format path parameters for the playground
     formatted_path_params: list[PathParam] = []

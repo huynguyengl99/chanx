@@ -30,6 +30,7 @@ class MySetting:
         SEND_COMPLETION: Whether to send completion messages after processing (default: False)
         SEND_MESSAGE_IMMEDIATELY: Whether to yield control after sending messages (default: True)
         SEND_AUTHENTICATION_MESSAGE: Whether to send auth status after connection (default: True)
+        CAMELIZE: Whether to convert keys to camelCase in messages (default: False)
         LOG_RECEIVED_MESSAGE: Whether to log received messages (default: True)
         LOG_SENT_MESSAGE: Whether to log sent messages (default: True)
         LOG_IGNORED_ACTIONS: Message actions that should not be logged (default: empty list)
@@ -41,6 +42,7 @@ class MySetting:
     SEND_COMPLETION: bool = False
     SEND_MESSAGE_IMMEDIATELY: bool = True
     SEND_AUTHENTICATION_MESSAGE: bool = True
+    CAMELIZE: bool = False
 
     LOG_RECEIVED_MESSAGE: bool = True
     LOG_SENT_MESSAGE: bool = True

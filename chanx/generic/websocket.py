@@ -49,6 +49,7 @@ from rest_framework.permissions import (
 import structlog
 from pydantic import ValidationError
 
+from chanx.constants import MISSING_PYHUMPS_ERROR
 from chanx.generic.authenticator import ChanxWebsocketAuthenticator, QuerysetLike
 from chanx.messages.base import (
     BaseIncomingMessage,
@@ -68,6 +69,11 @@ from chanx.utils.asyncio import create_task
 from chanx.utils.logging import logger
 
 _MT_co = TypeVar("_MT_co", bound=Model, covariant=True)
+
+try:
+    import humps
+except ImportError:  # pragma: no cover
+    humps = None  # type: ignore  # pragma: no cover
 
 
 class AsyncJsonWebsocketConsumer(BaseAsyncJsonWebsocketConsumer, Generic[_MT_co], ABC):  # type: ignore
@@ -165,6 +171,10 @@ class AsyncJsonWebsocketConsumer(BaseAsyncJsonWebsocketConsumer, Generic[_MT_co]
         self.group_name: str | None = None
         self.connecting: bool = False
         self.request: HttpRequest | None = None
+
+        if chanx_settings.CAMELIZE:
+            if not humps:
+                raise RuntimeError(MISSING_PYHUMPS_ERROR)
 
     def _create_authenticator(self) -> Any:
         """
@@ -292,6 +302,9 @@ class AsyncJsonWebsocketConsumer(BaseAsyncJsonWebsocketConsumer, Generic[_MT_co]
             content: The JSON content received from the client
             **kwargs: Additional keyword arguments
         """
+        if chanx_settings.CAMELIZE:
+            content = humps.decamelize(content)
+
         message_action = content.get(chanx_settings.MESSAGE_ACTION_KEY)
 
         message_id = str(uuid.uuid4())[:8]
@@ -327,6 +340,9 @@ class AsyncJsonWebsocketConsumer(BaseAsyncJsonWebsocketConsumer, Generic[_MT_co]
             content: The JSON content to send
             close: Whether to close the connection after sending
         """
+        if chanx_settings.CAMELIZE:
+            content = humps.camelize(content)
+
         await super().send_json(content, close)
 
         if self.send_message_immediately:

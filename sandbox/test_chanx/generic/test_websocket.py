@@ -1,5 +1,6 @@
 import asyncio
 from typing import Any, Literal
+from unittest.mock import patch
 
 from channels.routing import URLRouter
 from django.urls import path
@@ -7,13 +8,21 @@ from rest_framework import status
 from rest_framework.authentication import SessionAuthentication
 from rest_framework.permissions import AllowAny
 
+import humps
 import pytest
+from chanx.constants import MISSING_PYHUMPS_ERROR
 from chanx.generic.websocket import AsyncJsonWebsocketConsumer
-from chanx.messages.base import BaseGroupMessage, BaseMessage, BaseOutgoingGroupMessage
+from chanx.messages.base import (
+    BaseGroupMessage,
+    BaseIncomingMessage,
+    BaseMessage,
+    BaseOutgoingGroupMessage,
+)
 from chanx.messages.incoming import IncomingMessage, PingMessage
 from chanx.messages.outgoing import PongMessage
 from chanx.testing import WebsocketTestCase
 from chanx.utils.settings import override_chanx_settings
+from pydantic import BaseModel
 from structlog.testing import capture_logs
 
 
@@ -166,3 +175,70 @@ class MyAnonymousGroupTestCase(WebsocketTestCase):
         }
 
         assert message == extended_res
+
+
+class SnakePayload(BaseModel):
+    snake_field: str
+
+
+class SnakeMessage(BaseMessage):
+    action: Literal["snake_message"] = "snake_message"
+    payload: SnakePayload
+
+
+class SnakeIncomingMessage(BaseIncomingMessage):
+    message: SnakeMessage
+
+
+class CamelizeConsumer(AsyncJsonWebsocketConsumer):
+    permission_classes = [AllowAny]
+    authentication_classes = []
+    INCOMING_MESSAGE_SCHEMA = SnakeIncomingMessage
+
+    async def receive_message(self, message: BaseMessage, **kwargs: Any) -> None:
+        match message:
+            case SnakeMessage(payload=payload):
+                payload: SnakePayload
+                await self.send_message(
+                    SnakeMessage(
+                        payload=SnakePayload(snake_field=f"Reply {payload.snake_field}")
+                    )
+                )
+
+
+class CamelizeConsumerTestCase(WebsocketTestCase):
+    ws_path = "/camelize-consumer/"
+
+    router = URLRouter([path("camelize-consumer/", CamelizeConsumer.as_asgi())])
+
+    @override_chanx_settings(
+        CAMELIZE=True,
+    )
+    async def test_camelize_case(self):
+        await self.auth_communicator.connect()
+
+        auth = await self.auth_communicator.wait_for_auth(
+            MyConsumer.send_authentication_message
+        )
+        assert auth.payload.status_code == status.HTTP_200_OK
+
+        message = SnakeMessage(payload=SnakePayload(snake_field="data")).model_dump()
+        await self.auth_communicator.send_json_to(humps.camelize(message))
+        all_messages = await self.auth_communicator.receive_all_json()
+        assert all_messages == [
+            {
+                "action": "snake_message",
+                "payload": {"snakeField": "Reply data"},
+            }
+        ]
+
+    @override_chanx_settings(
+        CAMELIZE=True,
+        SEND_AUTHENTICATION_MESSAGE=False,
+    )
+    @patch("chanx.generic.websocket.humps", None)
+    async def test_missing_humps_raises_error(self):
+        with pytest.raises(RuntimeError) as excinfo:
+            await self.auth_communicator.connect()
+
+        assert MISSING_PYHUMPS_ERROR in str(excinfo.value)

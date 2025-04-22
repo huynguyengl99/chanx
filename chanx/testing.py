@@ -28,6 +28,11 @@ from chanx.messages.outgoing import (
 from chanx.settings import chanx_settings
 from chanx.utils.asgi import get_websocket_application
 
+try:
+    import humps
+except ImportError:  # pragma: no cover
+    humps = None  # type: ignore  # pragma: no cover
+
 
 class WebsocketCommunicator(BaseWebsocketCommunicator):  # type: ignore
     """
@@ -49,7 +54,7 @@ class WebsocketCommunicator(BaseWebsocketCommunicator):  # type: ignore
         self._connected = False
 
     async def receive_all_json(
-        self, timeout: int = 5, *, wait_group: bool = False
+        self, timeout: float = 5, *, wait_group: bool = False
     ) -> list[dict[str, Any]]:
         """
         Receives and collects all JSON messages until an ACTION_COMPLETE message
@@ -108,6 +113,8 @@ class WebsocketCommunicator(BaseWebsocketCommunicator):  # type: ignore
 
         if send_authentication_message:
             json_message = await self.receive_json_from(max_auth_time)
+            if chanx_settings.CAMELIZE:
+                json_message = humps.decamelize(json_message)
             # make sure any other pending work still have chance to done after that
             await asyncio.sleep(after_auth_time)
             return AuthenticationMessage.model_validate(json_message)

@@ -219,6 +219,42 @@ For group messages, inherit from ``BaseGroupMessage``:
         payload: str
         # Automatically includes is_mine and is_current
 
+
+**Message Camelization**
+
+For frontend compatibility, Chanx supports automatic camelCase conversion of message keys:
+
+.. code-block:: python
+
+    # settings.py
+    CHANX = {
+        'CAMELIZE': True,  # Enable camelCase conversion
+    }
+
+With this setting enabled, a message like:
+
+.. code-block:: json
+
+    {"action": "notification", "payload": {"user_name": "Alice", "message_text": "Hello"}}
+
+Will be automatically converted to:
+
+.. code-block:: json
+
+    {"action": "notification", "payload": {"userName": "Alice", "messageText": "Hello"}}
+
+Note: This feature requires the 'pyhumps' package. Install it with:
+
+.. code-block:: bash
+
+    pip install pyhumps
+
+or via the extras:
+
+.. code-block:: bash
+
+    pip install chanx[camel-case]
+
 Best Practices
 --------------
 1. **Define clear message contracts**: Document the purpose and structure of each message type

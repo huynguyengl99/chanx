@@ -305,7 +305,9 @@ LOGGING = {
             "()": structlog.stdlib.ProcessorFormatter,
             "processors": [
                 structlog.stdlib.ProcessorFormatter.remove_processors_meta,
-                structlog.dev.ConsoleRenderer(),
+                structlog.dev.ConsoleRenderer(
+                    exception_formatter=structlog.dev.plain_traceback
+                ),
             ],
             "foreign_pre_chain": pre_chain,
         },
@@ -367,6 +369,10 @@ CHANNEL_LAYERS = {
             "hosts": [REDIS_HOST],
         },
     },
+}
+
+CHANX = {
+    "CAMELIZE": False,
 }
 
 # =========================================================================

@@ -14,6 +14,7 @@ Here's an overview of all available settings and their default values:
         'SEND_COMPLETION': False,
         'SEND_MESSAGE_IMMEDIATELY': True,
         'SEND_AUTHENTICATION_MESSAGE': True,
+        'CAMELIZE': False,
         'LOG_RECEIVED_MESSAGE': True,
         'LOG_SENT_MESSAGE': True,
         'LOG_IGNORED_ACTIONS': ['ping', 'pong'],
@@ -41,6 +42,9 @@ Settings Details
    * - ``SEND_AUTHENTICATION_MESSAGE``
      - ``True``
      - Whether to send authentication status message after connection authentication
+   * - ``CAMELIZE``
+     - ``False``
+     - Whether to convert message keys to camelCase format using pyhumps. Requires the pyhumps package to be installed.
    * - ``LOG_RECEIVED_MESSAGE``
      - ``True``
      - Whether to log received WebSocket messages

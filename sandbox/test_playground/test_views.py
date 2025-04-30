@@ -1,4 +1,5 @@
 from unittest import mock
+from unittest.mock import Mock
 
 from django.test import TestCase
 from django.urls import reverse
@@ -12,7 +13,7 @@ from chanx.utils.settings import override_chanx_settings
 class TestWebSocketPlaygroundView(TestCase):
     """Tests for the WebSocket playground template view."""
 
-    def test_get_context_data(self):
+    def test_get_context_data(self) -> None:
         """Test that the correct context is provided to the template."""
         # Create an instance of the view
         view = WebSocketPlaygroundView()
@@ -29,7 +30,7 @@ class TestWebSocketPlaygroundView(TestCase):
         assert "websocket_info_url" in context
         assert context["websocket_info_url"] == reverse("websocket_info")
 
-    def test_template_used(self):
+    def test_template_used(self) -> None:
         """Test that the correct template is used."""
         # Use the Django test client to get the view
         response = self.client.get(reverse("websocket_playground"))
@@ -44,11 +45,11 @@ class TestWebSocketPlaygroundView(TestCase):
 class TestWebSocketInfoView(APITestCase):
     """Tests for the WebSocket info API view."""
 
-    def setUp(self):
+    def setUp(self) -> None:
         """Set up for each test method."""
         self.url = reverse("websocket_info")
 
-    def test_get_success(self):
+    def test_get_success(self) -> None:
         """Test successful retrieval of WebSocket routes."""
 
         # Make the API request
@@ -59,7 +60,7 @@ class TestWebSocketInfoView(APITestCase):
         assert len(response.data) == 3
 
     @mock.patch("chanx.playground.views.get_playground_websocket_routes")
-    def test_get_error(self, mock_get_routes):
+    def test_get_error(self, mock_get_routes: Mock) -> None:
         """Test error handling when retrieving WebSocket routes fails."""
         # Mock the function to raise an exception
         mock_get_routes.side_effect = Exception("Test error")
@@ -75,7 +76,7 @@ class TestWebSocketInfoView(APITestCase):
         assert response.data["detail"] == "Test error"
 
     @mock.patch("chanx.playground.utils._get_handler_info")
-    def test_get_error_deeper_level(self, mock_get_handler_info):
+    def test_get_error_deeper_level(self, mock_get_handler_info: Mock) -> None:
         """Test error handling when retrieving WebSocket routes fails."""
         # Mock the function to raise an exception
         mock_get_handler_info.side_effect = TypeError("Type error")
@@ -91,7 +92,7 @@ class TestWebSocketInfoView(APITestCase):
         assert response.data["detail"] == "Type error"
 
     @override_chanx_settings(CAMELIZE=True)
-    def test_websocket_info_with_camelize(self):
+    def test_websocket_info_with_camelize(self) -> None:
         """Test error handling when humps is missing but CAMELIZE is True."""
         response = self.client.get(self.url)
 
@@ -101,7 +102,7 @@ class TestWebSocketInfoView(APITestCase):
 
     @mock.patch("chanx.playground.utils.humps", None)
     @override_chanx_settings(CAMELIZE=True)
-    def test_missing_humps_in_websocket_info_view(self):
+    def test_missing_humps_in_websocket_info_view(self) -> None:
         """Test error handling when humps is missing but CAMELIZE is True."""
         response = self.client.get(self.url)
 

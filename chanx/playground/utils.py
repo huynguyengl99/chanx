@@ -6,11 +6,12 @@ transforming route information into a format suitable for display and interactio
 """
 
 import inspect
-from types import UnionType
+from types import ModuleType, UnionType
 from typing import (
     Any,
     TypedDict,
     Union,
+    cast,
     get_args,
     get_origin,
     get_type_hints,
@@ -29,7 +30,7 @@ from chanx.utils.websocket import RouteInfo, get_websocket_routes, transform_rou
 try:
     import humps
 except ImportError:  # pragma: no cover
-    humps = None  # type: ignore  # pragma: no cover
+    humps = cast(ModuleType, None)  # pragma: no cover
 
 
 class MessageExample(TypedDict):

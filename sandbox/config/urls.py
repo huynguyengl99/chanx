@@ -48,7 +48,7 @@ api_urlpatterns = [
 urlpatterns = [
     path("", RedirectView.as_view(url="admin/")),
     path("admin/", admin.site.urls),
-    path("api/", include(api_urlpatterns)),
+    path("api/", include(api_urlpatterns)),  # type: ignore
 ]
 
 

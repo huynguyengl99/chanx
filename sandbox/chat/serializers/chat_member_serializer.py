@@ -1,12 +1,13 @@
+from typing import Any
+
 from rest_framework import serializers
-from rest_framework.generics import get_object_or_404
 
 from accounts.serializers.user_serializer import EmailUserField
 
-from chat.models import ChatMember, GroupChat
+from chat.models import ChatMember
 
 
-class ChatMemberSerializer(serializers.ModelSerializer):
+class ChatMemberSerializer(serializers.ModelSerializer[ChatMember]):
     class Meta:
         model = ChatMember
         fields = [
@@ -18,7 +19,7 @@ class ChatMemberSerializer(serializers.ModelSerializer):
         ]
 
 
-class ManageChatMemberSerializer(serializers.ModelSerializer):
+class ManageChatMemberSerializer(serializers.ModelSerializer[ChatMember]):
     user = EmailUserField()
 
     class Meta:
@@ -26,15 +27,13 @@ class ManageChatMemberSerializer(serializers.ModelSerializer):
         fields = ["id", "user", "chat_role"]
         extra_kwargs = {"chat_role": {"required": True}}
 
-    def validate_role(self, value):
+    def validate_role(self, value: int) -> int:
         if value == ChatMember.ChatMemberRole.OWNER:
             raise serializers.ValidationError("Cannot add new owner")
 
         return value
 
-    def create(self, validated_data):
-        group_chat = get_object_or_404(GroupChat, id=validated_data["group_chat_id"])
-
+    def create(self, validated_data: dict[str, Any]) -> ChatMember:
         member_data = {
             "user": validated_data["user"],
             "group_chat_id": validated_data["group_chat_id"],
@@ -43,5 +42,4 @@ class ManageChatMemberSerializer(serializers.ModelSerializer):
         }
         instance = ChatMember(**member_data)
         instance.save()
-        group_chat.save(update_fields=["modified"])
         return instance

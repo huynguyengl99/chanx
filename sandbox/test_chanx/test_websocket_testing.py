@@ -7,7 +7,7 @@ from chanx.testing import WebsocketTestCase
 
 
 class TestWebsocketTesting(TestCase):
-    def test_ws_path_not_set(self):
+    def test_ws_path_not_set(self) -> None:
         with pytest.raises(
             AttributeError, match=r"ws_path is not set in ImplementedWebsocketTestCase"
         ):
@@ -19,7 +19,7 @@ class TestWebsocketTesting(TestCase):
             test_case.setUp()
             test_case.create_communicator()
 
-    def test_websocket_application_not_found(self):
+    def test_websocket_application_not_found(self) -> None:
         # Mock get_websocket_application to return None
         with patch("chanx.testing.get_websocket_application", return_value=None):
             # Define a test class with ws_path set
@@ -32,7 +32,7 @@ class TestWebsocketTesting(TestCase):
             ):
                 TestWebsocketCase()
 
-    def test_websocket_create_communicator_prepopulate(self):
+    def test_websocket_create_communicator_prepopulate(self) -> None:
         with patch("chanx.testing.WebsocketCommunicator") as mock_communicator:
 
             class ImplementedWebsocketTestCase(WebsocketTestCase):

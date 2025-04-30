@@ -5,7 +5,8 @@ This module tests the various utilities in the websocket.py module
 for discovering and transforming WebSocket routes.
 """
 
-from unittest.mock import MagicMock, patch
+from typing import Any
+from unittest.mock import MagicMock, Mock, patch
 
 from channels.routing import URLRouter
 from django.http import HttpRequest
@@ -25,12 +26,12 @@ from chanx.utils.websocket import (
 class TestWebSocketBaseURL:
     """Tests for the _get_websocket_base_url function."""
 
-    def test_without_request(self):
+    def test_without_request(self) -> None:
         """Test default WebSocket base URL without a request."""
         base_url = _get_websocket_base_url(None)
         assert base_url == "ws://localhost:8000"
 
-    def test_with_insecure_request(self):
+    def test_with_insecure_request(self) -> None:
         """Test WebSocket base URL with an insecure request."""
         mock_request = MagicMock(spec=HttpRequest)
         mock_request.get_host.return_value = "example.com"
@@ -41,7 +42,7 @@ class TestWebSocketBaseURL:
         mock_request.get_host.assert_called_once()
         mock_request.is_secure.assert_called_once()
 
-    def test_with_secure_request(self):
+    def test_with_secure_request(self) -> None:
         """Test WebSocket base URL with a secure request."""
         mock_request = MagicMock(spec=HttpRequest)
         mock_request.get_host.return_value = "example.com"
@@ -60,8 +61,8 @@ class TestGetWebSocketRoutes:
     @patch("chanx.utils.websocket.get_websocket_application")
     @patch("chanx.utils.websocket._traverse_middleware")
     def test_get_websocket_routes_with_app(
-        self, mock_traverse, mock_get_app, mock_get_base_url
-    ):
+        self, mock_traverse: Mock, mock_get_app: Mock, mock_get_base_url: Mock
+    ) -> None:
         """Test route discovery when a WebSocket app is available."""
         # Setup mocks
         mock_request = MagicMock(spec=HttpRequest)
@@ -83,8 +84,8 @@ class TestGetWebSocketRoutes:
     @patch("chanx.utils.websocket.get_websocket_application")
     @patch("chanx.utils.websocket._traverse_middleware")
     def test_get_websocket_routes_without_app(
-        self, mock_traverse, mock_get_app, mock_get_base_url
-    ):
+        self, mock_traverse: Mock, mock_get_app: Mock, mock_get_base_url: Mock
+    ) -> None:
         """Test route discovery when no WebSocket app is available."""
         # Setup mocks
         mock_request = MagicMock(spec=HttpRequest)
@@ -106,7 +107,7 @@ class TestGetWebSocketRoutes:
 class TestTransformRoutes:
     """Tests for the transform_routes function."""
 
-    def test_transform_routes(self):
+    def test_transform_routes(self) -> None:
         """Test transforming routes with a custom function."""
         # Create sample routes
         routes = [
@@ -124,7 +125,7 @@ class TestTransformRoutes:
         # Verify the results
         assert result == ["test1", "test2"]
 
-    def test_transform_routes_to_dict(self):
+    def test_transform_routes_to_dict(self) -> None:
         """Test transforming routes to dictionary format."""
         # Create sample routes
         mock_handler1 = MagicMock()
@@ -138,7 +139,7 @@ class TestTransformRoutes:
         ]
 
         # Define a transformation function for dictionary conversion
-        def transform_to_dict(route: RouteInfo) -> dict:
+        def transform_to_dict(route: RouteInfo) -> dict[str, Any]:
             return {
                 "path": route.path,
                 "handler_type": route.handler.__class__.__name__,
@@ -163,9 +164,9 @@ class TestTransformRoutes:
         ]
         assert result == expected
 
-    def test_empty_routes_list(self):
+    def test_empty_routes_list(self) -> None:
         """Test transforming an empty routes list."""
-        routes = []
+        routes: list[RouteInfo] = []
 
         def identity(route: RouteInfo) -> RouteInfo:
             return route
@@ -177,38 +178,38 @@ class TestTransformRoutes:
 class TestTraverseMiddleware:
     """Tests for the _traverse_middleware function."""
 
-    def test_traverse_url_router(self):
+    def test_traverse_url_router(self) -> None:
         """Test traversing a URLRouter directly."""
         router = MagicMock(spec=URLRouter)
-        routes = []
+        routes: list[RouteInfo] = []
         base_url = "ws://example.com"
 
         with patch("chanx.utils.websocket._extract_routes_from_router") as mock_extract:
             _traverse_middleware(router, "", routes, base_url)
             mock_extract.assert_called_once_with(router, "", routes, base_url)
 
-    def test_traverse_none_app(self):
+    def test_traverse_none_app(self) -> None:
         """Test traversing with None app."""
-        routes = []
+        routes: list[RouteInfo] = []
         base_url = "ws://example.com"
 
         # This should not raise an error
         _traverse_middleware(None, "", routes, base_url)
         assert routes == []
 
-    def test_traverse_middleware_with_inner(self):
+    def test_traverse_middleware_with_inner(self) -> None:
         """Test traversing middleware with inner application."""
         mock_inner = MagicMock()
         mock_app = MagicMock()
         mock_app.inner = mock_inner
-        routes = []
+        routes: list[RouteInfo] = []
         base_url = "ws://example.com"
 
         with patch("chanx.utils.websocket._traverse_middleware") as mock_traverse:
             _traverse_middleware(mock_app, "", routes, base_url)
             mock_traverse.assert_called_once_with(mock_inner, "", routes, base_url)
 
-    def test_traverse_middleware_with_app_attr(self):
+    def test_traverse_middleware_with_app_attr(self) -> None:
         """Test traversing middleware with app attribute."""
         mock_inner = MagicMock()
         mock_app = MagicMock()
@@ -216,14 +217,14 @@ class TestTraverseMiddleware:
         if hasattr(mock_app, "inner"):
             delattr(mock_app, "inner")
         mock_app.app = mock_inner
-        routes = []
+        routes: list[RouteInfo] = []
         base_url = "ws://example.com"
 
         with patch("chanx.utils.websocket._traverse_middleware") as mock_traverse:
             _traverse_middleware(mock_app, "", routes, base_url)
             mock_traverse.assert_called_once_with(mock_inner, "", routes, base_url)
 
-    def test_traverse_middleware_with_application_attr(self):
+    def test_traverse_middleware_with_application_attr(self) -> None:
         """Test traversing middleware with application attribute."""
         mock_inner = MagicMock()
         mock_app = MagicMock()
@@ -233,14 +234,14 @@ class TestTraverseMiddleware:
         if hasattr(mock_app, "app"):
             delattr(mock_app, "app")
         mock_app.application = mock_inner
-        routes = []
+        routes: list[RouteInfo] = []
         base_url = "ws://example.com"
 
         with patch("chanx.utils.websocket._traverse_middleware") as mock_traverse:
             _traverse_middleware(mock_app, "", routes, base_url)
             mock_traverse.assert_called_once_with(mock_inner, "", routes, base_url)
 
-    def test_traverse_middleware_no_inner_app(self):
+    def test_traverse_middleware_no_inner_app(self) -> None:
         """Test traversing middleware with no inner application found."""
         mock_app = MagicMock()
         # Remove all possible inner app attributes
@@ -251,7 +252,7 @@ class TestTraverseMiddleware:
         if hasattr(mock_app, "application"):
             delattr(mock_app, "application")
 
-        routes = []
+        routes: list[RouteInfo] = []
         base_url = "ws://example.com"
 
         # This should not call _traverse_middleware again
@@ -263,7 +264,7 @@ class TestTraverseMiddleware:
 class TestExtractRoutesFromRouter:
     """Tests for the _extract_routes_from_router function."""
 
-    def test_extract_routes_attribute_error(self):
+    def test_extract_routes_attribute_error(self) -> None:
         """Test handling of AttributeError in _extract_routes_from_router."""
         # Create a router with a route that will cause an AttributeError
         mock_route = MagicMock()
@@ -274,7 +275,7 @@ class TestExtractRoutesFromRouter:
         router = MagicMock(spec=URLRouter)
         router.routes = [mock_route]
 
-        routes = []
+        routes: list[RouteInfo] = []
         base_url = "ws://example.com"
         prefix = "test-prefix/"
 
@@ -285,7 +286,7 @@ class TestExtractRoutesFromRouter:
             # The routes list should remain empty
             assert routes == []
 
-    def test_extract_routes_general_exception(self):
+    def test_extract_routes_general_exception(self) -> None:
         """Test handling of general Exception in _extract_routes_from_router."""
         # Create a router with a route that will cause a general exception
         mock_route = MagicMock()
@@ -298,7 +299,7 @@ class TestExtractRoutesFromRouter:
         router = MagicMock(spec=URLRouter)
         router.routes = [mock_route]
 
-        routes = []
+        routes: list[RouteInfo] = []
         base_url = "ws://example.com"
         prefix = "test-prefix/"
 
@@ -313,7 +314,7 @@ class TestExtractRoutesFromRouter:
 class TestGetPatternString:
     """Tests for the _get_pattern_string_and_params function."""
 
-    def test_get_pattern_with_pattern_attribute_and_nested_pattern(self):
+    def test_get_pattern_with_pattern_attribute_and_nested_pattern(self) -> None:
         """Test extracting pattern string from route with nested pattern."""
         mock_route = MagicMock()
         mock_pattern = MagicMock()
@@ -324,7 +325,7 @@ class TestGetPatternString:
         assert pattern == "test-pattern"
         assert params is None
 
-    def test_get_pattern_with_pattern_attribute_no_nested(self):
+    def test_get_pattern_with_pattern_attribute_no_nested(self) -> None:
         """Test extracting pattern string from route with non-nested pattern."""
         mock_route = MagicMock()
         mock_route.pattern = "^another-pattern$"
@@ -333,7 +334,7 @@ class TestGetPatternString:
         assert pattern == "another-pattern"
         assert params is None
 
-    def test_get_pattern_with_path_parameters(self):
+    def test_get_pattern_with_path_parameters(self) -> None:
         """Test extracting pattern string with path parameters."""
         mock_route = MagicMock()
         mock_pattern = MagicMock()
@@ -344,7 +345,7 @@ class TestGetPatternString:
         assert pattern == "user/(?P<user_id>[0-9]+)/profile"
         assert params == {"user_id": "[0-9]+"}
 
-    def test_get_pattern_with_multiple_path_parameters(self):
+    def test_get_pattern_with_multiple_path_parameters(self) -> None:
         """Test extracting pattern string with multiple path parameters."""
         mock_route = MagicMock()
         mock_pattern = MagicMock()
@@ -362,7 +363,7 @@ class TestIntegration:
     """Integration tests for the WebSocket utils."""
 
     @patch("chanx.utils.websocket.get_websocket_application")
-    def test_route_discovery_integration(self, mock_get_app):
+    def test_route_discovery_integration(self, mock_get_app: Mock) -> None:
         """Test the route discovery process with a realistic URLRouter setup."""
         # Create mock consumer and handler
         mock_consumer = MagicMock()

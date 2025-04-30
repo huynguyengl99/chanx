@@ -1,5 +1,4 @@
-from collections.abc import Iterable
-from typing import Any, cast
+from typing import Any
 
 from chanx.generic.websocket import AsyncJsonWebsocketConsumer
 from chanx.messages.base import BaseMessage
@@ -9,12 +8,10 @@ from chanx.messages.outgoing import PongMessage
 from chat.messages.chat import (
     ChatIncomingMessage,
     JoinGroupMessage,
-    JoinGroupPayload,
-    MessagePayload,
     NewChatMessage,
 )
 from chat.messages.group import MemberMessage, OutgoingGroupMessage
-from chat.models import ChatMessage, GroupChat
+from chat.models import ChatMember, ChatMessage, GroupChat
 from chat.permissions import IsGroupChatMember
 from chat.serializers import ChatMessageSerializer
 from chat.utils import name_group_chat
@@ -27,38 +24,38 @@ class ChatDetailConsumer(AsyncJsonWebsocketConsumer):
     queryset = GroupChat.objects.get_queryset()
 
     obj: GroupChat
+    member: ChatMember
+    groups: list[str]
 
-    def __init__(self, *args: Any, **kwargs: Any):
-        super().__init__(args, kwargs)
-        self.member = None
-
-    async def build_groups(self) -> Iterable[str]:
-        group = cast(GroupChat, self.obj)
-        self.group_name = name_group_chat(group.id)
+    async def build_groups(self) -> list[str]:
+        self.group_name = name_group_chat(self.obj.pk)
         return [self.group_name]
 
-    async def post_authentication(self):
+    async def post_authentication(self) -> None:
+        assert self.user is not None
         self.member = await self.obj.members.select_related("user").aget(user=self.user)
 
     async def receive_message(self, message: BaseMessage, **kwargs: Any) -> None:
         match message:
             case PingMessage():
                 await self.send_message(PongMessage())
-            case NewChatMessage():
-                payload: MessagePayload = message.payload
+            case NewChatMessage(payload=message_payload):
                 new_message = await ChatMessage.objects.acreate(
-                    content=payload.content, group_chat=self.obj, sender=self.member
+                    content=message_payload.content,
+                    group_chat=self.obj,
+                    sender=self.member,
                 )
-                groups = payload.groups
+                groups = message_payload.groups
 
-                message = ChatMessageSerializer(new_message).data
+                message_data = ChatMessageSerializer(new_message).data
 
                 await self.send_group_message(
-                    MemberMessage(payload=message), groups=groups, exclude_current=False
+                    MemberMessage(payload=message_data),
+                    groups=groups,
+                    exclude_current=False,
                 )
-            case JoinGroupMessage():
-                payload: JoinGroupPayload = message.payload
+            case JoinGroupMessage(payload=join_group_payload):
                 await self.channel_layer.group_add(
-                    payload.group_name, self.channel_name
+                    join_group_payload.group_name, self.channel_name
                 )
-                self.groups.extend(payload.group_name)
+                self.groups.extend(join_group_payload.group_name)

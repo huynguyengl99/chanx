@@ -6,6 +6,7 @@ to ensure they work as expected for authentication.
 """
 
 import warnings
+from typing import Any
 from unittest.mock import MagicMock, patch
 
 from django.test import RequestFactory, TransactionTestCase
@@ -13,6 +14,7 @@ from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.request import Request
 from rest_framework.response import Response
+from rest_framework.views import APIView
 
 import pytest
 from chanx.generic.authenticator import (
@@ -27,7 +29,7 @@ from chat.models import GroupChat
 class TestChanxSerializer:
     """Tests for the ChanxSerializer class."""
 
-    def test_serializer_fields(self):
+    def test_serializer_fields(self) -> None:
         """Test that the serializer has expected fields."""
         serializer = ChanxSerializer()
         assert "detail" in serializer.fields
@@ -38,7 +40,7 @@ class TestChanxSerializer:
 class TestChanxAuthView:
     """Tests for the ChanxAuthView class."""
 
-    def setup_method(self):
+    def setup_method(self) -> None:
         """Set up test environment before each test method."""
         self.view = ChanxAuthView()
         self.factory = RequestFactory()
@@ -46,64 +48,64 @@ class TestChanxAuthView:
         self.view.request = Request(self.request)
         self.view.kwargs = {}
 
-    def test_default_attributes(self):
+    def test_default_attributes(self) -> None:
         """Test default attributes of the view."""
         assert self.view.serializer_class == ChanxSerializer
         assert self.view.lookup_field == "pk"
         assert self.view.detail is None
 
-    def test_get_response_without_detail(self):
+    def test_get_response_without_detail(self) -> None:
         """Test get_response when detail is None and no lookup param."""
         response = self.view.get_response(self.view.request)
         assert isinstance(response, Response)
         assert response.data == {"detail": "ok"}
         assert response.status_code == 200
 
-    def test_get_response_with_detail_true(self):
+    def test_get_response_with_detail_true(self) -> None:
         """Test get_response when detail is True."""
         self.view.detail = True
 
         # Mock get_object to prevent actual database lookup
-        self.view.get_object = MagicMock()
+        self.view.get_object = MagicMock()  # type: ignore[method-assign]
 
         response = self.view.get_response(self.view.request)
         assert self.view.get_object.called
         assert response.data == {"detail": "ok"}
 
-    def test_get_response_with_lookup_parameter(self):
+    def test_get_response_with_lookup_parameter(self) -> None:
         """Test get_response when lookup parameter is present."""
         self.view.kwargs = {"pk": "123"}
 
         # Mock get_object to prevent actual database lookup
-        self.view.get_object = MagicMock()
+        self.view.get_object = MagicMock()  # type: ignore[method-assign]
 
         response = self.view.get_response(self.view.request)
         assert self.view.get_object.called
         assert response.data == {"detail": "ok"}
 
-    def test_get_response_without_lookup_parameter(self):
+    def test_get_response_without_lookup_parameter(self) -> None:
         """Test get_response when no lookup parameter is present."""
         self.view.kwargs = {}
 
         # No need to mock get_object as it shouldn't be called
-        self.view.get_object = MagicMock()
+        self.view.get_object = MagicMock()  # type: ignore[method-assign]
 
         response = self.view.get_response(self.view.request)
         assert not self.view.get_object.called
         assert response.data == {"detail": "ok"}
 
-    def test_detail_false_no_get_object_call(self):
+    def test_detail_false_no_get_object_call(self) -> None:
         """Test that get_object is not called when detail is False."""
         self.view.detail = False
         self.view.kwargs = {"pk": "123"}
 
-        self.view.get_object = MagicMock()
+        self.view.get_object = MagicMock()  # type: ignore[method-assign]
 
         response = self.view.get_response(self.view.request)
         assert not self.view.get_object.called
         assert response.data == {"detail": "ok"}
 
-    def test_http_methods(self):
+    def test_http_methods(self) -> None:
         """Test that all HTTP methods return the response from get_response."""
         methods = ["get", "post", "put", "patch", "delete"]
 
@@ -120,7 +122,7 @@ class TestChanxAuthView:
 
 
 @pytest.mark.parametrize("method_name", ["get", "post", "put", "patch", "delete"])
-def test_http_method_calls_get_response(method_name):
+def test_http_method_calls_get_response(method_name: str) -> None:
     """Test that each HTTP method calls get_response correctly."""
     view = ChanxAuthView()
     request_factory = RequestFactory()
@@ -149,7 +151,7 @@ def test_http_method_calls_get_response(method_name):
 class TestChanxWebsocketAuthenticator(TransactionTestCase):
     """Tests for the ChanxWebsocketAuthenticator class."""
 
-    def setUp(self):
+    def setUp(self) -> None:
         """Set up test environment before each test method."""
         self.factory = RequestFactory()
         self.authenticator = ChanxWebsocketAuthenticator()
@@ -168,7 +170,7 @@ class TestChanxWebsocketAuthenticator(TransactionTestCase):
             },
         }
 
-    def _create_scope_with_pk(self, pk):
+    def _create_scope_with_pk(self, pk: int) -> dict[str, Any]:
         return {
             "type": "websocket",
             "path": "/ws/chat/1/",
@@ -181,7 +183,7 @@ class TestChanxWebsocketAuthenticator(TransactionTestCase):
             },
         }
 
-    def test_validate_configuration_check_has_object_permission_method(self):
+    def test_validate_configuration_check_has_object_permission_method(self) -> None:
         """Test validate_configuration checks for has_object_permission method."""
 
         self.authenticator.permission_classes = [IsAuthenticated]
@@ -199,7 +201,9 @@ class TestChanxWebsocketAuthenticator(TransactionTestCase):
 
         # Create permission class with has_object_permission defined in parent class
         class BaseObjectPermission(IsAuthenticated):
-            def has_object_permission(self, request, view, obj):
+            def has_object_permission(
+                self, request: Request, view: APIView, obj: Any
+            ) -> bool:
                 return True
 
         class ChildPermission(BaseObjectPermission):
@@ -208,7 +212,9 @@ class TestChanxWebsocketAuthenticator(TransactionTestCase):
 
         # Create permission class with has_object_permission defined in this class
         class DirectObjectPermission(IsAuthenticated):
-            def has_object_permission(self, request, view, obj):
+            def has_object_permission(
+                self, request: Request, view: APIView, obj: Any
+            ) -> bool:
                 return True
 
         self.authenticator.permission_classes = [ChildPermission]
@@ -233,15 +239,15 @@ class TestChanxWebsocketAuthenticator(TransactionTestCase):
             self.authenticator.validate_configuration()
             assert len(w) == 0
 
-    def test_validate_scope_configuration_no_lookup(self):
+    def test_validate_scope_configuration_no_lookup(self) -> None:
         """Test _validate_scope_configuration with no lookup parameters."""
         # Create a scope with no URL lookup parameters
-        scope = {"url_route": {"kwargs": {}}}
+        scope: dict[str, Any] = {"url_route": {"kwargs": {}}}
 
         # Should not raise any exceptions
         self.authenticator._validate_scope_configuration(scope)
 
-    def test_validate_scope_configuration_with_lookup_no_queryset(self):
+    def test_validate_scope_configuration_with_lookup_no_queryset(self) -> None:
         """Test _validate_scope_configuration with lookup but no queryset raises error."""
         # Create a scope with a URL lookup parameter
         scope = {"url_route": {"kwargs": {"pk": "1"}}}
@@ -252,12 +258,12 @@ class TestChanxWebsocketAuthenticator(TransactionTestCase):
 
         assert "Object retrieval requires a queryset" in str(context.value)
 
-    async def test_authenticate_no_permission(self):
+    async def test_authenticate_no_permission(self) -> None:
         """Test that authentication works."""
         result = await self.authenticator.authenticate(self.default_scope)
         assert result.is_authenticated
 
-    async def test_authenticate_failed_permission(self):
+    async def test_authenticate_failed_permission(self) -> None:
         class IsAuthenticatedCWebsocketAuthenticator(ChanxWebsocketAuthenticator):
             permission_classes = (IsAuthenticated,)
 
@@ -267,7 +273,7 @@ class TestChanxWebsocketAuthenticator(TransactionTestCase):
         assert not result.is_authenticated
         assert result.status_code == status.HTTP_401_UNAUTHORIZED
 
-    async def test_authenticate_exception(self):
+    async def test_authenticate_exception(self) -> None:
         """Test authenticate handles exceptions gracefully."""
         # Configure authenticator that will raise an exception
         with patch.object(self.authenticator, "_perform_dispatch") as mock_dispatch:
@@ -283,7 +289,7 @@ class TestChanxWebsocketAuthenticator(TransactionTestCase):
             assert result.data == {"detail": "Internal server error"}
             assert result.user is None
 
-    async def test_authenticate_with_object(self):
+    async def test_authenticate_with_object(self) -> None:
         """Test authenticate with object retrieval from URL parameter."""
         # Create a real GroupChat object
         group_chat = await GroupChatFactory.acreate()
@@ -291,7 +297,7 @@ class TestChanxWebsocketAuthenticator(TransactionTestCase):
         # Create a user with UserFactory
         # Configure authenticator with GroupChat queryset
         class GroupChatAuthenticator(ChanxWebsocketAuthenticator):
-            def __init__(self):
+            def __init__(self) -> None:
                 super().__init__()
                 self.queryset = GroupChat.objects.all()
 

@@ -10,6 +10,7 @@ testing components.
 """
 
 import asyncio
+from types import ModuleType
 from typing import Any, cast
 
 from channels.testing import WebsocketCommunicator as BaseWebsocketCommunicator
@@ -31,10 +32,10 @@ from chanx.utils.asgi import get_websocket_application
 try:
     import humps
 except ImportError:  # pragma: no cover
-    humps = None  # type: ignore  # pragma: no cover
+    humps = cast(ModuleType, None)  # pragma: no cover
 
 
-class WebsocketCommunicator(BaseWebsocketCommunicator):  # type: ignore
+class WebsocketCommunicator(BaseWebsocketCommunicator):
     """
     Chanx extended WebsocketCommunicator for testing WebSocket consumers.
 
@@ -48,7 +49,7 @@ class WebsocketCommunicator(BaseWebsocketCommunicator):  # type: ignore
         path: str,
         headers: list[tuple[bytes, bytes]] | None = None,
         subprotocols: list[str] | None = None,
-        spec_version: str | None = None,
+        spec_version: int | None = None,
     ) -> None:
         super().__init__(application, path, headers, subprotocols, spec_version)
         self._connected = False
@@ -144,7 +145,7 @@ class WebsocketCommunicator(BaseWebsocketCommunicator):  # type: ignore
         closed_status = await self.receive_output()
         assert closed_status == {"type": "websocket.close"}
 
-    async def connect(self, timeout: float = 1) -> tuple[bool, int]:
+    async def connect(self, timeout: float = 1) -> tuple[bool, int | str | None]:
         """
         Connects to the WebSocket and tracks connection state.
 
@@ -155,7 +156,7 @@ class WebsocketCommunicator(BaseWebsocketCommunicator):  # type: ignore
             Tuple of (connected, status_code)
         """
         try:
-            res: tuple[bool, int] = await super().connect(timeout)
+            res = await super().connect(timeout)
             self._connected = True
             return res
         except:

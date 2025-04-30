@@ -31,10 +31,9 @@ class MyConsumer(AsyncJsonWebsocketConsumer):
     authentication_classes = [SessionAuthentication]
     send_completion = True
     send_message_immediately = True
-    silent_actions = {}
     log_received_message = True
     log_sent_message = True
-    log_ignored_actions = {}
+    log_ignored_actions = set()
     send_authentication_message = True
     INCOMING_MESSAGE_SCHEMA = IncomingMessage
 
@@ -57,12 +56,13 @@ class MyConsumerTestCase(WebsocketTestCase):
         LOG_SENT_MESSAGE=False,
         LOG_IGNORED_ACTIONS=[],
     )
-    async def test_prepopulated_attributes_consumer(self):
+    async def test_prepopulated_attributes_consumer(self) -> None:
         await self.auth_communicator.connect()
 
         auth = await self.auth_communicator.wait_for_auth(
             MyConsumer.send_authentication_message
         )
+        assert auth
         assert auth.payload.status_code == status.HTTP_200_OK
 
         with capture_logs() as cap_logs:
@@ -79,7 +79,7 @@ class MyConsumerTestCase(WebsocketTestCase):
             },
         ]
 
-    async def test_override_wait_for_auth(self):
+    async def test_override_wait_for_auth(self) -> None:
         await self.auth_communicator.connect()
 
         res = await self.auth_communicator.wait_for_auth(False, 0.2)
@@ -98,7 +98,7 @@ class InvalidConsumerTestCase(WebsocketTestCase):
 
     router = URLRouter([path("invalid/", InvalidConsumer.as_asgi())])
 
-    async def test_connect_invalid_consumer(self):
+    async def test_connect_invalid_consumer(self) -> None:
         try:
             await self.auth_communicator.connect(0.1)
         except ValueError as e:
@@ -114,7 +114,7 @@ class NotImplementedConsumerTestCase(WebsocketTestCase):
 
     router = URLRouter([path("not-implemented/", NotImplementedConsumer.as_asgi())])
 
-    async def test_consumer_not_implemented_error(self):
+    async def test_consumer_not_implemented_error(self) -> None:
         with pytest.raises(
             TypeError, match=r"Can't instantiate abstract class NotImplementedConsumer"
         ):
@@ -135,10 +135,9 @@ class AnonymousGroupConsumer(AsyncJsonWebsocketConsumer):
     authentication_classes = []
     send_completion = False
     send_message_immediately = True
-    silent_actions = {}
     log_received_message = True
     log_sent_message = True
-    log_ignored_actions = {}
+    log_ignored_actions = set()
     send_authentication_message = True
     INCOMING_MESSAGE_SCHEMA = IncomingMessage
     OUTGOING_GROUP_MESSAGE_SCHEMA = AnonymousGroupMessage
@@ -159,7 +158,7 @@ class MyAnonymousGroupTestCase(WebsocketTestCase):
 
     router = URLRouter([path("anonymous-group/", AnonymousGroupConsumer.as_asgi())])
 
-    async def test_send_anonymous_group_message_without_completion(self):
+    async def test_send_anonymous_group_message_without_completion(self) -> None:
         await self.auth_communicator.connect()
         await self.auth_communicator.assert_authenticated_status_ok()
 
@@ -197,11 +196,12 @@ class CamelizeConsumer(AsyncJsonWebsocketConsumer):
 
     async def receive_message(self, message: BaseMessage, **kwargs: Any) -> None:
         match message:
-            case SnakeMessage(payload=payload):
-                payload: SnakePayload
+            case SnakeMessage(payload=snake_payload):
                 await self.send_message(
                     SnakeMessage(
-                        payload=SnakePayload(snake_field=f"Reply {payload.snake_field}")
+                        payload=SnakePayload(
+                            snake_field=f"Reply {snake_payload.snake_field}"
+                        )
                     )
                 )
 
@@ -214,12 +214,13 @@ class CamelizeConsumerTestCase(WebsocketTestCase):
     @override_chanx_settings(
         CAMELIZE=True,
     )
-    async def test_camelize_case(self):
+    async def test_camelize_case(self) -> None:
         await self.auth_communicator.connect()
 
         auth = await self.auth_communicator.wait_for_auth(
             MyConsumer.send_authentication_message
         )
+        assert auth
         assert auth.payload.status_code == status.HTTP_200_OK
 
         message = SnakeMessage(payload=SnakePayload(snake_field="data")).model_dump()
@@ -237,7 +238,7 @@ class CamelizeConsumerTestCase(WebsocketTestCase):
         SEND_AUTHENTICATION_MESSAGE=False,
     )
     @patch("chanx.generic.websocket.humps", None)
-    async def test_missing_humps_raises_error(self):
+    async def test_missing_humps_raises_error(self) -> None:
         with pytest.raises(RuntimeError) as excinfo:
             await self.auth_communicator.connect()
 

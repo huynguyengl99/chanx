@@ -25,11 +25,10 @@ import asyncio
 import uuid
 from abc import ABC, abstractmethod
 from collections.abc import Iterable, Sequence
+from types import ModuleType
 from typing import (
     Any,
-    Generic,
     Literal,
-    TypeVar,
     cast,
 )
 
@@ -47,6 +46,7 @@ from rest_framework.permissions import (
 )
 
 import structlog
+from asgiref.typing import WebSocketConnectEvent, WebSocketDisconnectEvent
 from pydantic import ValidationError
 
 from chanx.constants import MISSING_PYHUMPS_ERROR
@@ -68,15 +68,18 @@ from chanx.types import GroupMemberEvent
 from chanx.utils.asyncio import create_task
 from chanx.utils.logging import logger
 
-_MT_co = TypeVar("_MT_co", bound=Model, covariant=True)
+# _MT_co = TypeVar("_MT_co", bound=Model, covariant=True)
 
 try:
     import humps
 except ImportError:  # pragma: no cover
-    humps = None  # type: ignore  # pragma: no cover
+    humps = cast(ModuleType, None)  # pragma: no cover
 
 
-class AsyncJsonWebsocketConsumer(BaseAsyncJsonWebsocketConsumer, Generic[_MT_co], ABC):  # type: ignore
+# Message = TypeVar("Message", bound=BaseMessage)
+
+
+class AsyncJsonWebsocketConsumer(BaseAsyncJsonWebsocketConsumer, ABC):
     """
     Base class for asynchronous JSON WebSocket consumers with authentication and permissions.
 
@@ -167,7 +170,7 @@ class AsyncJsonWebsocketConsumer(BaseAsyncJsonWebsocketConsumer, Generic[_MT_co]
 
         # Initialize instance attributes
         self.user: User | AnonymousUser | None = None
-        self.obj: _MT_co | None = None
+        self.obj: Model | None = None
         self.group_name: str | None = None
         self.connecting: bool = False
         self.request: HttpRequest | None = None
@@ -202,7 +205,7 @@ class AsyncJsonWebsocketConsumer(BaseAsyncJsonWebsocketConsumer, Generic[_MT_co]
 
     # Connection lifecycle methods
 
-    async def websocket_connect(self, message: dict[str, Any]) -> None:
+    async def websocket_connect(self, message: WebSocketConnectEvent) -> None:
         """
         Handle WebSocket connection request with authentication.
 
@@ -220,7 +223,7 @@ class AsyncJsonWebsocketConsumer(BaseAsyncJsonWebsocketConsumer, Generic[_MT_co]
 
         # Store authentication results
         self.user = auth_result.user
-        self.obj = cast(_MT_co | None, auth_result.obj)
+        self.obj = cast(Model | None, auth_result.obj)
         self.request = self.authenticator.request
 
         # Send authentication status if configured
@@ -261,11 +264,14 @@ class AsyncJsonWebsocketConsumer(BaseAsyncJsonWebsocketConsumer, Generic[_MT_co]
 
         """
         custom_groups = await self.build_groups()
-        self.groups.extend(custom_groups)
+        if self.groups:
+            self.groups.extend(custom_groups)
+        else:
+            self.groups = custom_groups
         for group in self.groups:
             await self.channel_layer.group_add(group, self.channel_name)
 
-    async def build_groups(self) -> Iterable[str]:
+    async def build_groups(self) -> list[str]:
         """
         Build list of channel groups to join.
 
@@ -277,7 +283,7 @@ class AsyncJsonWebsocketConsumer(BaseAsyncJsonWebsocketConsumer, Generic[_MT_co]
         """
         return []
 
-    async def websocket_disconnect(self, message: dict[str, Any]) -> None:
+    async def websocket_disconnect(self, message: WebSocketDisconnectEvent) -> None:
         """
         Handle WebSocket disconnection.
 
@@ -384,7 +390,7 @@ class AsyncJsonWebsocketConsumer(BaseAsyncJsonWebsocketConsumer, Generic[_MT_co]
             kind: Type of message ('json' or 'message')
         """
         if groups is None:
-            groups = self.groups
+            groups = self.groups or []
         for group in groups:
             user_pk = getattr(self.user, "pk", None)
 

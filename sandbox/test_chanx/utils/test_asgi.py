@@ -8,7 +8,7 @@ from chanx.utils.asgi import get_websocket_application
 class TestAsgiUtils(TestCase):
     """Test cases for ASGI utility functions."""
 
-    def test_get_websocket_application_success(self):
+    def test_get_websocket_application_success(self) -> None:
         """Test successful retrieval of WebSocket application."""
         # Create a mock application with application_mapping
         mock_ws_app = Mock()
@@ -21,7 +21,7 @@ class TestAsgiUtils(TestCase):
             result = get_websocket_application()
             assert result == mock_ws_app
 
-    def test_get_websocket_application_no_mapping(self):
+    def test_get_websocket_application_no_mapping(self) -> None:
         """Test when application doesn't have application_mapping attribute."""
         # Create a mock application without application_mapping
         mock_application = Mock(spec=[])
@@ -32,7 +32,7 @@ class TestAsgiUtils(TestCase):
             result = get_websocket_application()
             assert result is None
 
-    def test_get_websocket_application_no_websocket(self):
+    def test_get_websocket_application_no_websocket(self) -> None:
         """Test when application_mapping doesn't contain 'websocket' key."""
         # Create a mock application with application_mapping but no websocket
         mock_application = Mock()

@@ -16,7 +16,9 @@ from discussion.messages.discussion import (
 class TestDiscussionConsumer(WebsocketTestCase):
     ws_path = "/ws/discussion/"
 
-    async def test_connect_successfully_and_send_and_receive_discussion_messages(self):
+    async def test_connect_successfully_and_send_and_receive_discussion_messages(
+        self,
+    ) -> None:
         await self.auth_communicator.connect()
 
         await self.auth_communicator.assert_authenticated_status_ok()

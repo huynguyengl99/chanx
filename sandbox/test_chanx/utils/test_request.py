@@ -6,7 +6,7 @@ from chanx.utils.request import request_from_scope
 class TestRequestUtils(TestCase):
     """Test cases for HTTP request utility functions."""
 
-    def test_request_from_scope_with_headers(self):
+    def test_request_from_scope_with_headers(self) -> None:
         """Test request_from_scope handles headers properly."""
         # Create a scope with headers
         scope = {
@@ -26,7 +26,7 @@ class TestRequestUtils(TestCase):
         assert request.META["HTTP_X_TEST_HEADER"] == "test-value"
         assert request.META["HTTP_HOST"] == "example.com"
 
-    def test_request_from_scope_header_with_http_prefix(self):
+    def test_request_from_scope_header_with_http_prefix(self) -> None:
         """Test headers already starting with HTTP_ don't get double-prefixed."""
         scope = {
             "headers": [
@@ -40,7 +40,7 @@ class TestRequestUtils(TestCase):
         assert "HTTP_HTTP_ALREADY_PREFIXED" not in request.META
         assert request.META["HTTP_ALREADY_PREFIXED"] == "test-value"
 
-    def test_request_from_scope_header_without_http_prefix(self):
+    def test_request_from_scope_header_without_http_prefix(self) -> None:
         """Test headers without HTTP_ prefix get properly prefixed."""
         scope = {
             "headers": [

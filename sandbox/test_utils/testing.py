@@ -9,7 +9,7 @@ from rest_framework_simplejwt.tokens import RefreshToken
 
 
 class WebsocketTestCase(BaseWebsocketTestCase):
-    def setUp(self):
+    def setUp(self) -> None:
         self.user, self.ws_headers = self.create_user_and_ws_headers()
         super().setUp()
 
@@ -27,7 +27,9 @@ class WebsocketTestCase(BaseWebsocketTestCase):
         ]
         return user, ws_headers
 
-    async def acreate_user_and_ws_headers(self):
+    async def acreate_user_and_ws_headers(
+        self,
+    ) -> tuple[User, list[tuple[bytes, bytes]]]:
         return await sync_to_async(self.create_user_and_ws_headers)()
 
     def get_ws_headers(self) -> list[tuple[bytes, bytes]]:

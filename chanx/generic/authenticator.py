@@ -22,7 +22,7 @@ import uuid
 import warnings
 from collections.abc import Sequence
 from dataclasses import dataclass, field
-from typing import Any, Generic, Literal, TypeVar, cast
+from typing import Any, Literal, cast
 
 from django.contrib.auth.base_user import AbstractBaseUser
 from django.contrib.auth.models import AnonymousUser
@@ -44,8 +44,6 @@ from asgiref.sync import sync_to_async
 
 from chanx.utils.logging import logger
 from chanx.utils.request import request_from_scope
-
-_MT_co = TypeVar("_MT_co", bound=Model, covariant=True)
 
 
 @dataclass
@@ -94,7 +92,7 @@ class ChanxAuthView(GenericAPIView[Model]):
     serializer_class = ChanxSerializer
     detail: bool | None = None
 
-    def get_response(self, request: ExtendedRequest) -> Response:
+    def get_response(self, request: Request) -> Response:
         """
         Get standard response with object if required.
 
@@ -104,6 +102,7 @@ class ChanxAuthView(GenericAPIView[Model]):
         Returns:
             Response with OK status and object if needed
         """
+        request = cast(ExtendedRequest, request)
         request.obj = None
         if self.detail or (self.detail is None and self.kwargs.get(self.lookup_field)):
             request.obj = self.get_object()
@@ -138,7 +137,7 @@ class ChanxAuthView(GenericAPIView[Model]):
 QuerysetLike = Literal[True] | QuerySet[Any] | Manager[Any]
 
 
-class ChanxWebsocketAuthenticator(Generic[_MT_co]):
+class ChanxWebsocketAuthenticator:
     """
     Authenticator for Chanx WebSocket connections.
 

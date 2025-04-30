@@ -18,7 +18,7 @@ from pydantic import Field
 class TestBaseMessage(SimpleTestCase):
     """Test cases for the BaseMessage class."""
 
-    def test_valid_concrete_message(self):
+    def test_valid_concrete_message(self) -> None:
         """Test that a valid concrete message subclass can be defined."""
 
         class ValidMessage(BaseMessage):
@@ -29,7 +29,7 @@ class TestBaseMessage(SimpleTestCase):
         assert message.action == "valid_action"
         assert message.payload is None
 
-    def test_valid_concrete_message_with_payload(self):
+    def test_valid_concrete_message_with_payload(self) -> None:
         """Test that a valid message with payload can be defined."""
 
         class ValidMessageWithPayload(BaseMessage):
@@ -42,14 +42,14 @@ class TestBaseMessage(SimpleTestCase):
         assert message.action == "with_payload"
         assert message.payload == {"key": "value"}
 
-    def test_missing_action_field(self):
+    def test_missing_action_field(self) -> None:
         """Test that a TypeError is raised when 'action' field is missing."""
         with pytest.raises(TypeError, match=r"must define an 'action' field"):
             # Missing 'action' field
             class InvalidMessage(BaseMessage):
                 other_field: str
 
-    def test_non_literal_action_field(self):
+    def test_non_literal_action_field(self) -> None:
         """Test that a TypeError is raised when 'action' is not a Literal."""
         with pytest.raises(
             TypeError, match=r"requires the field 'action' to be a `Literal` type"
@@ -58,7 +58,7 @@ class TestBaseMessage(SimpleTestCase):
             class InvalidMessage(BaseMessage):
                 action: str
 
-    def test_inheritance(self):
+    def test_inheritance(self) -> None:
         """Test that inheritance works correctly for BaseMessage."""
 
         class ParentMessage(BaseMessage):
@@ -66,7 +66,7 @@ class TestBaseMessage(SimpleTestCase):
             parent_field: str
 
         class ChildMessage(ParentMessage):
-            action: Literal["child_action"]
+            action: Literal["child_action"]  # type: ignore[assignment]
             child_field: int
 
         parent = ParentMessage(action="parent_action", parent_field="value")
@@ -105,7 +105,7 @@ class GroupMessage2(BaseGroupMessage):
 class TestBaseIncomingMessage(SimpleTestCase):
     """Test cases for the BaseIncomingMessage class."""
 
-    def test_valid_incoming_message(self):
+    def test_valid_incoming_message(self) -> None:
         """Test that a valid incoming message can be defined with a union."""
 
         class ValidIncomingMessage(BaseIncomingMessage):
@@ -124,7 +124,7 @@ class TestBaseIncomingMessage(SimpleTestCase):
         assert incoming2.message.action == "action2"
         assert incoming2.message.field2 == 123
 
-    def test_direct_basemessage_field(self):
+    def test_direct_basemessage_field(self) -> None:
         """Test that a direct BaseMessage field is allowed."""
 
         class ValidDirectMessage(BaseIncomingMessage):
@@ -135,30 +135,30 @@ class TestBaseIncomingMessage(SimpleTestCase):
         assert incoming.message.action == "action1"
         assert incoming.message.field1 == "test"
 
-    def test_missing_message_field(self):
+    def test_missing_message_field(self) -> None:
         """Test that TypeError is raised when 'message' field is missing."""
         with pytest.raises(TypeError, match=r"must define a 'message' field"):
 
             class InvalidIncoming(BaseIncomingMessage):
                 wrong_field: str
 
-    def test_non_basemessage_in_union(self):
+    def test_non_basemessage_in_union(self) -> None:
         """Test that TypeError is raised when union contains non-BaseMessage types."""
         with pytest.raises(TypeError, match=r"must be subclasses of BaseMessage"):
 
             class InvalidUnionIncoming(BaseIncomingMessage):
-                message: Message1 | str  # str is not a BaseMessage
+                message: Message1 | str  # type: ignore[assignment]  # str is not a BaseMessage, testing
 
-    def test_non_union_non_basemessage(self):
+    def test_non_union_non_basemessage(self) -> None:
         """Test that TypeError is raised when 'message' is not a BaseMessage or union."""
         with pytest.raises(
             TypeError, match=r"must be BaseMessage or a union of BaseMessage subclasses"
         ):
 
             class InvalidTypeIncoming(BaseIncomingMessage):
-                message: str  # str is not a BaseMessage or union of BaseMessages
+                message: str  # type: ignore[assignment]  # str is not a BaseMessage or union of BaseMessages
 
-    def test_json_serialization(self):
+    def test_json_serialization(self) -> None:
         """Test that messages can be properly serialized to JSON with type discrimination."""
 
         class IncomingMessageTest(BaseIncomingMessage):
@@ -177,7 +177,7 @@ class TestBaseIncomingMessage(SimpleTestCase):
         assert incoming_restored.message.field1 == "value1"
         assert isinstance(incoming_restored.message, Message1)
 
-    def test_explicit_discriminator(self):
+    def test_explicit_discriminator(self) -> None:
         """Test with an explicitly defined discriminator."""
 
         class ExplicitDiscriminatorMessage(BaseIncomingMessage):
@@ -198,7 +198,7 @@ class TestBaseIncomingMessage(SimpleTestCase):
 class TestBaseOutgoingGroupMessage(SimpleTestCase):
     """Test cases for the BaseOutgoingGroupMessage class."""
 
-    def test_valid_outgoing_group_message(self):
+    def test_valid_outgoing_group_message(self) -> None:
         """Test that a valid outgoing group message can be defined with a union."""
 
         class ValidOutgoingMessage(BaseOutgoingGroupMessage):
@@ -217,7 +217,7 @@ class TestBaseOutgoingGroupMessage(SimpleTestCase):
         assert outgoing2.group_message.action == "group_action2"
         assert outgoing2.group_message.group_field2 == 123
 
-    def test_direct_basegroupmessage_field(self):
+    def test_direct_basegroupmessage_field(self) -> None:
         """Test that a direct BaseGroupMessage field is allowed."""
 
         class ValidDirectMessage(BaseOutgoingGroupMessage):
@@ -228,21 +228,21 @@ class TestBaseOutgoingGroupMessage(SimpleTestCase):
         assert outgoing.group_message.action == "group_action1"
         assert outgoing.group_message.group_field1 == "test"
 
-    def test_missing_group_message_field(self):
+    def test_missing_group_message_field(self) -> None:
         """Test that TypeError is raised when 'group_message' field is missing."""
         with pytest.raises(TypeError, match=r"must define a 'group_message' field"):
 
             class InvalidOutgoing(BaseOutgoingGroupMessage):
                 wrong_field: str
 
-    def test_non_basegroupmessage_in_union(self):
+    def test_non_basegroupmessage_in_union(self) -> None:
         """Test that TypeError is raised when union contains non-BaseGroupMessage types."""
         with pytest.raises(TypeError, match=r"must be subclasses of BaseGroupMessage"):
 
             class InvalidUnionOutgoing(BaseOutgoingGroupMessage):
-                group_message: GroupMessage1 | str  # str is not a BaseGroupMessage
+                group_message: GroupMessage1 | str  # type: ignore[assignment]  # str is not a BaseGroupMessage
 
-    def test_non_union_non_basegroupmessage(self):
+    def test_non_union_non_basegroupmessage(self) -> None:
         """Test that TypeError is raised when 'group_message' is not a BaseGroupMessage or union."""
         with pytest.raises(
             TypeError,
@@ -250,11 +250,9 @@ class TestBaseOutgoingGroupMessage(SimpleTestCase):
         ):
 
             class InvalidTypeOutgoing(BaseOutgoingGroupMessage):
-                group_message: (
-                    str  # str is not a BaseGroupMessage or union of BaseGroupMessages
-                )
+                group_message: str  # type: ignore[assignment]  # str is not a BaseGroupMessage or union of BaseGroupMessages
 
-    def test_json_serialization(self):
+    def test_json_serialization(self) -> None:
         """Test that group messages can be properly serialized to JSON with type discrimination."""
 
         class OutgoingMessageTest(BaseOutgoingGroupMessage):
@@ -273,7 +271,7 @@ class TestBaseOutgoingGroupMessage(SimpleTestCase):
         assert outgoing_restored.group_message.group_field1 == "value1"
         assert isinstance(outgoing_restored.group_message, GroupMessage1)
 
-    def test_explicit_discriminator(self):
+    def test_explicit_discriminator(self) -> None:
         """Test with an explicitly defined discriminator."""
 
         class ExplicitDiscriminatorMessage(BaseOutgoingGroupMessage):
@@ -294,7 +292,7 @@ class TestBaseOutgoingGroupMessage(SimpleTestCase):
 class TestMessageContainerMixin(SimpleTestCase):
     """Test cases for the MessageContainerMixin class."""
 
-    def test_custom_message_container(self):
+    def test_custom_message_container(self) -> None:
         """Test creating a custom message container class with the mixin."""
 
         class CustomMessage(BaseMessage):
@@ -315,7 +313,7 @@ class TestMessageContainerMixin(SimpleTestCase):
         assert container.custom_field.data == "test_data"
         assert isinstance(container.custom_field, CustomMessage)
 
-    def test_custom_container_with_union(self):
+    def test_custom_container_with_union(self) -> None:
         """Test creating a custom container with a union of message types."""
 
         class CustomMessage1(BaseMessage):
@@ -345,7 +343,7 @@ class TestMessageContainerMixin(SimpleTestCase):
         assert container2.custom_field.action == "custom2"
         assert container2.custom_field.field2 == 42
 
-    def test_missing_required_class_var(self):
+    def test_missing_required_class_var(self) -> None:
         """Test that error is raised when required class variables are missing."""
 
         with pytest.raises(AttributeError):
@@ -364,7 +362,7 @@ class TestMessageContainerMixin(SimpleTestCase):
 
                 message: Message1
 
-    def test_wrong_field_name(self):
+    def test_wrong_field_name(self) -> None:
         """Test that error is raised when field name doesn't match _message_field_name."""
 
         with pytest.raises(TypeError, match=r"must define a 'custom_field' field"):

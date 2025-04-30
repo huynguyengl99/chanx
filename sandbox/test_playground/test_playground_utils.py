@@ -13,7 +13,7 @@ from pydantic import BaseModel
 class TestPlaygroundUtilsEdgeCases(TestCase):
     """Tests for edge cases and exception handling in WebSocket playground utilities."""
 
-    def test_get_message_examples_non_union_type(self):
+    def test_get_message_examples_non_union_type(self) -> None:
         """Test get_message_examples with a non-union message type."""
 
         # Create a simple message type
@@ -47,14 +47,14 @@ class TestPlaygroundUtilsEdgeCases(TestCase):
             # Verify _create_example was called with SimpleMessage
             mock_create_example.assert_called_once_with(SimpleMessage)
 
-    def test_get_message_examples_none_type(self):
+    def test_get_message_examples_none_type(self) -> None:
         # Call the function with None
         result = get_message_examples(None)
 
         # Verify we got an empty list
         self.assertEqual(result, [])
 
-    def test_get_message_examples_no_message_field(self):
+    def test_get_message_examples_no_message_field(self) -> None:
         # Create a mock message type that will fail to have the 'message' field
         mock_message_type = mock.Mock(spec=BaseIncomingMessage)
 
@@ -65,7 +65,7 @@ class TestPlaygroundUtilsEdgeCases(TestCase):
             # Should return empty list when no message field is found
             self.assertEqual(result, [])
 
-    def test_get_message_examples_exception_handling(self):
+    def test_get_message_examples_exception_handling(self) -> None:
         # Create a mock that will raise an exception during processing
         mock_message_type = mock.Mock(spec=BaseIncomingMessage)
 
@@ -78,7 +78,7 @@ class TestPlaygroundUtilsEdgeCases(TestCase):
             result = get_message_examples(mock_message_type)
             self.assertEqual(result, [])
 
-    def test_create_example_with_real_types(self):
+    def test_create_example_with_real_types(self) -> None:
         # Create concrete message types
         class TestMessage(BaseMessage):
             action: Literal["test_action"]

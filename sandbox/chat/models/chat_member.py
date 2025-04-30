@@ -1,10 +1,10 @@
 from django.conf import settings
 from django.db import models
 
-from django_extensions.db.models import TimeStampedModel
+from django_stubs_ext.db.models import TypedModelMeta
 
 
-class ChatMember(TimeStampedModel):
+class ChatMember(models.Model):
     class ChatMemberRole(models.IntegerChoices):
         OWNER = 2001
         ADMIN = 2002
@@ -24,10 +24,9 @@ class ChatMember(TimeStampedModel):
 
     nick_name = models.CharField(default="", blank=True)
 
-    class Meta:
+    class Meta(TypedModelMeta):
         constraints = [
             models.UniqueConstraint(
                 "user", "group_chat", name="unique_sender_in_group"
             ),
         ]
-        ordering = ["-created"]

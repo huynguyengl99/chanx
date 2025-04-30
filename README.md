@@ -85,7 +85,7 @@ from chanx.testing import WebsocketTestCase
 class TestChatConsumer(WebsocketTestCase):
     ws_path = "/ws/chat/room1/"
 
-    async def test_connect(self):
+    async def test_connect(self) -> None:
         communicator = self.create_communicator()
         connected, _ = await communicator.connect()
         self.assertTrue(connected)

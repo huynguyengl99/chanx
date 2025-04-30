@@ -1,12 +1,16 @@
-from django.conf import settings
 from django.db import models
 
-from django_extensions.db.models import TimeStampedModel, TitleDescriptionModel
+from django_stubs_ext.db.models import TypedModelMeta
 
 
-class GroupChat(TitleDescriptionModel, TimeStampedModel):
+class GroupChat(models.Model):
+    title = models.CharField(max_length=255)
+    description = models.TextField(blank=True, null=True)
     users = models.ManyToManyField(
-        settings.AUTH_USER_MODEL,
+        "accounts.User",
         related_name="chat_groups",
         through="chat.ChatMember",
     )
+
+    class Meta(TypedModelMeta):
+        pass

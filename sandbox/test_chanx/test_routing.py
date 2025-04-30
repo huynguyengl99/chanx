@@ -15,14 +15,14 @@ from chanx.routing import include
 class TestIncludeFunction:
     """Test class for the include function in chanx.routing."""
 
-    def setup_method(self):
+    def setup_method(self) -> None:
         """Set up test data before each test method."""
         # Set up a mock consumer for creating test patterns
         self.consumer = MagicMock()
 
         # Set up chat.routing-like module for testing
         self.chat_module = ModuleType("chat.routing")
-        self.chat_module.router = URLRouter(
+        self.chat_module.router = URLRouter(  # type: ignore[attr-defined]
             [
                 path("", self.consumer, name="chat_consumer"),
             ]
@@ -30,7 +30,7 @@ class TestIncludeFunction:
 
         # Module with router as a list
         self.list_module = ModuleType("list_module")
-        self.list_module.router = [
+        self.list_module.router = [  # type: ignore[attr-defined]
             path("test1/", self.consumer, name="test1"),
             path("test2/", self.consumer, name="test2"),
         ]
@@ -46,13 +46,13 @@ class TestIncludeFunction:
         sys.modules["list_module"] = self.list_module
         sys.modules["no_router_module"] = self.no_router_module
 
-    def teardown_method(self):
+    def teardown_method(self) -> None:
         """Clean up after each test method."""
         # Restore original sys.modules
         sys.modules.clear()
         sys.modules.update(self.original_modules)
 
-    def test_include_with_real_module_string(self):
+    def test_include_with_real_module_string(self) -> None:
         """Test include with a string path to a module with URLRouter."""
         # This should work with the real module import
         result = include("chat.routing")
@@ -60,38 +60,38 @@ class TestIncludeFunction:
         assert len(result.routes) == 1
         assert result.routes[0].name == "chat_consumer"
 
-    def test_include_with_list_router_module(self):
+    def test_include_with_list_router_module(self) -> None:
         """Test include with a module that has a router attribute as a list."""
         result = include("list_module")
         assert len(result) == 2
-        assert result[0].name == "test1"
-        assert result[1].name == "test2"
+        assert result[0].name == "test1"  # type: ignore[attr-defined]
+        assert result[1].name == "test2"  # type: ignore[attr-defined]
 
-    def test_include_with_module_object(self):
+    def test_include_with_module_object(self) -> None:
         """Test include with a direct module object rather than string."""
         result = include(self.chat_module)
         assert isinstance(result, URLRouter)
 
-    def test_include_with_no_router_module(self):
+    def test_include_with_no_router_module(self) -> None:
         """Test include with a module that lacks a router attribute."""
         with pytest.raises(ImproperlyConfigured):
             include("no_router_module")
 
-    def test_include_with_invalid_router_type(self):
+    def test_include_with_invalid_router_type(self) -> None:
         """Test include with a module that has an invalid router type."""
         # Create a module with a router that's not a list, tuple, or URLRouter
         invalid_module = ModuleType("invalid_module")
-        invalid_module.router = "not a valid router"
+        invalid_module.router = "not a valid router"  # type: ignore[attr-defined]
         sys.modules["invalid_module"] = invalid_module
 
         with pytest.raises(ImproperlyConfigured):
             include("invalid_module")
 
-    def test_include_with_tuple_router(self):
+    def test_include_with_tuple_router(self) -> None:
         """Test include with a module that has a router attribute as a tuple."""
         # Create a module with a router that's a tuple
         tuple_module = ModuleType("tuple_module")
-        tuple_module.router = [
+        tuple_module.router = [  # type: ignore[attr-defined]
             path("tuple1/", self.consumer, name="tuple1"),
             path("tuple2/", self.consumer, name="tuple2"),
         ]
@@ -99,4 +99,4 @@ class TestIncludeFunction:
 
         result = include("tuple_module")
         assert len(result) == 2
-        assert result[0].name == "tuple1"
+        assert result[0].name == "tuple1"  # type: ignore[attr-defined]

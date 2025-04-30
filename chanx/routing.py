@@ -1,17 +1,18 @@
 """Functions for use in Channels routing."""
 
+from collections.abc import Sequence
 from importlib import import_module
 from types import ModuleType
 from typing import TypeAlias, cast
 
 from channels.routing import URLRouter
 from django.core.exceptions import ImproperlyConfigured
-from django.urls import URLPattern
+from django.urls import URLResolver
 
 _URLConf: TypeAlias = str | ModuleType
 
 
-def include(arg: _URLConf) -> list[URLPattern]:
+def include(arg: _URLConf) -> Sequence[URLResolver]:
     """
     Include router from another module for Channels routing.
 
@@ -38,11 +39,11 @@ def include(arg: _URLConf) -> list[URLPattern]:
     # If router is already a URLRouter, return it directly
     if isinstance(router, URLRouter):
         # Cast to the correct return type
-        return cast(list[URLPattern], router)
+        return cast(Sequence[URLResolver], router)
 
     # Otherwise, make sure router is iterable
     if not isinstance(router, list | tuple):
         raise ImproperlyConfigured("'router' must be a list, tuple, or URLRouter.")
 
     # Return router list, ensuring it's the correct type
-    return cast(list[URLPattern], router)
+    return cast(Sequence[URLResolver], router)

@@ -28,17 +28,16 @@ class DiscussionConsumer(AsyncJsonWebsocketConsumer):
             case PingMessage():
                 # Reply with a PONG message
                 await self.send_message(PongMessage())
-            case NewDiscussionMessage(payload=payload):
-                payload: DiscussionMessagePayload
+            case NewDiscussionMessage(payload=discussion_payload):
 
-                if payload.raw:
-                    await self.send_to_groups({"message": payload.content})
+                if discussion_payload.raw:
+                    await self.send_to_groups({"message": discussion_payload.content})
                 else:
                     # Echo back with a reply message
                     await self.send_group_message(
                         DiscussionMemberMessage(
                             payload=DiscussionMessagePayload(
-                                content=payload.content,
+                                content=discussion_payload.content,
                             )
                         ),
                     )

@@ -1,9 +1,9 @@
 from django.db import models
 
-from django_extensions.db.models import TimeStampedModel
+from django_stubs_ext.db.models import TypedModelMeta
 
 
-class ChatMessage(TimeStampedModel):
+class ChatMessage(models.Model):
     group_chat = models.ForeignKey("chat.GroupChat", on_delete=models.CASCADE)
     sender = models.ForeignKey(
         "chat.ChatMember", on_delete=models.CASCADE, null=True, blank=True
@@ -11,5 +11,5 @@ class ChatMessage(TimeStampedModel):
 
     content = models.TextField(default="", blank=True)
 
-    class Meta:
-        ordering = ("-created",)
+    class Meta(TypedModelMeta):
+        pass

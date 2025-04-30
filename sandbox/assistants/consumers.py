@@ -26,13 +26,13 @@ class AssistantConsumer(AsyncJsonWebsocketConsumer):
             case PingMessage():
                 # Reply with a PONG message
                 await self.send_message(PongMessage())
-            case NewMessage(payload=payload):
-                # Extract the user's message directly from the matched payload
-                payload: MessagePayload
+            case NewMessage(payload=new_message_payload):
 
                 # Echo back with a reply message
                 await self.send_message(
                     ReplyMessage(
-                        payload=MessagePayload(content=f"Reply: {payload.content}")
+                        payload=MessagePayload(
+                            content=f"Reply: {new_message_payload.content}"
+                        )
                     )
                 )

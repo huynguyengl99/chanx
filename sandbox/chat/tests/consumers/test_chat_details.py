@@ -19,7 +19,7 @@ from test_utils.testing import WebsocketTestCase
 
 
 class TestChatDetailConsumer(WebsocketTestCase):
-    def setUp(self):
+    def setUp(self) -> None:
         super().setUp()
         # Create a group chat for testing
         # Add the authenticated user as a member
@@ -28,7 +28,7 @@ class TestChatDetailConsumer(WebsocketTestCase):
 
         self.ws_path = f"/ws/chat/{self.group_chat.id}/"
 
-    async def test_connect_successfully_and_send_message(self):
+    async def test_connect_successfully_and_send_message(self) -> None:
         """Test connection and sending a message to a group chat"""
         await self.auth_communicator.connect()
 
@@ -55,9 +55,11 @@ class TestChatDetailConsumer(WebsocketTestCase):
         )
         assert await messages.acount() == 1
         message = await messages.afirst()
-        assert message.sender.user == self.user
+        assert message
+        assert message.sender
+        assert message.sender.user.pk == self.user.pk
 
-    async def test_unauthorized_access(self):
+    async def test_unauthorized_access(self) -> None:
         """Test that non-members cannot connect to the chat"""
         # Create a new user who is not a member of the group chat
         non_member_user, non_member_headers = await self.acreate_user_and_ws_headers()
@@ -69,12 +71,13 @@ class TestChatDetailConsumer(WebsocketTestCase):
 
         # Check authentication response
         auth = await non_member_communicator.wait_for_auth(max_auth_time=1000)
+        assert auth
         assert auth.payload.status_code == status.HTTP_403_FORBIDDEN
 
         # Connection should be closed
         await non_member_communicator.assert_closed()
 
-    async def test_group_message_broadcast(self):
+    async def test_group_message_broadcast(self) -> None:
         """Test that messages are broadcast to all group members"""
         # Create a second user and make them a member
         second_user, second_ws_headers = await self.acreate_user_and_ws_headers()
@@ -117,7 +120,7 @@ class TestChatDetailConsumer(WebsocketTestCase):
         assert second_messages[0].get("action") == "member_message"
         assert second_messages[0].get("payload", {}).get("content") == message_content
 
-    async def test_invalid_message_handling(self):
+    async def test_invalid_message_handling(self) -> None:
         """Test handling of invalid messages"""
         await self.auth_communicator.connect()
         await self.auth_communicator.assert_authenticated_status_ok()
@@ -132,7 +135,7 @@ class TestChatDetailConsumer(WebsocketTestCase):
         assert error_message.payload[0]["type"] == "literal_error"
 
     @override_chanx_settings(SEND_COMPLETION=True)
-    async def test_send_with_completion_message(self):
+    async def test_send_with_completion_message(self) -> None:
         """Test that completion messages are sent when enabled"""
         await self.auth_communicator.connect()
         await self.auth_communicator.wait_for_auth()
@@ -156,7 +159,7 @@ class TestChatDetailConsumer(WebsocketTestCase):
         assert "member_message" in message_types
         assert "complete" in message_types
 
-    async def test_exception_during_message_processing(self):
+    async def test_exception_during_message_processing(self) -> None:
         """Test exception handling during message processing"""
         await self.auth_communicator.connect()
         await self.auth_communicator.wait_for_auth()
@@ -177,7 +180,7 @@ class TestChatDetailConsumer(WebsocketTestCase):
             assert error_message.payload == {"detail": "Failed to process message"}
 
     @override_chanx_settings(LOG_RECEIVED_MESSAGE=True)
-    async def test_message_logging(self):
+    async def test_message_logging(self) -> None:
         """Test that messages are properly logged"""
         await self.auth_communicator.connect()
         await self.auth_communicator.wait_for_auth()
@@ -192,7 +195,7 @@ class TestChatDetailConsumer(WebsocketTestCase):
             # Should log "Received websocket json"
             assert "Received websocket json" in str(mock_logger.call_args_list)
 
-    async def test_group_message_broadcast_to_specific_groups(self):
+    async def test_group_message_broadcast_to_specific_groups(self) -> None:
         """Test that messages are broadcast to all group members"""
         # Create a second user and make them a member
         second_user, second_ws_headers = await self.acreate_user_and_ws_headers()

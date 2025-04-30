@@ -4,41 +4,34 @@ from .models import ChatMember, ChatMessage, GroupChat
 
 
 @admin.register(ChatMember)
-class ChatMemberAdmin(admin.ModelAdmin):
+class ChatMemberAdmin(admin.ModelAdmin[ChatMember]):
     list_display = (
         "id",
         "chat_role",
         "group_chat",
         "user",
     )
-    list_filter = ("created", "modified", "group_chat", "user")
+    list_filter = ("group_chat", "user")
 
 
 @admin.register(ChatMessage)
-class ChatMessageAdmin(admin.ModelAdmin):
+class ChatMessageAdmin(admin.ModelAdmin[ChatMessage]):
     list_display = (
         "id",
-        "created",
-        "modified",
         "group_chat",
         "sender",
     )
     list_filter = (
-        "created",
-        "modified",
         "group_chat",
         "sender",
     )
 
 
 @admin.register(GroupChat)
-class GroupChatAdmin(admin.ModelAdmin):
+class GroupChatAdmin(admin.ModelAdmin[GroupChat]):
     list_display = (
         "id",
-        "created",
-        "modified",
         "title",
         "description",
     )
-    list_filter = ("created", "modified")
     raw_id_fields = ("users",)

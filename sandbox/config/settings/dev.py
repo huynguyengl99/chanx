@@ -12,8 +12,14 @@ import os
 from datetime import timedelta
 from pathlib import Path
 
-import environ
+import django_stubs_ext
+import environ  # type: ignore
 import structlog
+
+# =========================================================================
+# STUB MONKEYPATCH FOR DJANGO MYPY
+# =========================================================================
+django_stubs_ext.monkeypatch()
 
 # =========================================================================
 # PATH CONFIGURATION
@@ -136,9 +142,6 @@ DATABASES = {
         "PASSWORD": env.str("POSTGRES_PASSWORD", ""),
         "HOST": env.str("POSTGRES_HOST", "localhost"),
         "PORT": env.int("POSTGRES_PORT", 5432),
-        "OPTIONS": {
-            "pool": True,
-        },
     }
 }
 
@@ -346,7 +349,7 @@ LOGGING = {
 }
 
 structlog.configure(
-    processors=pre_chain
+    processors=pre_chain  # type: ignore[arg-type]
     + [
         structlog.stdlib.filter_by_level,
         structlog.processors.StackInfoRenderer(),

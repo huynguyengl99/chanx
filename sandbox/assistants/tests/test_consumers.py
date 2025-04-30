@@ -22,11 +22,12 @@ from assistants.messages.assistant import MessagePayload, NewMessage, ReplyMessa
 class TestChatConsumer(WebsocketTestCase):
     ws_path = "/ws/assistants/"
 
-    async def test_connect_successfully_and_send_and_reply_message(self):
+    async def test_connect_successfully_and_send_and_reply_message(self) -> None:
         # Test basic connection and message flow
         await self.auth_communicator.connect()
 
         auth = await self.auth_communicator.wait_for_auth()
+        assert auth
         assert auth.payload.status_code == status.HTTP_200_OK
 
         # Test ping/pong
@@ -57,7 +58,7 @@ class TestChatConsumer(WebsocketTestCase):
 
         await self.auth_communicator.disconnect()
 
-    async def test_exception_during_message_processing(self):
+    async def test_exception_during_message_processing(self) -> None:
         # Test exception handling during message processing
         await self.auth_communicator.connect()
         await self.auth_communicator.wait_for_auth()
@@ -78,7 +79,7 @@ class TestChatConsumer(WebsocketTestCase):
             assert error_message.payload == {"detail": "Failed to process message"}
 
     @override_chanx_settings(SEND_COMPLETION=True)
-    async def test_send_with_completion_message(self):
+    async def test_send_with_completion_message(self) -> None:
         # Test that completion messages are sent when enabled
         await self.auth_communicator.connect()
         await self.auth_communicator.wait_for_auth()
@@ -101,7 +102,7 @@ class TestChatConsumer(WebsocketTestCase):
         assert "complete" in message_types
 
     @override_chanx_settings(SEND_COMPLETION=False)
-    async def test_send_without_completion_message(self):
+    async def test_send_without_completion_message(self) -> None:
         # Test that completion messages won't be sent when disabled
         await self.auth_communicator.connect()
         await self.auth_communicator.wait_for_auth()
@@ -126,7 +127,7 @@ class TestChatConsumer(WebsocketTestCase):
         assert "complete" not in message_types
 
     @override_chanx_settings(SEND_MESSAGE_IMMEDIATELY=True)
-    async def test_send_message_immediately(self):
+    async def test_send_message_immediately(self) -> None:
         # Test the send_message_immediately flag
         await self.auth_communicator.connect()
         await self.auth_communicator.wait_for_auth()
@@ -139,7 +140,7 @@ class TestChatConsumer(WebsocketTestCase):
             mock_sleep.assert_called()
 
     @override_chanx_settings(SEND_MESSAGE_IMMEDIATELY=False)
-    async def test_send_message_not_immediately(self):
+    async def test_send_message_not_immediately(self) -> None:
         # Test the send_message_immediately flag
         await self.auth_communicator.connect()
         await self.auth_communicator.wait_for_auth()
@@ -151,7 +152,7 @@ class TestChatConsumer(WebsocketTestCase):
             # Should not call sleep when send_message_immediately is False
             mock_sleep.assert_not_called()
 
-    async def test_websocket_disconnect(self):
+    async def test_websocket_disconnect(self) -> None:
         # Test disconnection handling
         await self.auth_communicator.connect()
         await self.auth_communicator.wait_for_auth()
@@ -162,7 +163,7 @@ class TestChatConsumer(WebsocketTestCase):
             # Should log disconnection
             mock_logger.assert_called_with("Disconnecting websocket")
 
-    async def test_validation_error_handling(self):
+    async def test_validation_error_handling(self) -> None:
         # Test handling of validation errors
         await self.auth_communicator.connect()
         await self.auth_communicator.wait_for_auth()
@@ -185,7 +186,7 @@ class TestChatConsumer(WebsocketTestCase):
         assert len(error_message.payload) > 0
         assert any("missing" in str(error).lower() for error in error_message.payload)
 
-    async def test_message_id_and_logging(self):
+    async def test_message_id_and_logging(self) -> None:
         # Test message ID generation and logging
         await self.auth_communicator.connect()
         await self.auth_communicator.wait_for_auth()
@@ -204,7 +205,7 @@ class TestChatConsumer(WebsocketTestCase):
                 )
 
     @override_chanx_settings(SEND_AUTHENTICATION_MESSAGE=False)
-    async def test_authentication_skip(self):
+    async def test_authentication_skip(self) -> None:
         # Test behavior when authentication messages are disabled
         await self.auth_communicator.connect()
 
@@ -213,7 +214,7 @@ class TestChatConsumer(WebsocketTestCase):
             await self.auth_communicator.receive_json_from(timeout=0.1)
 
     @override_chanx_settings(LOG_RECEIVED_MESSAGE=False)
-    async def test_disable_received_message_logging(self):
+    async def test_disable_received_message_logging(self) -> None:
         # Test that log_received_message setting works
         await self.auth_communicator.connect()
         await self.auth_communicator.wait_for_auth()
@@ -225,7 +226,7 @@ class TestChatConsumer(WebsocketTestCase):
             assert "Received websocket json" not in str(mock_logger.call_args_list)
 
     @override_chanx_settings(LOG_RECEIVED_MESSAGE=True)
-    async def test_enable_received_message_logging(self):
+    async def test_enable_received_message_logging(self) -> None:
         # Test that log_received_message setting works
         await self.auth_communicator.connect()
         await self.auth_communicator.wait_for_auth()
@@ -238,7 +239,7 @@ class TestChatConsumer(WebsocketTestCase):
             assert "Received websocket json" in str(mock_logger.call_args_list)
 
     @override_chanx_settings(LOG_SENT_MESSAGE=False)
-    async def test_disable_sent_message_logging(self):
+    async def test_disable_sent_message_logging(self) -> None:
         await self.auth_communicator.connect()
         await self.auth_communicator.wait_for_auth()
 
@@ -250,7 +251,7 @@ class TestChatConsumer(WebsocketTestCase):
             assert "Sent websocket json" not in str(mock_logger.call_args_list)
 
     @override_chanx_settings(LOG_SENT_MESSAGE=True)
-    async def test_enable_sent_message_logging(self):
+    async def test_enable_sent_message_logging(self) -> None:
         await self.auth_communicator.connect()
         await self.auth_communicator.wait_for_auth()
 
@@ -262,7 +263,7 @@ class TestChatConsumer(WebsocketTestCase):
             assert "Sent websocket json" in str(mock_logger.call_args_list)
 
     @override_chanx_settings(LOG_IGNORED_ACTIONS={"ping"})
-    async def test_ignore_actions(self):
+    async def test_ignore_actions(self) -> None:
         # Test silent actions feature by patching the consumer class
         await self.auth_communicator.connect()
         await self.auth_communicator.wait_for_auth()

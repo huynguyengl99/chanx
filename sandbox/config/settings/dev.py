@@ -13,8 +13,8 @@ from datetime import timedelta
 from pathlib import Path
 
 import django_stubs_ext
-import environ  # type: ignore
 import structlog
+from environs import env
 
 # =========================================================================
 # STUB MONKEYPATCH FOR DJANGO MYPY
@@ -25,21 +25,22 @@ django_stubs_ext.monkeypatch()
 # PATH CONFIGURATION
 # =========================================================================
 
-CONFIG_PATH = environ.Path(__file__)
+CONFIG_PATH = Path(__file__)
 
-ROOT_DIR = Path(CONFIG_PATH - 4)
-APPS_DIR = Path(CONFIG_PATH - 2)
+BASE_DIR = CONFIG_PATH.parent.parent.parent
+ROOT_DIR = BASE_DIR.parent
 
 
 # =========================================================================
 # ENVIRONMENT SETTINGS
 # =========================================================================
 
-env = environ.Env()
 env_file = f"{ROOT_DIR}/.env.test"
 
 if os.path.isfile(env_file):
-    environ.Env.read_env(env_file)
+    env.read_env(env_file, recurse=False)
+else:
+    env.read_env()
 
 CURRENT_ENV = env.str("DJANGO_SETTINGS_MODULE").split(".")[-1]
 
@@ -199,10 +200,10 @@ USE_TZ = True
 # STATIC FILES CONFIGURATION
 # =========================================================================
 
-STATIC_ROOT = str(APPS_DIR / "static")
+STATIC_ROOT = str(BASE_DIR / "static")
 STATIC_URL = "static/"
 
-MEDIA_ROOT = str(APPS_DIR / "media/")
+MEDIA_ROOT = str(BASE_DIR / "media/")
 MEDIA_URL = "media/"
 
 # =========================================================================
@@ -283,7 +284,7 @@ SPECTACULAR_SETTINGS = {
 # CORS CONFIGURATION
 # =========================================================================
 
-CORS_ALLOWED_ORIGINS = env.list("CORS_ALLOWED_ORIGINS", default=[])
+CORS_ALLOWED_ORIGINS = env.list("CORS_ALLOWED_ORIGINS", default=[], subcast=str)
 CORS_ALLOW_CREDENTIALS = True
 CSRF_TRUSTED_ORIGINS = env.list("CSRF_TRUSTED_ORIGINS", default=[SERVER_URL])
 

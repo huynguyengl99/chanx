@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, ClassVar, Self, TypeVar, cast
+from typing import TYPE_CHECKING, Any, ClassVar, TypeVar, cast
 
 from django.contrib import auth
 from django.contrib.auth.models import AbstractUser, BaseUserManager, Permission
@@ -124,7 +124,7 @@ class User(AbstractUser):
         max_length=255,
         unique=True,
     )
-    objects: ClassVar[UserManager[Self]] = UserManager[Self]()  # type: ignore[assignment]
+    objects: ClassVar[UserManager[User]] = UserManager["User"]()  # type: ignore[assignment]
 
     username = None  # type: ignore[assignment]
     EMAIL_FIELD = "email"

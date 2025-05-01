@@ -1,3 +1,14 @@
+## v0.4.0 (2025-05-02)
+
+### Feat
+
+- **types**: add and update type annotations for the entire project, and install channels stubs as well
+
+### Fix
+
+- **dev**: migrate django-environ to environs for better typing support, and update user type hint
+- **refactor**: remove redundant code or comments
+
 ## v0.3.0 (2025-04-22)
 
 ### Feat

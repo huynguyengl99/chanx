@@ -26,10 +26,6 @@ jobs:
     permissions:
       id-token: write
     steps:
-      - name: Dump GitHub context
-        env:
-          GITHUB_CONTEXT: ${{ toJson(github) }}
-        run: echo "$GITHUB_CONTEXT"
       - uses: actions/checkout@v4
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -48,7 +44,3 @@ jobs:
         run: python -m build
       - name: Publish
         uses: pypa/gh-action-pypi-publish@release/v1
-      - name: Dump GitHub context
-        env:
-          GITHUB_CONTEXT: ${{ toJson(github) }}
-        run: echo "$GITHUB_CONTEXT"

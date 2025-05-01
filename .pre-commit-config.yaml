@@ -39,7 +39,7 @@ repos:
     hooks:
       - id: uv-lock
 -   repo: https://github.com/econchick/interrogate
-    rev: 1.7.0  # or master if you're bold
+    rev: 1.7.0
     hooks:
       - id: interrogate
         args: [--quiet, --fail-under=95, chanx]

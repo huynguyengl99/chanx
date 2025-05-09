@@ -16,6 +16,7 @@ Key Features
 * **DRF-style Authentication**: Use Django REST Framework authentication for WebSockets
 * **Structured Messaging**: Type-safe message handling with Pydantic validation
 * **Group Management**: Automatic channel group management for pub/sub messaging
+* **Enhanced URL Routing**: Extended routing utilities for WebSocket endpoints
 * **Testing Utilities**: Simplified WebSocket testing infrastructure
 * **Playground UI**: Interactive WebSocket exploration and testing tool
 
@@ -42,6 +43,7 @@ Quick Example
     from chanx.generic.websocket import AsyncJsonWebsocketConsumer
     from chanx.messages.incoming import IncomingMessage
     from chanx.messages.outgoing import PongMessage
+    from chanx.urls import path
 
     class EchoConsumer(AsyncJsonWebsocketConsumer):
         INCOMING_MESSAGE_SCHEMA = IncomingMessage
@@ -49,6 +51,11 @@ Quick Example
         async def receive_message(self, message, **kwargs):
             # Echo back with a pong
             await self.send_message(PongMessage())
+
+    # Define URL patterns
+    router = [
+        path('ws/echo/', EchoConsumer.as_asgi()),
+    ]
 
 Contents
 --------
@@ -77,6 +84,8 @@ Contents
 
    reference/generic
    reference/messages
+   reference/urls
+   reference/routing
    reference/utils
    reference/settings
 

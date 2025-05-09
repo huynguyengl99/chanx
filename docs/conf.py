@@ -27,6 +27,7 @@ author = "Huy Nguyen"
 release = version("chanx")
 version = release
 
+smartquotes = False
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 

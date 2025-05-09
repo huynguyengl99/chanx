@@ -1,4 +1,12 @@
-"""Functions for use in Channels routing."""
+"""
+URL routing utilities for Django Channels applications.
+This module provides functions to simplify routing configuration in Django Channels projects.
+It extends Django Channels' routing capabilities with improved include functionality for
+modular routing organization.
+Functions:
+include: Includes URL patterns from another module, similar to Django's include function
+but specifically designed for Channels routing.
+"""
 
 from importlib import import_module
 from types import ModuleType

@@ -265,6 +265,35 @@ Chanx provides utilities for testing consumers:
             # Disconnect
             await communicator.disconnect()
 
+Routing Configuration
+---------------------
+Chanx provides enhanced URL routing capabilities through ``chanx.urls`` and modular routing with ``chanx.routing``:
+
+.. code-block:: python
+
+    # routing.py
+    from chanx.urls import path, re_path
+    from chanx.routing import include
+    from .consumers import ChatConsumer, NotificationConsumer
+
+    # Application-specific routes
+    router = URLRouter([
+        # Simple path-based routing with converters
+        path('<str:room_id>/', ChatConsumer.as_asgi()),
+
+        # Regex-based routing for more complex patterns
+        re_path(r'^(?P<user_id>\w+)/$', NotificationConsumer.as_asgi()),
+    ])
+
+    # In the main routing file:
+    router = URLRouter([
+        # Include app-specific routes
+        path('chat/', include('chat.routing')),
+        path('notifications/', include('notifications.routing')),
+    ])
+
+For more details on URL routing, see :doc:`../reference/urls` and :doc:`../reference/routing`.
+
 Best Practices
 --------------
 1. **Use type hints**: Add proper type annotations for better IDE support

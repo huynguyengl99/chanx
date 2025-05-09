@@ -1,3 +1,22 @@
+"""
+URL routing utilities for Django Channels applications.
+
+This module provides path and re_path functions that extend Django's URL routing capabilities
+to work with ASGI applications and Django Channels consumers. The functions support both
+synchronous Django views and asynchronous ASGI applications.
+
+Functions:
+    path: Creates a URL pattern for the given route with simplified syntax.
+           Similar to django.urls.path but supports Channels consumers and ASGI applications.
+
+    re_path: Creates a URL pattern for the given route using regular expressions.
+             Similar to django.urls.re_path but supports Channels consumers and ASGI applications.
+
+The module ensures proper type checking for different types of views and applications,
+supporting URLRouter, ASGIApplication, synchronous and asynchronous HTTP handlers,
+and included URL configurations.
+"""
+
 from collections.abc import Callable, Coroutine, Sequence
 from typing import TYPE_CHECKING, Any, overload
 
@@ -54,11 +73,30 @@ def path(
     kwargs: dict[str, Any] = ...,
     name: str = ...,
 ) -> URLPattern: ...
-def path(
-    route: _StrOrPromise, view: Any, kwargs: Any = None, name: str | None = None
-) -> Any:
-    return base_path(  # pyright: ignore[reportUnknownVariableType, reportCallIssue]
-        route, view, kwargs, name  # pyright: ignore[reportArgumentType]
+def path(route: _StrOrPromise, view: Any, kwargs: Any = None, name: str = "") -> Any:
+    """
+    Return a URLRouter or URLPattern for the specified route and view.
+
+    This function extends Django's url routing to support both Django views and
+    ASGI applications/Channels consumers. It uses a simplified URL routing syntax
+    with path converters similar to django.urls.path.
+
+    Parameters:
+        route: A string or promise that contains a URL pattern with optional
+               path converters (e.g., '<int:id>/' or 'chat/<str:room_name>/')
+        view: The view to be called, which can be one of:
+              - An ASGI application (Channels consumer)
+              - A URLRouter instance (for nested routing)
+              - A Django view function (synchronous or asynchronous)
+        kwargs: Additional keyword arguments to pass to the view
+        name: The name of the URL pattern for reverse URL matching
+
+    Returns:
+        URLRouter: If the view is an ASGI application or a URLRouter
+        URLPattern: If the view is a Django view function
+    """
+    return base_path(  # pyright: ignore[reportUnknownVariableType]
+        route, view, kwargs, name
     )
 
 
@@ -101,9 +139,31 @@ def re_path(
     kwargs: dict[str, Any] = ...,
     name: str = ...,
 ) -> URLResolver: ...
-def re_path(
-    route: _StrOrPromise, view: Any, kwargs: Any = None, name: str | None = None
-) -> Any:
-    return base_re_path(  # pyright: ignore[reportUnknownVariableType, reportCallIssue]
-        route, view, kwargs, name  # pyright: ignore[reportArgumentType]
+def re_path(route: _StrOrPromise, view: Any, kwargs: Any = None, name: str = "") -> Any:
+    r"""
+    Return a URLRouter, URLPattern, or URLResolver for the specified regex route and view.
+
+    This function extends Django's regex-based URL routing to support both Django views
+    and ASGI applications/Channels consumers. It uses regular expressions for more
+    complex URL pattern matching.
+
+    Parameters:
+        route: A string or promise that contains a regular expression pattern
+               (e.g., r'^ws/chat/(?P<room_name>\w+)/$')
+        view: The view to be called, which can be one of:
+              - An ASGI application (Channels consumer)
+              - A URLRouter instance (for nested routing)
+              - A Django view function (synchronous or asynchronous)
+              - An included URL configuration
+              - A sequence of URLResolvers or strings
+        kwargs: Additional keyword arguments to pass to the view
+        name: The name of the URL pattern for reverse URL matching
+
+    Returns:
+        URLRouter: If the view is an ASGI application or a URLRouter
+        URLPattern: If the view is a Django view function
+        URLResolver: If the view is an included URL configuration or sequence
+    """
+    return base_re_path(  # pyright: ignore[reportUnknownVariableType]
+        route, view, kwargs, name
     )

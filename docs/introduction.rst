@@ -51,7 +51,19 @@ Chanx fills these gaps with a cohesive framework that provides:
       async def receive_message(self, message):
           await self.send_group_message(message)
 
-4. **Testing Utilities**: Specialized tools for WebSocket testing
+4. **Enhanced URL Routing**: Extended routing utilities for WebSocket endpoints (for type annotations)
+
+   .. code-block:: python
+
+      from chanx.urls import path, re_path
+      from chanx.routing import include
+
+      router = [
+          path('ws/chat/<str:room_id>/', ChatConsumer.as_asgi()),
+          path('ws/apps/', include('apps.routing')),
+      ]
+
+5. **Testing Utilities**: Specialized tools for WebSocket testing
 
    .. code-block:: python
 
@@ -61,13 +73,14 @@ Chanx fills these gaps with a cohesive framework that provides:
               response = await communicator.receive_all_json()
               assert response[0]["payload"] == "Hello"
 
-5. **Developer Tooling**: In-browser WebSocket playground for exploring and testing endpoints
+6. **Developer Tooling**: In-browser WebSocket playground for exploring and testing endpoints
 
 Key Benefits
 ------------
 - **Reduced Boilerplate**: Write less code to implement common WebSocket patterns
 - **Type Safety**: Catch message structure errors at development time
 - **Consistency**: Use the same authentication and permission patterns as your REST API
+- **Modularity**: Organize WebSocket routes with an intuitive include system
 - **Testability**: Simplified testing with specialized utilities
 - **Documentation**: Comprehensive documentation and examples
 
@@ -77,6 +90,7 @@ Chanx is built around several key components:
 
 - **WebSocket Consumers**: Base consumer classes with integrated authentication
 - **Message System**: Pydantic-based message validation with discriminated unions
+- **URL Routing**: Enhanced routing utilities for WebSocket endpoints with modular organization
 - **Authenticator**: Bridge between WebSocket connections and DRF authentication
 - **Testing Framework**: Specialized test case and communicator classes
 - **Playground UI**: Visual interface for exploring and testing WebSocket endpoints

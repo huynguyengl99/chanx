@@ -1,3 +1,14 @@
+## v0.5.0 (2025-05-09)
+
+### Feat
+
+- **pyright,urls**: add support for (based)pyright and urls path,repath utils
+
+### Fix
+
+- **basedpyright,yml,ci**: fix yml indent, ci branches to run and basedpyright venv path in tox
+- **tox**: install camel-case for all env in tox
+
 ## v0.4.0 (2025-05-02)
 
 ### Feat

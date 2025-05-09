@@ -1,0 +1,15 @@
+{
+  "include": [
+    "chanx",
+    "sandbox"
+  ],
+  "exclude": [
+    "sandbox/config/settings/test.py"
+  ],
+  "typeCheckingMode": "strict",
+  "reportMissingTypeArgument": "warning",
+  "reportMissingTypeStubs": "warning",
+  "reportPrivateUsage": "none",
+  "pythonVersion": "3.11",
+  "reportIncompatibleVariableOverride": "none"
+}

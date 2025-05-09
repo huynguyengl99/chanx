@@ -1,7 +1,7 @@
 from channels.routing import URLRouter
-from django.urls import path, re_path
 
 from chanx.routing import include
+from chanx.urls import path, re_path
 
 ws_router = URLRouter(
     [
@@ -11,9 +11,8 @@ ws_router = URLRouter(
         re_path("chat/", include("chat.routing")),
     ]
 )
-
 router = URLRouter(
     [
-        re_path("ws/", ws_router),
+        re_path("ws/", include(ws_router)),
     ]
 )

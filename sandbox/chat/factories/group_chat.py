@@ -4,5 +4,5 @@ from chat.models import GroupChat
 
 
 class GroupChatFactory(BaseModelFactory[GroupChat]):
-    class Meta:
+    class Meta:  # pyright: ignore
         model = "chat.GroupChat"

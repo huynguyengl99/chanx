@@ -1,18 +1,15 @@
 """Functions for use in Channels routing."""
 
-from collections.abc import Sequence
 from importlib import import_module
 from types import ModuleType
-from typing import TypeAlias, cast
+from typing import TypeAlias
 
 from channels.routing import URLRouter
-from django.core.exceptions import ImproperlyConfigured
-from django.urls import URLResolver
 
-_URLConf: TypeAlias = str | ModuleType
+_URLConf: TypeAlias = URLRouter | str | ModuleType
 
 
-def include(arg: _URLConf) -> Sequence[URLResolver]:
+def include(arg: _URLConf) -> URLRouter:
     """
     Include router from another module for Channels routing.
 
@@ -28,22 +25,17 @@ def include(arg: _URLConf) -> Sequence[URLResolver]:
         The router from the module as a list of URLPattern.
     """
     # Check if it's a string path to module
-    if isinstance(arg, str):
-        imported_module = import_module(arg)
+    if isinstance(arg, URLRouter):
+        router = arg
     else:
-        imported_module = arg
-
-    # Get 'router' from the module
-    router = getattr(imported_module, "router", imported_module)
+        if isinstance(arg, str):
+            imported_module = import_module(arg)
+        else:
+            imported_module = arg
+        # Get 'router' from the module
+        router = imported_module.router
 
     # If router is already a URLRouter, return it directly
-    if isinstance(router, URLRouter):
-        # Cast to the correct return type
-        return cast(Sequence[URLResolver], router)
-
-    # Otherwise, make sure router is iterable
-    if not isinstance(router, list | tuple):
-        raise ImproperlyConfigured("'router' must be a list, tuple, or URLRouter.")
 
     # Return router list, ensuring it's the correct type
-    return cast(Sequence[URLResolver], router)
+    return router

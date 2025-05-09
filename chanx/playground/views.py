@@ -85,6 +85,7 @@ class WebSocketInfoView(APIView):
     """
 
     serializer_class = WebSocketRouteListSerializer
+    authentication_classes = []
 
     def get(self, request: HttpRequest) -> Response:
         """
@@ -113,8 +114,7 @@ class WebSocketInfoView(APIView):
             )
 
             # Use the list serializer directly
-            serializer = WebSocketRouteListSerializer(available_endpoints)
-            return Response(serializer.data)
+            return Response(available_endpoints)
         except Exception as e:
             # Return error details for debugging
             logger.exception("Error happened when get websocket info")

@@ -63,7 +63,7 @@ class AuthenticationResult:
     is_authenticated: bool
     status_code: int
     status_text: str
-    data: dict[str, Any] = field(default_factory=dict)
+    data: dict[str, Any] = field(default_factory=dict[str, Any])
     user: AbstractBaseUser | AnonymousUser | None = None
     obj: Model | None = None
 
@@ -244,7 +244,7 @@ class ChanxWebsocketAuthenticator:
         if self.permission_classes:
             # Check if any permission class might need an object
             for perm_class in self.permission_classes:
-                if hasattr(perm_class, "has_object_permission"):
+                if hasattr(perm_class, "has_object_permission") and issubclass(perm_class, BasePermission):  # type: ignore  # pyright: ignore[reportArgumentType]
                     meth = perm_class.has_object_permission
                     qname = meth.__qualname__
 
@@ -256,8 +256,8 @@ class ChanxWebsocketAuthenticator:
         if needs_object and self.queryset is True:
             warnings.warn(
                 "The authenticator has permissions that may require object "
-                "access, but no queryset is defined. This might cause errors during "
-                "authentication.",
+                + "access, but no queryset is defined. This might cause errors during "
+                + "authentication.",
                 RuntimeWarning,
                 stacklevel=2,
             )
@@ -280,7 +280,7 @@ class ChanxWebsocketAuthenticator:
         if has_lookup_param and self.queryset is True:
             raise ValueError(
                 "Object retrieval requires a queryset. Please set the 'queryset' "
-                "attribute on your consumer or use an auth_class with a defined queryset."
+                + "attribute on your consumer or use an auth_class with a defined queryset."
             )
 
     # Helper methods
@@ -334,11 +334,7 @@ class ChanxWebsocketAuthenticator:
         res.render()
 
         # Get updated request from renderer context
-        req = (
-            res.renderer_context.get("request", req)
-            if hasattr(res, "renderer_context")
-            else req
-        )
+        req = self._view.request
 
         return res, req
 
@@ -354,6 +350,6 @@ class ChanxWebsocketAuthenticator:
         """
         request_id = req.headers.get("x-request-id") or str(uuid.uuid4())
 
-        structlog.contextvars.bind_contextvars(
+        _ = structlog.contextvars.bind_contextvars(
             request_id=request_id, path=req.path, ip=scope.get("client", [None])[0]
         )

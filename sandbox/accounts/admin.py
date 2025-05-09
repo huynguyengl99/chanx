@@ -38,4 +38,4 @@ class UserAdmin(BaseUserAdmin[User]):  # pragma: no cover
     ordering = ("email",)
 
 
-admin.site.register(User, UserAdmin)
+admin.site.register(User, UserAdmin)  # pyright: ignore[reportUnknownMemberType]

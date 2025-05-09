@@ -1,8 +1,12 @@
+# pyright: reportIncompatibleMethodOverride=false
+from typing import cast
+
 from rest_framework import permissions
 from rest_framework.request import Request
 from rest_framework.views import APIView
 
 from chat.models import ChatMember, GroupChat
+from utils.request import AuthenticatedRequest
 
 
 class ReadOnlyMemberOrOwner(permissions.BasePermission):
@@ -11,6 +15,8 @@ class ReadOnlyMemberOrOwner(permissions.BasePermission):
     def has_object_permission(
         self, request: Request, view: APIView, obj: GroupChat
     ) -> bool:
+        request = cast(AuthenticatedRequest, request)
+
         if request.method in permissions.SAFE_METHODS:
             return ChatMember.objects.filter(
                 user=request.user.pk, group_chat=obj
@@ -29,6 +35,8 @@ class IsGroupChatMember(permissions.BasePermission):
     def has_object_permission(
         self, request: Request, view: APIView, obj: GroupChat
     ) -> bool:
+        request = cast(AuthenticatedRequest, request)
+
         return ChatMember.objects.filter(
             user=request.user.pk,
             group_chat=obj,
@@ -39,6 +47,7 @@ class GroupChatManagerOrMemberReadonly(permissions.BasePermission):
     message = "Only group managers can access this nested api."
 
     def has_permission(self, request: Request, view: APIView) -> bool:
+        request = cast(AuthenticatedRequest, request)
         if request.method in permissions.SAFE_METHODS:
             return ChatMember.objects.filter(
                 user=request.user.pk,
@@ -56,6 +65,8 @@ class IsGroupChatMemberNested(permissions.BasePermission):
     message = "Only group members are allowed for these nested route apis."
 
     def has_permission(self, request: Request, view: APIView) -> bool:
+        request = cast(AuthenticatedRequest, request)
+
         return ChatMember.objects.filter(
             user=request.user.pk,
             group_chat=view.kwargs.get("group_chat_pk"),

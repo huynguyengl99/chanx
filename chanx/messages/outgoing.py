@@ -20,6 +20,7 @@ class PongMessage(BaseMessage):
     """
 
     action: Literal["pong"] = "pong"
+    payload: None = None
 
 
 class ErrorMessage(BaseMessage):
@@ -33,7 +34,7 @@ class ErrorMessage(BaseMessage):
     """
 
     action: Literal["error"] = "error"
-    payload: Any
+    payload: Any = None
 
 
 class AuthenticationPayload(BaseModel):
@@ -79,6 +80,7 @@ class CompleteMessage(BaseMessage):
     """
 
     action: Literal["complete"] = ACTION_COMPLETE
+    payload: None = None
 
 
 GROUP_ACTION_COMPLETE: Literal["group_complete"] = "group_complete"
@@ -97,3 +99,4 @@ class GroupCompleteMessage(BaseMessage):
     """
 
     action: Literal["group_complete"] = GROUP_ACTION_COMPLETE
+    payload: None = None

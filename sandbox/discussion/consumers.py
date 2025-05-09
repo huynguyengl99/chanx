@@ -20,6 +20,7 @@ class DiscussionConsumer(AsyncJsonWebsocketConsumer):
     INCOMING_MESSAGE_SCHEMA = DiscussionIncomingMessage
     OUTGOING_GROUP_MESSAGE_SCHEMA = DiscussionGroupMessage
     permission_classes = []
+    authentication_classes = []
 
     groups = ["discussion"]
 
@@ -41,3 +42,5 @@ class DiscussionConsumer(AsyncJsonWebsocketConsumer):
                             )
                         ),
                     )
+            case _:
+                pass

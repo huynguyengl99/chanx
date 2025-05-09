@@ -45,7 +45,7 @@ class TestChanxAuthView:
         self.view = ChanxAuthView()
         self.factory = RequestFactory()
         self.request = self.factory.get("/")
-        self.view.request = Request(self.request)
+        self.view.request = Request(self.request)  # pyright: ignore[reportCallIssue]
         self.view.kwargs = {}
 
     def test_default_attributes(self) -> None:
@@ -130,7 +130,7 @@ def test_http_method_calls_get_response(method_name: str) -> None:
     # Create a request for the specific method
     request_method = getattr(request_factory, method_name)
     request = request_method("/")
-    drf_request = Request(request)
+    drf_request = Request(request)  # pyright: ignore[reportCallIssue]
 
     # Set up the view
     view.request = drf_request
@@ -155,7 +155,7 @@ class TestChanxWebsocketAuthenticator(TransactionTestCase):
         """Set up test environment before each test method."""
         self.factory = RequestFactory()
         self.authenticator = ChanxWebsocketAuthenticator()
-        self.default_scope = {
+        self.default_scope: dict[str, Any] = {
             "type": "websocket",
             "path": "/ws/test/",
             "headers": [
@@ -304,7 +304,7 @@ class TestChanxWebsocketAuthenticator(TransactionTestCase):
         authenticator = GroupChatAuthenticator()
 
         # Update the scope with the real group_chat id
-        scope_with_real_pk = self._create_scope_with_pk(group_chat.id)
+        scope_with_real_pk = self._create_scope_with_pk(group_chat.pk)
 
         result = await authenticator.authenticate(scope_with_real_pk)
 

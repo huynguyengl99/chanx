@@ -36,3 +36,5 @@ class AssistantConsumer(AsyncJsonWebsocketConsumer):
                         )
                     )
                 )
+            case _:
+                pass

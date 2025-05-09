@@ -46,13 +46,13 @@ class MySetting:
 
     LOG_RECEIVED_MESSAGE: bool = True
     LOG_SENT_MESSAGE: bool = True
-    LOG_IGNORED_ACTIONS: Iterable[str] = dataclasses.field(default_factory=list)
+    LOG_IGNORED_ACTIONS: Iterable[str] = dataclasses.field(default_factory=list[str])
 
     WEBSOCKET_BASE_URL: str = "ws://localhost:8000"
 
     # Add this field to satisfy the type checker
     # It will be used by APISettings but isn't part of the real dataclass structure
-    user_settings: dict[str, Any] = dataclasses.field(default_factory=dict)
+    user_settings: dict[str, Any] = dataclasses.field(default_factory=dict[str, Any])
 
 
 IMPORT_STRINGS = ("INCOMING_MESSAGE_SCHEMA",)
@@ -125,4 +125,4 @@ def reload_api_settings(*args: Any, **kwargs: Any) -> None:
         )
 
 
-setting_changed.connect(reload_api_settings)
+setting_changed.connect(reload_api_settings)  # pyright: ignore[reportUnknownMemberType]

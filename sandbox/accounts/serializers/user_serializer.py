@@ -2,7 +2,9 @@ from rest_framework import serializers
 from rest_framework.generics import get_object_or_404
 
 from drf_spectacular.types import OpenApiTypes
-from drf_spectacular.utils import extend_schema_field
+from drf_spectacular.utils import (
+    extend_schema_field,  # pyright: ignore[reportUnknownVariableType]
+)
 
 from accounts.models import User
 
@@ -20,6 +22,6 @@ class EmailUserField(serializers.RelatedField[User, User, str]):
 
 class UserSerializer(serializers.ModelSerializer[User]):
     class Meta:
-        model = User
+        model = User  # pyright: ignore
         fields = ["id", "email"]
         read_only_fields = ["email"]

@@ -6,10 +6,12 @@ from django.contrib import auth
 from django.contrib.auth.models import AbstractUser, BaseUserManager, Permission
 from django.db import models
 from django.db.models import Model, QuerySet
+from django.db.models.expressions import Combinable
+
+from chat.models import GroupChat
 
 if TYPE_CHECKING:
-    from django.contrib.auth.backends import BaseBackend
-
+    from django.contrib.auth.backends import ModelBackend
 
 _T = TypeVar("_T", bound=AbstractUser)
 
@@ -87,28 +89,32 @@ class UserManager(BaseUserManager[_T]):
         perm: str | Permission,
         is_active: bool = True,
         include_superusers: bool = True,
-        backend: BaseBackend | str | None = None,
+        backend: str | None = None,
         obj: Model | None = None,
     ) -> QuerySet[_T]:
         if backend is None:
-            backends = auth._get_backends(return_tuples=True)  # type: ignore
+            backends = auth.get_backends()
             if len(backends) == 1:
-                backend, _ = backends[0]
+                load_backend = backends[0]
             else:
                 raise ValueError(
                     "You have multiple authentication backends configured and "
                     "therefore must provide the `backend` argument."
                 )
-        elif not isinstance(backend, str):
+        elif not isinstance(
+            backend, str
+        ):  # pyright: ignore[reportUnnecessaryIsInstance]
             raise TypeError(
                 f"backend must be a dotted import path string (got {backend})."
             )
         else:
-            backend = auth.load_backend(backend)
-        if hasattr(backend, "with_perm"):
+            load_backend = auth.load_backend(backend)
+
+        load_backend = cast(ModelBackend, load_backend)
+        if hasattr(load_backend, "with_perm"):
             return cast(
                 QuerySet[_T],
-                backend.with_perm(
+                load_backend.with_perm(
                     perm,
                     is_active=is_active,
                     include_superusers=include_superusers,
@@ -119,7 +125,7 @@ class UserManager(BaseUserManager[_T]):
 
 
 class User(AbstractUser):
-    email = models.EmailField(
+    email = models.EmailField[str | Combinable, str](
         verbose_name="email address",
         max_length=255,
         unique=True,
@@ -131,5 +137,7 @@ class User(AbstractUser):
     USERNAME_FIELD = "email"
     REQUIRED_FIELDS = []
 
+    chat_groups: QuerySet[GroupChat]
+
     def __str__(self) -> str:
-        return self.email
+        return str(self.email)

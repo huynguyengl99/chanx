@@ -48,8 +48,8 @@ class BaseMessage(BaseModel, abc.ABC):
         payload: Optional message payload data
     """
 
-    action: str
-    payload: Any | None = None
+    action: Any
+    payload: Any
 
     def __init_subclass__(cls, **kwargs: Unpack[ConfigDict]):
         """
@@ -132,6 +132,9 @@ class MessageContainerMixin(BaseModel, abc.ABC):
         """
         super().__init_subclass__(**kwargs)
 
+        if abc.ABC in cls.__bases__:
+            return
+
         field_name = cls._message_field_name
         base_class = cls._message_base_class
 
@@ -188,7 +191,7 @@ class MessageContainerMixin(BaseModel, abc.ABC):
             )
 
 
-class BaseIncomingMessage(MessageContainerMixin):
+class BaseIncomingMessage(MessageContainerMixin, abc.ABC):
     """
     Base WebSocket incoming message wrapper.
 
@@ -203,10 +206,10 @@ class BaseIncomingMessage(MessageContainerMixin):
     _message_field_name: ClassVar[str] = "message"
     _message_base_class: ClassVar[type[BaseMessage]] = BaseMessage
 
-    message: BaseMessage
+    message: Any
 
 
-class BaseOutgoingGroupMessage(MessageContainerMixin):
+class BaseOutgoingGroupMessage(MessageContainerMixin, abc.ABC):
     """
     Base WebSocket outgoing group message wrapper.
 
@@ -219,4 +222,4 @@ class BaseOutgoingGroupMessage(MessageContainerMixin):
     _message_field_name: ClassVar[str] = "group_message"
     _message_base_class: ClassVar[type[BaseMessage]] = BaseGroupMessage
 
-    group_message: BaseGroupMessage
+    group_message: Any

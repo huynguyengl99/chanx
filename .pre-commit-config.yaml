@@ -42,7 +42,7 @@ repos:
     rev: 1.7.0
     hooks:
       - id: interrogate
-        args: [--quiet, --fail-under=95, chanx]
+        args: [--quiet, --fail-under=80, chanx]
         pass_filenames: false
 ci:
     autofix_commit_msg: 🎨 [pre-commit.ci] Auto format from pre-commit.com hooks

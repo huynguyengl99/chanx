@@ -3,7 +3,6 @@ from typing import Any, Literal
 from unittest.mock import patch
 
 from channels.routing import URLRouter
-from django.urls import path
 from rest_framework import status
 from rest_framework.authentication import SessionAuthentication
 from rest_framework.permissions import AllowAny
@@ -21,6 +20,7 @@ from chanx.messages.base import (
 from chanx.messages.incoming import IncomingMessage, PingMessage
 from chanx.messages.outgoing import PongMessage
 from chanx.testing import WebsocketTestCase
+from chanx.urls import path
 from chanx.utils.settings import override_chanx_settings
 from pydantic import BaseModel
 from structlog.testing import capture_logs
@@ -41,6 +41,8 @@ class MyConsumer(AsyncJsonWebsocketConsumer):
         match message:
             case PingMessage():
                 await self.send_message(PongMessage())
+            case _:
+                pass
 
 
 class MyConsumerTestCase(WebsocketTestCase):
@@ -91,6 +93,8 @@ class InvalidConsumer(AsyncJsonWebsocketConsumer):
         match message:
             case PingMessage():
                 await self.send_message(PongMessage())
+            case _:
+                pass
 
 
 class InvalidConsumerTestCase(WebsocketTestCase):
@@ -151,6 +155,8 @@ class AnonymousGroupConsumer(AsyncJsonWebsocketConsumer):
                     AnonymousGroupMemberMessage(payload=PongMessage()),
                     exclude_current=False,
                 )
+            case _:
+                pass
 
 
 class MyAnonymousGroupTestCase(WebsocketTestCase):
@@ -204,6 +210,8 @@ class CamelizeConsumer(AsyncJsonWebsocketConsumer):
                         )
                     )
                 )
+            case _:
+                pass
 
 
 class CamelizeConsumerTestCase(WebsocketTestCase):

@@ -1,3 +1,4 @@
+from typing import Any
 from unittest.mock import patch
 
 from rest_framework import status
@@ -26,7 +27,7 @@ class TestChatDetailConsumer(WebsocketTestCase):
         self.group_chat = GroupChat.objects.create(title="Test Group Chat")
         self.group_chat.users.add(self.user)
 
-        self.ws_path = f"/ws/chat/{self.group_chat.id}/"
+        self.ws_path = f"/ws/chat/{self.group_chat.pk}/"
 
     async def test_connect_successfully_and_send_message(self) -> None:
         """Test connection and sending a message to a group chat"""
@@ -62,7 +63,7 @@ class TestChatDetailConsumer(WebsocketTestCase):
     async def test_unauthorized_access(self) -> None:
         """Test that non-members cannot connect to the chat"""
         # Create a new user who is not a member of the group chat
-        non_member_user, non_member_headers = await self.acreate_user_and_ws_headers()
+        _, non_member_headers = await self.acreate_user_and_ws_headers()
 
         non_member_communicator = self.create_communicator(headers=non_member_headers)
 
@@ -126,7 +127,9 @@ class TestChatDetailConsumer(WebsocketTestCase):
         await self.auth_communicator.assert_authenticated_status_ok()
 
         # Send an invalid message type
-        await self.auth_communicator.send_message(BaseMessage(action="invalid_action"))
+        await self.auth_communicator.send_message(
+            BaseMessage(action="invalid_action", payload=None)
+        )
 
         # Should receive an error
         all_json = await self.auth_communicator.receive_all_json()
@@ -145,7 +148,7 @@ class TestChatDetailConsumer(WebsocketTestCase):
             NewChatMessage(payload=MessagePayload(content="Test completion"))
         )
 
-        all_messages = []
+        all_messages: list[dict[str, Any]] = []
         try:
             async with async_timeout(0.5):
                 while True:

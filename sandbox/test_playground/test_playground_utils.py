@@ -37,8 +37,9 @@ class TestPlaygroundUtilsEdgeCases(TestCase):
             }
 
             # Call the function
-            result = get_message_examples(mock.Mock(spec=BaseIncomingMessage))
-
+            result = get_message_examples(
+                mock.Mock(spec=BaseIncomingMessage)  # pyright: ignore
+            )
             # Verify we got a single example
             assert len(result) == 1
             assert result[0]["name"] == "SimpleMessage"
@@ -60,7 +61,7 @@ class TestPlaygroundUtilsEdgeCases(TestCase):
 
         # Mock get_type_hints to return empty dict (no message field)
         with mock.patch("chanx.playground.utils.get_type_hints", return_value={}):
-            result = get_message_examples(mock_message_type)
+            result = get_message_examples(mock_message_type)  # pyright: ignore
 
             # Should return empty list when no message field is found
             self.assertEqual(result, [])
@@ -75,7 +76,7 @@ class TestPlaygroundUtilsEdgeCases(TestCase):
             side_effect=Exception("Test exception"),
         ):
             # Function should return empty list when exception occurs
-            result = get_message_examples(mock_message_type)
+            result = get_message_examples(mock_message_type)  # pyright: ignore
             self.assertEqual(result, [])
 
     def test_create_example_with_real_types(self) -> None:

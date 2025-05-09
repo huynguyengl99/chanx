@@ -28,6 +28,7 @@ from collections.abc import Iterable, Sequence
 from types import ModuleType
 from typing import (
     Any,
+    Generic,
     Literal,
     cast,
 )
@@ -48,6 +49,7 @@ from rest_framework.permissions import (
 import structlog
 from asgiref.typing import WebSocketConnectEvent, WebSocketDisconnectEvent
 from pydantic import ValidationError
+from typing_extensions import TypeVar
 
 from chanx.constants import MISSING_PYHUMPS_ERROR
 from chanx.generic.authenticator import ChanxWebsocketAuthenticator, QuerysetLike
@@ -73,13 +75,15 @@ from chanx.utils.logging import logger
 try:
     import humps
 except ImportError:  # pragma: no cover
-    humps = cast(ModuleType, None)  # pragma: no cover
+    humps = cast(
+        ModuleType, None
+    )  # pragma: no cover  # pyright: ignore[reportInvalidCast]
 
 
-# Message = TypeVar("Message", bound=BaseMessage)
+_M = TypeVar("_M", bound=Model, default=Model)
 
 
-class AsyncJsonWebsocketConsumer(BaseAsyncJsonWebsocketConsumer, ABC):
+class AsyncJsonWebsocketConsumer(Generic[_M], BaseAsyncJsonWebsocketConsumer, ABC):
     """
     Base class for asynchronous JSON WebSocket consumers with authentication and permissions.
 
@@ -170,7 +174,7 @@ class AsyncJsonWebsocketConsumer(BaseAsyncJsonWebsocketConsumer, ABC):
 
         # Initialize instance attributes
         self.user: User | AnonymousUser | None = None
-        self.obj: Model | None = None
+        self.obj: _M | None = None
         self.group_name: str | None = None
         self.connecting: bool = False
         self.request: HttpRequest | None = None
@@ -223,7 +227,7 @@ class AsyncJsonWebsocketConsumer(BaseAsyncJsonWebsocketConsumer, ABC):
 
         # Store authentication results
         self.user = auth_result.user
-        self.obj = cast(Model | None, auth_result.obj)
+        self.obj = auth_result.obj
         self.request = self.authenticator.request
 
         # Send authentication status if configured

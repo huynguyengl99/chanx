@@ -21,6 +21,6 @@ def task_handle_new_chat_message(group_chat_id: int) -> None:
         chat_list_layer_name,
         {
             "type": "notify_new_chat_message",
-            "payload": serializer.data,
+            "payload": serializer.validated_data,
         },
     )

@@ -108,6 +108,18 @@ wheels = [
 ]
 
 [[package]]
+name = "basedpyright"
+version = "1.29.1"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "nodejs-wheel-binaries" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/b9/18/f5e488eac4960ad9a2e71b95f0d91cf93a982c7f68aa90e4e0554f0bc37e/basedpyright-1.29.1.tar.gz", hash = "sha256:06bbe6c3b50ab4af20f80e154049477a50d8b81d2522eadbc9f472f2f92cd44b", size = 21773469 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/95/1b/1bb837bbb7e259928f33d3c105dfef4f5349ef08b3ef45576801256e3234/basedpyright-1.29.1-py3-none-any.whl", hash = "sha256:b7eb65b9d4aaeeea29a349ac494252032a75a364942d0ac466d7f07ddeacc786", size = 11397959 },
+]
+
+[[package]]
 name = "black"
 version = "25.1.0"
 source = { registry = "https://pypi.org/simple" }
@@ -242,14 +254,16 @@ wheels = [
 
 [[package]]
 name = "channels-stubs"
-version = "0.1.3"
+version = "0.1.6"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "channels" },
+    { name = "django" },
+    { name = "django-stubs" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/eb/29/8e1ab565c9684263bd09621b72402554c262c8aeb5e359ba9e9f712e9e0f/channels_stubs-0.1.3.tar.gz", hash = "sha256:58d297bf277d4785ccf42e1284b5e0695017e39f945d1b9b0d3bf655b481dd1c", size = 8776 }
+sdist = { url = "https://files.pythonhosted.org/packages/3d/03/69b573b312c82e57952cd6b56a6f8a1c80c68f9eb86000168acfa1414a2e/channels_stubs-0.1.6.tar.gz", hash = "sha256:991d47df7cf0de0574fcfa0a614c68064f97b2833902f029a783bd23c01c7d0d", size = 8970 }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/41/15/825048c61f4b2793476a820d1ab89590492b5e0c25a96ce07d1af82deaaa/channels_stubs-0.1.3-py3-none-any.whl", hash = "sha256:c07c19088895af9bb6112270319fd69d4802ffd228ec367cd63740c2601d3db9", size = 16144 },
+    { url = "https://files.pythonhosted.org/packages/7e/87/9f7950266d5d4c59d84c7c9ceb4b7482ebb720df2d6b06cb91ec143d2343/channels_stubs-0.1.6-py3-none-any.whl", hash = "sha256:f55d2306d4887e4ba82b27b8755a97ec2e382052008ddaf3abd409c4a40a6001", size = 16299 },
 ]
 
 [[package]]
@@ -259,7 +273,6 @@ source = { editable = "." }
 dependencies = [
     { name = "channels" },
     { name = "channels-redis" },
-    { name = "channels-stubs" },
     { name = "django" },
     { name = "djangorestframework" },
     { name = "polyfactory" },
@@ -279,6 +292,7 @@ build = [
     { name = "twine" },
 ]
 dev = [
+    { name = "channels-stubs" },
     { name = "commitizen" },
     { name = "coveralls" },
     { name = "daphne" },
@@ -310,6 +324,7 @@ docs = [
     { name = "sphinx-rtd-theme" },
 ]
 lint = [
+    { name = "basedpyright" },
     { name = "black" },
     { name = "djangorestframework-stubs", extra = ["compatible-mypy"] },
     { name = "mypy" },
@@ -329,7 +344,6 @@ test = [
 requires-dist = [
     { name = "channels", specifier = ">=4,<5" },
     { name = "channels-redis", specifier = ">=4,<5" },
-    { name = "channels-stubs", specifier = ">=0.1.3" },
     { name = "django", specifier = ">=5,<6" },
     { name = "djangorestframework", specifier = ">=3,<4" },
     { name = "polyfactory", specifier = ">=2.20.0" },
@@ -346,6 +360,7 @@ build = [
     { name = "twine", specifier = ">=6.1.0" },
 ]
 dev = [
+    { name = "channels-stubs", specifier = ">=0.1.6" },
     { name = "commitizen", specifier = ">=4.5.0,<5" },
     { name = "coveralls", specifier = ">=4.0.1,<5" },
     { name = "daphne", specifier = ">=4.1.2,<5" },
@@ -377,6 +392,7 @@ docs = [
     { name = "sphinx-rtd-theme" },
 ]
 lint = [
+    { name = "basedpyright", specifier = ">=1.29.1" },
     { name = "black", specifier = ">=25.1.0,<26" },
     { name = "djangorestframework-stubs", extras = ["compatible-mypy"], specifier = ">=3.15.3" },
     { name = "mypy", specifier = ">=1.15.0" },
@@ -1503,6 +1519,22 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/43/16/fc88b08840de0e0a72a2f9d8c6bae36be573e475a6326ae854bcc549fc45/nodeenv-1.9.1.tar.gz", hash = "sha256:6ec12890a2dab7946721edbfbcd91f3319c6ccc9aec47be7c7e6b7011ee6645f", size = 47437 }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/d2/1d/1b658dbd2b9fa9c4c9f32accbfc0205d532c8c6194dc0f2a4c0428e7128a/nodeenv-1.9.1-py2.py3-none-any.whl", hash = "sha256:ba11c9782d29c27c70ffbdda2d7415098754709be8a7056d79a737cd901155c9", size = 22314 },
+]
+
+[[package]]
+name = "nodejs-wheel-binaries"
+version = "22.15.0"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/45/5b/6c5f973765b96793d4e4d03684bcbd273b17e471ecc7e9bec4c32b595ebd/nodejs_wheel_binaries-22.15.0.tar.gz", hash = "sha256:ff81aa2a79db279c2266686ebcb829b6634d049a5a49fc7dc6921e4f18af9703", size = 8054 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/d3/a8/a32e5bb99e95c536e7dac781cffab1e7e9f8661b8ee296b93df77e4df7f9/nodejs_wheel_binaries-22.15.0-py2.py3-none-macosx_11_0_arm64.whl", hash = "sha256:aa16366d48487fff89446fb237693e777aa2ecd987208db7d4e35acc40c3e1b1", size = 50514526 },
+    { url = "https://files.pythonhosted.org/packages/05/e8/eb024dbb3a7d3b98c8922d1c306be989befad4d2132292954cb902f43b07/nodejs_wheel_binaries-22.15.0-py2.py3-none-macosx_11_0_x86_64.whl", hash = "sha256:a54bb3fee9170003fa8abc69572d819b2b1540344eff78505fcc2129a9175596", size = 51409179 },
+    { url = "https://files.pythonhosted.org/packages/3f/0f/baa968456c3577e45c7d0e3715258bd175dcecc67b683a41a5044d5dae40/nodejs_wheel_binaries-22.15.0-py2.py3-none-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:867121ccf99d10523f6878a26db86e162c4939690e24cfb5bea56d01ea696c93", size = 57364460 },
+    { url = "https://files.pythonhosted.org/packages/2f/a2/977f63cd07ed8fc27bc0d0cd72e801fc3691ffc8cd40a51496ff18a6d0a2/nodejs_wheel_binaries-22.15.0-py2.py3-none-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:0ab0fbcda2ddc8aab7db1505d72cb958f99324b3834c4543541a305e02bfe860", size = 57889101 },
+    { url = "https://files.pythonhosted.org/packages/67/7f/57b9c24a4f0d25490527b043146aa0fdff2d8fdc82f90667cdaf6f00cfc9/nodejs_wheel_binaries-22.15.0-py2.py3-none-musllinux_1_2_aarch64.whl", hash = "sha256:2bde1d8e00cd955b9ce9ee9ac08309923e2778a790ee791b715e93e487e74bfd", size = 59190817 },
+    { url = "https://files.pythonhosted.org/packages/fd/7f/970acbe33b81c22b3c7928f52e32347030aa46d23d779cf781cf9a9cf557/nodejs_wheel_binaries-22.15.0-py2.py3-none-musllinux_1_2_x86_64.whl", hash = "sha256:acdd4ef73b6701aab9fbe02ac5e104f208a5e3c300402fa41ad7bc7f49499fbf", size = 60220316 },
+    { url = "https://files.pythonhosted.org/packages/07/4c/030243c04bb60f0de66c2d7ee3be289c6d28ef09113c06ffa417bdfedf8f/nodejs_wheel_binaries-22.15.0-py2.py3-none-win_amd64.whl", hash = "sha256:51deaf13ee474e39684ce8c066dfe86240edb94e7241950ca789befbbbcbd23d", size = 40718853 },
+    { url = "https://files.pythonhosted.org/packages/1f/49/011d472814af4fabeaab7d7ce3d5a1a635a3dadc23ae404d1f546839ecb3/nodejs_wheel_binaries-22.15.0-py2.py3-none-win_arm64.whl", hash = "sha256:01a3fe4d60477f93bf21a44219db33548c75d7fed6dc6e6f4c05cf0adf015609", size = 36436645 },
 ]
 
 [[package]]

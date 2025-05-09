@@ -9,6 +9,7 @@ build = [
 ]
 dev = [
   "Faker>=37.1.0,<38",
+  "channels-stubs>=0.1.6",
   "commitizen>=4.5.0,<5",
   "coveralls>=4.0.1,<5",
   "daphne>=4.1.2,<5",
@@ -39,6 +40,7 @@ docs = [
   "sphinx_rtd_theme"
 ]
 lint = [
+  "basedpyright>=1.29.1",
   "black>=25.1.0,<26",
   "djangorestframework-stubs[compatible-mypy]>=3.15.3",
   "mypy>=1.15.0",
@@ -76,7 +78,6 @@ classifiers = [
 dependencies = [
   "Django>=5,<6",
   "channels-redis>=4,<5",
-  "channels-stubs>=0.1.3",
   "channels>=4,<5",
   "djangorestframework>=3,<4",
   "polyfactory>=2.20.0",
@@ -154,6 +155,25 @@ ignore-property-decorators = false
 style = "sphinx"
 verbose = 0
 whitelist-regex = []
+
+[tool.pyright]
+exclude = [
+  "**/__pycache__",
+  "**/node_modules"
+]
+executionEnvironments = [
+  {root = "chanx"}
+]
+ignore = [
+  'sandbox/config/settings/test.py'
+]
+include = ["chanx", "sandbox"]
+pythonVersion = "3.11"
+reportIncompatibleVariableOverride = false
+reportMissingImports = "error"
+reportMissingTypeStubs = false
+reportPrivateUsage = false
+typeCheckingMode = "strict"
 
 [tool.tomlsort]
 all = true

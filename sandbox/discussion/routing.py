@@ -1,5 +1,6 @@
 from channels.routing import URLRouter
-from django.urls import path
+
+from chanx.urls import path
 
 from discussion.consumers import DiscussionConsumer
 

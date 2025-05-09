@@ -1,3 +1,5 @@
+# pyright: reportUnusedClass=false
+
 from typing import Any, ClassVar, Literal
 
 from django.test import SimpleTestCase
@@ -25,7 +27,7 @@ class TestBaseMessage(SimpleTestCase):
             action: Literal["valid_action"]
 
         # This should not raise any exceptions
-        message = ValidMessage(action="valid_action")
+        message = ValidMessage(action="valid_action", payload=None)
         assert message.action == "valid_action"
         assert message.payload is None
 
@@ -69,9 +71,11 @@ class TestBaseMessage(SimpleTestCase):
             action: Literal["child_action"]  # type: ignore[assignment]
             child_field: int
 
-        parent = ParentMessage(action="parent_action", parent_field="value")
+        parent = ParentMessage(
+            action="parent_action", parent_field="value", payload=None
+        )
         child = ChildMessage(
-            action="child_action", parent_field="value", child_field=42
+            action="child_action", parent_field="value", child_field=42, payload=None
         )
 
         assert parent.action == "parent_action"
@@ -112,8 +116,8 @@ class TestBaseIncomingMessage(SimpleTestCase):
             message: Message1 | Message2
 
         # Create instances of both message types
-        message1 = Message1(action="action1", field1="test")
-        message2 = Message2(action="action2", field2=123)
+        message1 = Message1(action="action1", field1="test", payload=None)
+        message2 = Message2(action="action2", field2=123, payload=None)
 
         # Validate that both work in the incoming message
         incoming1 = ValidIncomingMessage(message=message1)
@@ -130,7 +134,7 @@ class TestBaseIncomingMessage(SimpleTestCase):
         class ValidDirectMessage(BaseIncomingMessage):
             message: Message1
 
-        message = Message1(action="action1", field1="test")
+        message = Message1(action="action1", field1="test", payload=None)
         incoming = ValidDirectMessage(message=message)
         assert incoming.message.action == "action1"
         assert incoming.message.field1 == "test"
@@ -147,7 +151,9 @@ class TestBaseIncomingMessage(SimpleTestCase):
         with pytest.raises(TypeError, match=r"must be subclasses of BaseMessage"):
 
             class InvalidUnionIncoming(BaseIncomingMessage):
-                message: Message1 | str  # type: ignore[assignment]  # str is not a BaseMessage, testing
+                message: (
+                    Message1 | str
+                )  # pyright: ignore[assignment]  # str is not a BaseMessage, testing
 
     def test_non_union_non_basemessage(self) -> None:
         """Test that TypeError is raised when 'message' is not a BaseMessage or union."""
@@ -156,7 +162,7 @@ class TestBaseIncomingMessage(SimpleTestCase):
         ):
 
             class InvalidTypeIncoming(BaseIncomingMessage):
-                message: str  # type: ignore[assignment]  # str is not a BaseMessage or union of BaseMessages
+                message: str
 
     def test_json_serialization(self) -> None:
         """Test that messages can be properly serialized to JSON with type discrimination."""
@@ -165,7 +171,7 @@ class TestBaseIncomingMessage(SimpleTestCase):
             message: Message1 | Message2
 
         # Create test messages
-        message1 = Message1(action="action1", field1="value1")
+        message1 = Message1(action="action1", field1="value1", payload=None)
         incoming1 = IncomingMessageTest(message=message1)
 
         # Serialize to JSON
@@ -184,7 +190,7 @@ class TestBaseIncomingMessage(SimpleTestCase):
             message: Message1 | Message2 = Field(discriminator="action")
 
         # Create test message
-        message2 = Message2(action="action2", field2=42)
+        message2 = Message2(action="action2", field2=42, payload=None)
         incoming = ExplicitDiscriminatorMessage(message=message2)
 
         # Validate parsing works with the discriminator
@@ -205,8 +211,10 @@ class TestBaseOutgoingGroupMessage(SimpleTestCase):
             group_message: GroupMessage1 | GroupMessage2
 
         # Create instances of both message types
-        message1 = GroupMessage1(action="group_action1", group_field1="test")
-        message2 = GroupMessage2(action="group_action2", group_field2=123)
+        message1 = GroupMessage1(
+            action="group_action1", group_field1="test", payload=None
+        )
+        message2 = GroupMessage2(action="group_action2", group_field2=123, payload=None)
 
         # Validate that both work in the outgoing message
         outgoing1 = ValidOutgoingMessage(group_message=message1)
@@ -223,7 +231,9 @@ class TestBaseOutgoingGroupMessage(SimpleTestCase):
         class ValidDirectMessage(BaseOutgoingGroupMessage):
             group_message: GroupMessage1
 
-        message = GroupMessage1(action="group_action1", group_field1="test")
+        message = GroupMessage1(
+            action="group_action1", group_field1="test", payload=None
+        )
         outgoing = ValidDirectMessage(group_message=message)
         assert outgoing.group_message.action == "group_action1"
         assert outgoing.group_message.group_field1 == "test"
@@ -240,7 +250,7 @@ class TestBaseOutgoingGroupMessage(SimpleTestCase):
         with pytest.raises(TypeError, match=r"must be subclasses of BaseGroupMessage"):
 
             class InvalidUnionOutgoing(BaseOutgoingGroupMessage):
-                group_message: GroupMessage1 | str  # type: ignore[assignment]  # str is not a BaseGroupMessage
+                group_message: GroupMessage1 | str
 
     def test_non_union_non_basegroupmessage(self) -> None:
         """Test that TypeError is raised when 'group_message' is not a BaseGroupMessage or union."""
@@ -250,7 +260,7 @@ class TestBaseOutgoingGroupMessage(SimpleTestCase):
         ):
 
             class InvalidTypeOutgoing(BaseOutgoingGroupMessage):
-                group_message: str  # type: ignore[assignment]  # str is not a BaseGroupMessage or union of BaseGroupMessages
+                group_message: str
 
     def test_json_serialization(self) -> None:
         """Test that group messages can be properly serialized to JSON with type discrimination."""
@@ -259,7 +269,9 @@ class TestBaseOutgoingGroupMessage(SimpleTestCase):
             group_message: GroupMessage1 | GroupMessage2
 
         # Create test messages
-        message1 = GroupMessage1(action="group_action1", group_field1="value1")
+        message1 = GroupMessage1(
+            action="group_action1", group_field1="value1", payload=None
+        )
         outgoing1 = OutgoingMessageTest(group_message=message1)
 
         # Serialize to JSON
@@ -278,7 +290,7 @@ class TestBaseOutgoingGroupMessage(SimpleTestCase):
             group_message: GroupMessage1 | GroupMessage2 = Field(discriminator="action")
 
         # Create test message
-        message2 = GroupMessage2(action="group_action2", group_field2=42)
+        message2 = GroupMessage2(action="group_action2", group_field2=42, payload=None)
         outgoing = ExplicitDiscriminatorMessage(group_message=message2)
 
         # Validate parsing works with the discriminator
@@ -306,7 +318,7 @@ class TestMessageContainerMixin(SimpleTestCase):
             custom_field: CustomMessage
 
         # Create a test message
-        message = CustomMessage(action="custom_action", data="test_data")
+        message = CustomMessage(action="custom_action", data="test_data", payload=None)
         container = CustomContainer(custom_field=message)
 
         assert container.custom_field.action == "custom_action"
@@ -331,8 +343,8 @@ class TestMessageContainerMixin(SimpleTestCase):
             custom_field: CustomMessage1 | CustomMessage2
 
         # Create test messages
-        message1 = CustomMessage1(action="custom1", field1="test")
-        message2 = CustomMessage2(action="custom2", field2=42)
+        message1 = CustomMessage1(action="custom1", field1="test", payload=None)
+        message2 = CustomMessage2(action="custom2", field2=42, payload=None)
 
         # Validate both message types work
         container1 = CustomUnionContainer(custom_field=message1)

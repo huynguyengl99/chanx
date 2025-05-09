@@ -1,5 +1,6 @@
 from channels.routing import URLRouter
-from django.urls import re_path
+
+from chanx.urls import re_path
 
 from chat.consumers.chat_detail import ChatDetailConsumer
 

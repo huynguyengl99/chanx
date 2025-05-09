@@ -11,6 +11,7 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 import os
 from datetime import timedelta
 from pathlib import Path
+from typing import Any
 
 import django_stubs_ext
 import structlog
@@ -116,7 +117,7 @@ WSGI_APPLICATION = "config.wsgi.application"
 # TEMPLATE CONFIGURATION
 # =========================================================================
 
-TEMPLATES = [
+TEMPLATES: list[dict[str, Any]] = [
     {
         "BACKEND": "django.template.backends.django.DjangoTemplates",
         "DIRS": [],

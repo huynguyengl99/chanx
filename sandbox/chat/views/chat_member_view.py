@@ -1,3 +1,5 @@
+from typing import cast
+
 from django.db.models import QuerySet
 from rest_framework.generics import (
     RetrieveUpdateDestroyAPIView,
@@ -10,6 +12,7 @@ from rest_framework.viewsets import ModelViewSet
 from chat.models import ChatMember
 from chat.permissions import GroupChatManagerOrMemberReadonly, IsGroupChatMemberNested
 from chat.serializers import ChatMemberSerializer, ManageChatMemberSerializer
+from utils.request import AuthenticatedRequest
 
 
 class ManageChatMemberViewSet(ModelViewSet[ChatMember]):
@@ -21,7 +24,9 @@ class ManageChatMemberViewSet(ModelViewSet[ChatMember]):
     def get_queryset(self) -> QuerySet[ChatMember]:
         return ChatMember.objects.filter(group_chat=self.kwargs["group_chat_pk"])
 
-    def perform_create(self, serializer: BaseSerializer[ChatMember]) -> None:
+    def perform_create(  # pyright: ignore[reportIncompatibleMethodOverride]
+        self, serializer: BaseSerializer[ChatMember]
+    ) -> None:
         serializer.save(
             group_chat_id=self.kwargs["group_chat_pk"],
         )
@@ -35,7 +40,8 @@ class ChatMemberView(RetrieveUpdateDestroyAPIView[ChatMember]):
 
     def get_object(self) -> ChatMember:
         group_chat_pk = self.kwargs["group_chat_pk"]
+        request = cast(AuthenticatedRequest, self.request)
         chat_member = get_object_or_404(
-            ChatMember, group_chat=group_chat_pk, user=self.request.user
+            ChatMember, group_chat=group_chat_pk, user=request.user
         )
         return chat_member

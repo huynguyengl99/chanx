@@ -1,4 +1,5 @@
 import asyncio
+from typing import Any
 from unittest.mock import patch
 from uuid import uuid4
 
@@ -49,7 +50,9 @@ class TestChatConsumer(WebsocketTestCase):
         ]
 
         # Test invalid message handling
-        await self.auth_communicator.send_message(BaseMessage(action="Invalid action"))
+        await self.auth_communicator.send_message(
+            BaseMessage(action="Invalid action", payload=None)
+        )
         all_json = await self.auth_communicator.receive_all_json()
         error_item = all_json[0]
         error_message = ErrorMessage.model_validate(error_item)
@@ -87,11 +90,13 @@ class TestChatConsumer(WebsocketTestCase):
         # Send a message that should trigger a completion
         await self.auth_communicator.send_message(PingMessage())
 
-        all_messages = []
+        all_messages: list[dict[str, Any]] = []
         try:
             async with async_timeout(0.5):
                 while True:
-                    message = await self.auth_communicator.receive_json_from(0.1)
+                    message: dict[str, Any] = (
+                        await self.auth_communicator.receive_json_from(0.1)
+                    )
                     all_messages.append(message)
         except TimeoutError:
             pass
@@ -112,7 +117,7 @@ class TestChatConsumer(WebsocketTestCase):
 
         assert not chanx_settings.SEND_COMPLETION
 
-        all_messages = []
+        all_messages: list[dict[str, Any]] = []
         try:
             async with async_timeout(0.5):
                 while True:

@@ -9,7 +9,7 @@ of route discovery that can be used by various components.
 import re
 from collections.abc import Callable
 from dataclasses import dataclass
-from typing import Any, TypeVar
+from typing import TYPE_CHECKING, Any, TypeVar, cast
 
 from channels.routing import URLRouter
 from django.http import HttpRequest
@@ -17,6 +17,13 @@ from django.http import HttpRequest
 from chanx.settings import chanx_settings
 from chanx.utils.asgi import get_websocket_application
 from chanx.utils.logging import logger
+
+if TYPE_CHECKING:
+    from channels.routing import (
+        _ExtendedURLPattern,  # pragma: no cover ; TYPE CHECK only
+    )
+else:
+    _ExtendedURLPattern = Any
 
 # Type for route callbacks/handlers
 RouteHandler = TypeVar("RouteHandler")
@@ -171,7 +178,8 @@ def _extract_routes_from_router(
         routes: List to store discovered RouteInfo objects.
         ws_base_url: Base URL for WebSocket connections.
     """
-    for route in router.routes:
+    router_routes = cast(list[_ExtendedURLPattern], router.routes)
+    for route in router_routes:
         try:
             # Get the pattern string and extract path parameters
             pattern, path_params = _get_pattern_string_and_params(route)
@@ -180,7 +188,7 @@ def _extract_routes_from_router(
             full_path: str = f"{prefix}{pattern}"
 
             # Get the handler
-            handler: Any = route.callback
+            handler = route.callback
 
             # If it's another router, recurse into it
             if isinstance(handler, URLRouter):
@@ -234,7 +242,7 @@ def _get_pattern_string_and_params(route: Any) -> tuple[str, dict[str, str] | No
         pattern = str(route)
 
     # Extract path parameters
-    path_params = {}
+    path_params: dict[str, str] = {}
     param_regex = r"\(\?P<([^>]+)>([^)]+)\)"
     matches = re.findall(param_regex, pattern)
 

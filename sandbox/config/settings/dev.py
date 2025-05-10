@@ -279,6 +279,8 @@ SPECTACULAR_SETTINGS = {
     "COMPONENT_NO_READ_ONLY_REQUIRED": True,
     "SCHEMA_COERCE_PATH_PK_SUFFIX": True,
     "DISABLE_ERRORS_AND_WARNINGS": False if CURRENT_ENV == "dev" else True,
+    "SERVE_PERMISSIONS": ["rest_framework.permissions.AllowAny"],
+    "SERVE_AUTHENTICATION": [],
 }
 
 # =========================================================================

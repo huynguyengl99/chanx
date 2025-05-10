@@ -10,6 +10,4 @@ class GroupChatSerializer(serializers.ModelSerializer[GroupChat]):
             "id",
             "title",
             "description",
-            "created",
-            "modified",
         ]

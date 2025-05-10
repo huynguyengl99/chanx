@@ -86,6 +86,10 @@ class AsyncJsonWebsocketConsumer(Generic[_M], BaseAsyncJsonWebsocketConsumer, AB
     Pydantic validation, logging, and error handling. Subclasses must implement
     `receive_message` and set `INCOMING_MESSAGE_SCHEMA`.
 
+    For group messaging functionality, subclasses should also define
+    `OUTGOING_GROUP_MESSAGE_SCHEMA` to enable proper validation and handling
+    of group message broadcasts.
+
     Attributes:
         authentication_classes: DRF authentication classes for connection verification
         permission_classes: DRF permission classes for connection authorization
@@ -98,8 +102,9 @@ class AsyncJsonWebsocketConsumer(Generic[_M], BaseAsyncJsonWebsocketConsumer, AB
         log_sent_message: Whether to log sent messages
         log_ignored_actions: Message actions that should not be logged
         send_authentication_message: Whether to send auth status after connection
-        INCOMING_MESSAGE_SCHEMA: Pydantic model class for receiving message validation
-        OUTGOING_GROUP_MESSAGE_SCHEMA: Pydantic model class for group messages
+        INCOMING_MESSAGE_SCHEMA: Pydantic model class for validating incoming messages
+        OUTGOING_GROUP_MESSAGE_SCHEMA: Pydantic model class for validating group broadcast messages,
+                                      required when using send_group_message with kind="message"
     """
 
     # Authentication attributes
@@ -381,11 +386,18 @@ class AsyncJsonWebsocketConsumer(Generic[_M], BaseAsyncJsonWebsocketConsumer, AB
         """
         Send content to one or more channel groups.
 
+        Low-level method to broadcast dictionary content to channel groups.
+        For sending BaseMessage objects, prefer using send_group_message() instead.
+
         Args:
-            content: Content to send
+            content: Dictionary content to send to the groups
             groups: Group names to send to (defaults to self.groups)
-            exclude_current: Whether to exclude the sending consumer
-            kind: Type of message ('json' or 'message')
+            exclude_current: Whether to exclude the sending consumer from receiving
+                            the broadcast (prevents echo effects)
+            kind: Type of message to send:
+                  - "json": Send as raw JSON directly to clients (default)
+                  - "message": Process through OUTGOING_GROUP_MESSAGE_SCHEMA validation
+                              (requires consumer to define this schema)
         """
         if groups is None:
             groups = self.groups or []
@@ -409,20 +421,35 @@ class AsyncJsonWebsocketConsumer(Generic[_M], BaseAsyncJsonWebsocketConsumer, AB
         message: BaseMessage,
         groups: list[str] | None = None,
         *,
+        kind: Literal["json", "message"] = "message",
         exclude_current: bool = True,
     ) -> None:
         """
-        Send a BaseMessage object to one or more groups.
+        Send a BaseMessage object to one or more channel groups.
+
+        Broadcasts a message to all consumers in the specified groups.
+        This is useful for implementing pub/sub patterns where messages
+        need to be distributed to multiple connected clients.
+
+        Important:
+            When using kind="message" (the default), your consumer class must define
+            OUTGOING_GROUP_MESSAGE_SCHEMA to properly validate and wrap the message.
+            This schema ensures that group messages follow the expected structure
+            and contain the required metadata. If not defined, use kind="json" instead.
 
         Args:
-            message: Message object to send
+            message: Message object to send to the groups
             groups: Group names to send to (defaults to self.groups)
-            exclude_current: Whether to exclude the sending consumer
+            kind: Format to send the message as:
+                  - "message": Validated and wrapped via OUTGOING_GROUP_MESSAGE_SCHEMA (default)
+                  - "json": Sent as raw JSON without validation or wrapping
+            exclude_current: Whether to exclude the sending consumer from receiving
+                            the broadcast (prevents echo effects)
         """
         await self.send_to_groups(
             message.model_dump(),
             groups,
-            kind="message",
+            kind=kind,
             exclude_current=exclude_current,
         )
 

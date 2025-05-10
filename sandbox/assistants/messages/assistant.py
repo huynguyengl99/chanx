@@ -10,6 +10,10 @@ class MessagePayload(BaseModel):
 
 
 class NewMessage(BaseMessage):
+    """
+    New message for assistant.
+    """
+
     action: Literal["new_message"] = "new_message"
     payload: MessagePayload
 

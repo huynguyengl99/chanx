@@ -413,7 +413,7 @@ requires-dist = [
     { name = "pydantic", specifier = ">=2,<3" },
     { name = "pyhumps", marker = "extra == 'camel-case'", specifier = ">=3.8.0" },
     { name = "redis", extras = ["hiredis"], specifier = ">=5.2.1,<6" },
-    { name = "structlog", specifier = ">=25.2.0" },
+    { name = "structlog", specifier = ">=23.1.0" },
     { name = "typing-extensions", specifier = ">=4.13.2" },
 ]
 provides-extras = ["camel-case"]

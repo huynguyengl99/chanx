@@ -39,8 +39,23 @@ class WebsocketCommunicator(BaseWebsocketCommunicator):
     """
     Chanx extended WebsocketCommunicator for testing WebSocket consumers.
 
-    Provides additional helper methods for sending structured messages,
-    receiving responses, handling authentication, and managing connections.
+    Provides enhanced testing capabilities for WebSocket applications including:
+    - Structured message sending and receiving
+    - Authentication handling and verification
+    - Automatic message collection until completion signals
+    - Group message broadcast testing
+    - Connection state tracking
+    - Message validation and error handling
+
+    Typical usage patterns:
+    - Connection testing: connect(), assert_authenticated_status_ok()
+    - Message exchange: send_message(), receive_all_json()
+    - Authentication flows: wait_for_auth(), assert_authenticated_status_ok()
+    - Error handling: send invalid messages and check error responses
+    - Group messaging: create multiple communicators and test broadcasts
+
+    The communicator automatically handles message serialization/deserialization
+    and provides convenience methods to simplify common WebSocket testing tasks.
     """
 
     def __init__(
@@ -51,6 +66,19 @@ class WebsocketCommunicator(BaseWebsocketCommunicator):
         subprotocols: list[str] | None = None,
         spec_version: int | None = None,
     ) -> None:
+        """
+        Initialize the WebSocket communicator for testing.
+
+        Sets up the communicator with the specified application and path,
+        and initializes connection tracking.
+
+        Args:
+            application: The ASGI application (usually a consumer)
+            path: The WebSocket path to connect to
+            headers: Optional HTTP headers for the connection
+            subprotocols: Optional WebSocket subprotocols
+            spec_version: Optional WebSocket spec version
+        """
         super().__init__(application, path, headers, subprotocols, spec_version)
         self._connected = False
 
@@ -165,18 +193,45 @@ class WebsocketCommunicator(BaseWebsocketCommunicator):
 
 class WebsocketTestCase(TransactionTestCase):
     """
-    Base test case for WebSocket testing.
+    Base test case for WebSocket testing with Chanx.
 
-    Subclass this and set the 'ws_path' class attribute to the WebSocket
-    endpoint path for your tests. The router is automatically discovered
-    from the ASGI application.
+    Provides a framework for testing WebSocket consumers with built-in support for:
+    - Automatic WebSocket application discovery
+    - Connection management and cleanup
+    - Authentication testing
+    - Message sending and receiving
+    - Group broadcast testing
+
+    To use this class:
+    1. Subclass WebsocketTestCase
+    2. Set the ws_path class attribute to your WebSocket endpoint
+    3. Optionally override get_ws_headers() for authentication
+    4. Use self.auth_communicator for the main connection
+    5. Use create_communicator() only when testing multi-user scenarios
+
+    Attributes:
+        ws_path: WebSocket endpoint path to test (required)
+        router: WebSocket application router (auto-discovered)
+        auth_communicator: Default WebSocket communicator for the main connection
     """
 
     ws_path: str = ""
     router: Any = None
 
     def __init__(self, *args: Any, **kwargs: Any) -> None:
-        """Initializes the test case and discovers the WebSocket router."""
+        """
+        Initialize the WebSocket test case.
+
+        Discovers the WebSocket router from the ASGI application and
+        initializes tracking for WebSocket communicators that need cleanup.
+
+        Args:
+            *args: Arguments passed to the parent TransactionTestCase
+            **kwargs: Keyword arguments passed to the parent TransactionTestCase
+
+        Raises:
+            ValueError: If no WebSocket application could be discovered
+        """
         super().__init__(*args, **kwargs)
 
         self._communicators: list[WebsocketCommunicator] = []
@@ -207,14 +262,24 @@ class WebsocketTestCase(TransactionTestCase):
         return []
 
     def setUp(self) -> None:
-        """Sets up test environment before each test method."""
+        """
+        Set up the test environment before each test method.
+
+        Initializes WebSocket headers and subprotocols by calling the
+        corresponding getter methods, and prepares for tracking communicators.
+        """
         super().setUp()
         self.ws_headers: list[tuple[bytes, bytes]] = self.get_ws_headers()
         self.subprotocols: list[str] = self.get_subprotocols()
         self._communicators = []
 
     def tearDown(self) -> None:
-        """Cleans up after each test, ensuring all WebSocket connections are closed."""
+        """
+        Clean up after each test method.
+
+        Ensures all WebSocket connections created during the test are properly
+        disconnected to prevent resource leaks and test isolation issues.
+        """
         for communicator in self._communicators:
             try:
                 async_to_sync(communicator.disconnect)()
@@ -231,16 +296,30 @@ class WebsocketTestCase(TransactionTestCase):
         subprotocols: list[str] | None = None,
     ) -> WebsocketCommunicator:
         """
-        Creates a WebsocketCommunicator with the given parameters.
+        Creates a WebsocketCommunicator for testing WebSocket connections.
+
+        Creates and tracks a communicator instance for interacting with WebSocket consumers
+        in tests, allowing you to create multiple communicators to test various scenarios including:
+        - Multi-user WebSocket interactions
+        - Testing group message broadcasting
+        - Testing authentication with different credentials
+        - Simulating concurrent connections
+
+        The method tracks all created communicators and automatically handles
+        their cleanup during tearDown() to prevent resource leaks.
 
         Args:
             router: Application to use (defaults to self.router)
             ws_path: WebSocket path to connect to (defaults to self.ws_path)
             headers: HTTP headers to include (defaults to self.ws_headers)
+                   Use different headers for testing multiple authenticated users
             subprotocols: WebSocket subprotocols to use (defaults to self.subprotocols)
 
         Returns:
-            A configured WebsocketCommunicator instance
+            A configured WebsocketCommunicator instance ready for connecting
+
+        Raises:
+            AttributeError: If ws_path is not set and not provided
         """
         if router is None:
             router = self.router

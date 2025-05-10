@@ -82,5 +82,5 @@ class TestDiscussionConsumer(WebsocketTestCase):
 
         all_messages = await self.auth_communicator.receive_all_json(wait_group=True)
         assert all_messages == [
-            {"message": "Raw message"},
+            {"is_current": False, "is_mine": False, "message": "Raw message"},
         ]

@@ -151,9 +151,7 @@ class TestBaseIncomingMessage(SimpleTestCase):
         with pytest.raises(TypeError, match=r"must be subclasses of BaseMessage"):
 
             class InvalidUnionIncoming(BaseIncomingMessage):
-                message: (
-                    Message1 | str
-                )  # pyright: ignore[assignment]  # str is not a BaseMessage, testing
+                message: Message1 | str
 
     def test_non_union_non_basemessage(self) -> None:
         """Test that TypeError is raised when 'message' is not a BaseMessage or union."""

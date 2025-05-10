@@ -90,7 +90,6 @@ class ChanxAuthView(GenericAPIView[Model]):
     """
 
     serializer_class = ChanxSerializer
-    detail: bool | None = None
 
     def get_response(self, request: Request) -> Response:
         """
@@ -100,34 +99,32 @@ class ChanxAuthView(GenericAPIView[Model]):
             request: The HTTP request object
 
         Returns:
-            Response with OK status and object if needed
+            Response with OK detail
         """
-        request = cast(ExtendedRequest, request)
-        request.obj = None
-        if self.detail or (self.detail is None and self.kwargs.get(self.lookup_field)):
-            request.obj = self.get_object()
+        if isinstance(self.queryset, QuerySet):
+            _ = self.get_object()
         return Response({"detail": "ok"})
 
-    def get(self, request: ExtendedRequest, *args: Any, **kwargs: Any) -> Response:
+    def get(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         """Stub get method"""
         return self.get_response(request)
 
-    def post(self, request: ExtendedRequest, *args: Any, **kwargs: Any) -> Response:
+    def post(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         """Stub post method"""
 
         return self.get_response(request)
 
-    def put(self, request: ExtendedRequest, *args: Any, **kwargs: Any) -> Response:
+    def put(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         """Stub put method"""
 
         return self.get_response(request)
 
-    def patch(self, request: ExtendedRequest, *args: Any, **kwargs: Any) -> Response:
+    def patch(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         """Stub patch method"""
 
         return self.get_response(request)
 
-    def delete(self, request: ExtendedRequest, *args: Any, **kwargs: Any) -> Response:
+    def delete(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         """Stub delete method"""
 
         return self.get_response(request)
@@ -205,7 +202,9 @@ class ChanxWebsocketAuthenticator:
                 response_data = {"detail": "OK"}
 
             user = request.user
-            obj = getattr(request, "obj", None)
+            obj: Model | None = None
+            if self.queryset is not True and status_code == status.HTTP_200_OK:
+                obj = await sync_to_async(self._view.get_object)()
 
             return AuthenticationResult(
                 is_authenticated=is_authenticated,
@@ -244,7 +243,7 @@ class ChanxWebsocketAuthenticator:
         if self.permission_classes:
             # Check if any permission class might need an object
             for perm_class in self.permission_classes:
-                if hasattr(perm_class, "has_object_permission") and issubclass(perm_class, BasePermission):  # type: ignore  # pyright: ignore[reportArgumentType]
+                if hasattr(perm_class, "has_object_permission") and issubclass(perm_class, BasePermission):  # type: ignore
                     meth = perm_class.has_object_permission
                     qname = meth.__qualname__
 

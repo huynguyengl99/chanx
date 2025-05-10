@@ -1,11 +1,13 @@
 """
 URL routing utilities for Django Channels applications.
+
 This module provides functions to simplify routing configuration in Django Channels projects.
 It extends Django Channels' routing capabilities with improved include functionality for
-modular routing organization.
+modular routing organization similar to Django's URL routing system.
+
 Functions:
-include: Includes URL patterns from another module, similar to Django's include function
-but specifically designed for Channels routing.
+    include: Includes URL patterns from another module, similar to Django's include function
+             but specifically designed for Channels routing.
 """
 
 from importlib import import_module
@@ -21,16 +23,22 @@ def include(arg: _URLConf) -> URLRouter:
     """
     Include router from another module for Channels routing.
 
-    This function can handle both:
-    - Modules with a 'router' attribute that contains a list of paths
-    - Modules with a 'router' attribute that is a URLRouter
+    Similar to Django's URL include function, but designed for Channels routing.
+    This allows for modular organization of WebSocket routing configurations.
+
+    This function can handle:
+    - A URLRouter instance (returned as-is)
+    - A string path to a module with a 'router' attribute
+    - A module object with a 'router' attribute
+
+    The 'router' attribute should be a URLRouter instance.
 
     Args:
-        arg: Either a string path to a module or the module itself.
-             The module should have a 'router' attribute.
+        arg: Either a URLRouter instance, a string path to a module, or the module itself.
+             For string paths or modules, they should have a 'router' attribute.
 
     Returns:
-        The router from the module as a list of URLPattern.
+        The URLRouter instance from the module.
     """
     # Check if it's a string path to module
     if isinstance(arg, URLRouter):

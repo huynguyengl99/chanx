@@ -38,7 +38,6 @@ from channels.generic.websocket import (
 )
 from django.contrib.auth.models import AnonymousUser, User
 from django.db.models import Model
-from django.http import HttpRequest
 from rest_framework.authentication import BaseAuthentication
 from rest_framework.permissions import (
     BasePermission,
@@ -70,14 +69,10 @@ from chanx.types import GroupMemberEvent
 from chanx.utils.asyncio import create_task
 from chanx.utils.logging import logger
 
-# _MT_co = TypeVar("_MT_co", bound=Model, covariant=True)
-
 try:
     import humps
 except ImportError:  # pragma: no cover
-    humps = cast(
-        ModuleType, None
-    )  # pragma: no cover  # pyright: ignore[reportInvalidCast]
+    humps = cast(ModuleType, None)  # pragma: no cover
 
 
 _M = TypeVar("_M", bound=Model, default=Model)
@@ -96,14 +91,14 @@ class AsyncJsonWebsocketConsumer(Generic[_M], BaseAsyncJsonWebsocketConsumer, AB
         permission_classes: DRF permission classes for connection authorization
         queryset: QuerySet or Manager used for retrieving objects
         auth_method: HTTP verb to emulate for authentication
-        authenticator_class: Class to use for authentication
+        authenticator_class: Class to use for performing websocket authentication, defaults to ChanxWebsocketAuthenticator
         send_completion: Whether to send completion message after processing
         send_message_immediately: Whether to yield control after sending messages
         log_received_message: Whether to log received messages
         log_sent_message: Whether to log sent messages
         log_ignored_actions: Message actions that should not be logged
         send_authentication_message: Whether to send auth status after connection
-        INCOMING_MESSAGE_SCHEMA: Pydantic model class for message validation
+        INCOMING_MESSAGE_SCHEMA: Pydantic model class for receiving message validation
         OUTGOING_GROUP_MESSAGE_SCHEMA: Pydantic model class for group messages
     """
 
@@ -177,7 +172,6 @@ class AsyncJsonWebsocketConsumer(Generic[_M], BaseAsyncJsonWebsocketConsumer, AB
         self.obj: _M | None = None
         self.group_name: str | None = None
         self.connecting: bool = False
-        self.request: HttpRequest | None = None
 
         if chanx_settings.CAMELIZE:
             if not humps:
@@ -440,8 +434,13 @@ class AsyncJsonWebsocketConsumer(Generic[_M], BaseAsyncJsonWebsocketConsumer, AB
         and forwards to the client socket. This method is called by the Channels system when
         a message is sent to a group this consumer is part of.
 
+        The method adds two metadata fields to all messages:
+        - is_mine: True if the message originated from the current user
+        - is_current: True if the message originated from this channel
+
         If the message is from the current channel and exclude_current is True, the message
-        is not relayed to avoid echo effects. For message-type events, user ownership is tracked.
+        is not relayed to avoid echo effects. For message-type events, the content is wrapped
+        in the OUTGOING_GROUP_MESSAGE_SCHEMA, while JSON-type events are sent directly.
         If configured, a GroupCompleteMessage is sent after successful processing.
 
         Args:
@@ -457,13 +456,14 @@ class AsyncJsonWebsocketConsumer(Generic[_M], BaseAsyncJsonWebsocketConsumer, AB
         if exclude_current and self.channel_name == from_channel:
             return
 
-        if kind == "message":
-            user_pk = getattr(self.user, "pk", None)
-            is_mine = bool(from_user_pk) and from_user_pk == user_pk
+        user_pk = getattr(self.user, "pk", None)
+        is_mine = bool(from_user_pk) and from_user_pk == user_pk
 
-            content.update(
-                {"is_mine": is_mine, "is_current": self.channel_name == from_channel}
-            )
+        content.update(
+            {"is_mine": is_mine, "is_current": self.channel_name == from_channel}
+        )
+
+        if kind == "message":
             message = self.OUTGOING_GROUP_MESSAGE_SCHEMA.model_validate(
                 {"group_message": content}
             ).group_message

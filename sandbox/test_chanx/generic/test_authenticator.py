@@ -48,12 +48,6 @@ class TestChanxAuthView:
         self.view.request = Request(self.request)  # pyright: ignore[reportCallIssue]
         self.view.kwargs = {}
 
-    def test_default_attributes(self) -> None:
-        """Test default attributes of the view."""
-        assert self.view.serializer_class == ChanxSerializer
-        assert self.view.lookup_field == "pk"
-        assert self.view.detail is None
-
     def test_get_response_without_detail(self) -> None:
         """Test get_response when detail is None and no lookup param."""
         response = self.view.get_response(self.view.request)
@@ -61,44 +55,11 @@ class TestChanxAuthView:
         assert response.data == {"detail": "ok"}
         assert response.status_code == 200
 
-    def test_get_response_with_detail_true(self) -> None:
-        """Test get_response when detail is True."""
-        self.view.detail = True
-
-        # Mock get_object to prevent actual database lookup
-        self.view.get_object = MagicMock()  # type: ignore[method-assign]
-
-        response = self.view.get_response(self.view.request)
-        assert self.view.get_object.called
-        assert response.data == {"detail": "ok"}
-
-    def test_get_response_with_lookup_parameter(self) -> None:
-        """Test get_response when lookup parameter is present."""
-        self.view.kwargs = {"pk": "123"}
-
-        # Mock get_object to prevent actual database lookup
-        self.view.get_object = MagicMock()  # type: ignore[method-assign]
-
-        response = self.view.get_response(self.view.request)
-        assert self.view.get_object.called
-        assert response.data == {"detail": "ok"}
-
     def test_get_response_without_lookup_parameter(self) -> None:
         """Test get_response when no lookup parameter is present."""
         self.view.kwargs = {}
 
         # No need to mock get_object as it shouldn't be called
-        self.view.get_object = MagicMock()  # type: ignore[method-assign]
-
-        response = self.view.get_response(self.view.request)
-        assert not self.view.get_object.called
-        assert response.data == {"detail": "ok"}
-
-    def test_detail_false_no_get_object_call(self) -> None:
-        """Test that get_object is not called when detail is False."""
-        self.view.detail = False
-        self.view.kwargs = {"pk": "123"}
-
         self.view.get_object = MagicMock()  # type: ignore[method-assign]
 
         response = self.view.get_response(self.view.request)

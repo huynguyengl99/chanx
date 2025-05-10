@@ -1,9 +1,13 @@
 """
 Standard incoming message types for Chanx websockets.
 
-This module defines the base incoming message types and schemas used
-for validating and processing messages received from clients.
-Applications can extend these base types to add custom message handling.
+Provides ready-to-use message types for WebSocket communication:
+- PingMessage: Simple connection status check message
+- IncomingMessage: Basic schema implementation that supports PingMessage
+
+For real applications, you can use IncomingMessage directly for simple cases,
+or extend BaseIncomingMessage with your own custom message types for more
+complex applications. The IncomingMessage class only supports PingMessage.
 """
 
 from typing import Literal
@@ -23,13 +27,14 @@ class PingMessage(BaseMessage):
 
 class IncomingMessage(BaseIncomingMessage):
     """
-    Default implementation of BaseIncomingMessage.
+    Ready-to-use implementation of BaseIncomingMessage.
 
-    Provides a concrete incoming message container with support for PingMessage type.
-    Applications should extend this class to add support for additional message types.
+    Provides a concrete incoming message container with support for PingMessage only.
+    Can be used directly for simple applications that only need ping functionality,
+    or as a starting point for more complex implementations.
 
     Attributes:
-      message: The wrapped message object, using action as discriminator field
+        message: The wrapped message object, using action as discriminator
     """
 
     message: PingMessage = Field(discriminator=chanx_settings.MESSAGE_ACTION_KEY)

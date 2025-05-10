@@ -1,8 +1,15 @@
 """
 Standard outgoing message types for Chanx websockets.
 
-This module defines the standard outgoing message types sent from the server
-to clients, including status messages, error responses, and completion signals.
+Provides ready-to-use message types for server-to-client communication:
+- PongMessage: Response to ping requests
+- ErrorMessage: Communicates errors to clients
+- AuthenticationMessage: Informs clients about authentication results
+- CompleteMessage: Signals completion of message processing
+- GroupCompleteMessage: Signals completion of group message distribution
+
+These messages handle common communication patterns in WebSocket applications
+including status updates, error reporting, and process completion signals.
 """
 
 from typing import Any, Literal

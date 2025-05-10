@@ -16,7 +16,6 @@ class GroupMemberEvent(TypedDict):
     the channel layer.
 
     Attributes:
-        type: Event type name (typically "send_group_member")
         content: The message content to be sent
         kind: Type of content format ('json' or 'message')
         exclude_current: Whether to exclude the sender from receiving the message
@@ -24,7 +23,6 @@ class GroupMemberEvent(TypedDict):
         from_user_pk: User PK of the sender, if authenticated
     """
 
-    type: str
     content: dict[str, Any]
     kind: Literal["json", "message"]
     exclude_current: bool

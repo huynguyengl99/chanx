@@ -1,8 +1,13 @@
 """
-WebSocket playground utilities.
+WebSocket playground utilities for Chanx.
 
-This module provides specialized utilities for the WebSocket playground,
-transforming route information into a format suitable for display and interaction.
+This module provides specialized utilities for the WebSocket playground UI,
+which enables developers to discover, test, and interact with WebSocket endpoints.
+It includes functions for:
+- Discovering available WebSocket routes in the application
+- Transforming route information into UI-friendly formats
+- Generating example messages for testing endpoints
+- Formatting path parameters for documentation
 """
 
 import inspect
@@ -34,7 +39,14 @@ except ImportError:  # pragma: no cover
 
 
 class MessageExample(TypedDict):
-    """Type definition for WebSocket message examples."""
+    """
+    Type definition for WebSocket message examples in the playground UI.
+
+    Attributes:
+        name: Name of the message type (e.g., "PingMessage")
+        description: Human-readable description of the message purpose
+        example: Sample JSON message that can be used in the playground
+    """
 
     name: str
     description: str
@@ -42,7 +54,14 @@ class MessageExample(TypedDict):
 
 
 class PathParam(TypedDict):
-    """Type definition for path parameters in the WebSocket routes."""
+    """
+    Type definition for path parameters in WebSocket routes.
+
+    Attributes:
+        name: The parameter name as it appears in URL patterns
+        pattern: The regex pattern that matches this parameter
+        description: Human-readable description of the parameter
+    """
 
     name: str
     pattern: str
@@ -190,13 +209,15 @@ def _create_example(msg_type: type[BaseModel]) -> MessageExample:
     """
     Create an example for a specific message type.
 
-    Helper function to generate a standardized example for a message type.
+    Uses Pydantic's ModelFactory to generate realistic sample data
+    for a given message type, extracting documentation from the class
+    docstring if available.
 
     Args:
-        msg_type: The message type to create an example for.
+        msg_type: The message type class to create an example for
 
     Returns:
-        A formatted example with name, description, and sample data.
+        A formatted example with name, description, and sample JSON data
     """
     description: str = inspect.getdoc(msg_type) or f"Example of {msg_type.__name__}"
 

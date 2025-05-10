@@ -31,7 +31,13 @@ from .utils import WebSocketRoute, get_playground_websocket_routes
 
 class WebSocketPlaygroundView(TemplateView):
     """
-    A view that renders the WebSocket playground template.
+    A view that renders the WebSocket playground interface.
+
+    This view provides the main interactive UI for the WebSocket playground,
+    enabling developers to browse available WebSocket endpoints, connect to them,
+    send/receive messages, and view documentation. The template includes a
+    JavaScript application that communicates with the WebSocketInfoView API
+    to dynamically load available endpoints.
     """
 
     template_name = "playground/websocket.html"
@@ -58,7 +64,11 @@ class WebSocketPlaygroundView(TemplateView):
 
 class WebSocketRouteSerializer(serializers.Serializer[WebSocketRoute]):
     """
-    Serializer for WebSocket route information.
+    Serializer for WebSocket route information in the playground.
+
+    Converts internal WebSocketRoute TypedDict objects into a format suitable
+    for the API response, including endpoint URLs, descriptions, message examples,
+    and path parameters that the frontend can use to build a dynamic interface.
     """
 
     name = serializers.CharField()
@@ -73,7 +83,11 @@ class WebSocketRouteSerializer(serializers.Serializer[WebSocketRoute]):
 
 class WebSocketRouteListSerializer(serializers.ListSerializer[list[WebSocketRoute]]):
     """
-    List serializer for WebSocket routes.
+    List serializer for WebSocket routes in the playground API.
+
+    Handles the serialization of multiple WebSocket routes into a consistent
+    list format for the frontend to consume. Uses WebSocketRouteSerializer as
+    its child serializer.
     """
 
     child = WebSocketRouteSerializer()

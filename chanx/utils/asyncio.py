@@ -18,6 +18,7 @@ maintaining an active connection.
 """
 
 import asyncio
+import sys
 from collections.abc import Coroutine
 from contextvars import Context
 from typing import Any, TypeVar
@@ -73,14 +74,20 @@ def create_task(
         coro: The coroutine to convert into a task
         background_tasks: Set to track the task (uses global set if None)
         name: Optional name for the task
-        context: Optional context for the task
+        context: Optional context for the task. Only used in Python 3.11 and above.
+         In Python 3.10, this parameter is accepted but ignored.
 
     Returns:
         The created asyncio task
     """
-    task: asyncio.Task[T] = asyncio.create_task(
-        wrap_task(coro), name=name, context=context
-    )
+
+    kwargs: dict[str, Any] = {
+        "name": name,
+    }
+    if sys.version_info >= (3, 11):  # pragma: no cover  # Python 3.11+ specific code
+        kwargs["context"] = context
+
+    task: asyncio.Task[T] = asyncio.create_task(wrap_task(coro), **kwargs)
     if background_tasks is None:
         background_tasks = global_background_tasks
 

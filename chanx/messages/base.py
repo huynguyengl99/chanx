@@ -28,12 +28,12 @@ from typing import (
     Literal,
     TypeVar,
     Union,
-    Unpack,
     get_args,
     get_origin,
 )
 
 from pydantic import BaseModel, ConfigDict, Field
+from typing_extensions import Unpack
 
 
 class BaseMessage(BaseModel, abc.ABC):

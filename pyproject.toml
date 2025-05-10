@@ -66,6 +66,7 @@ classifiers = [
   "Operating System :: OS Independent",
   "Programming Language :: Python :: 3 :: Only",
   "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.10",
   "Programming Language :: Python :: 3.11",
   "Programming Language :: Python :: 3.12",
   "Programming Language :: Python :: 3.13",
@@ -83,13 +84,14 @@ dependencies = [
   "polyfactory>=2.20.0",
   "pydantic>=2,<3",
   "redis[hiredis]>=5.2.1,<6",
-  "structlog>=25.2.0"
+  "structlog>=25.2.0",
+  "typing-extensions>=4.13.2"
 ]
 description = "The missing toolkit for Django Channels — auth, logging, consumers, and more."
 license = {file = "LICENSE"}
 name = "chanx"
 readme = "README.md"
-requires-python = ">=3.11,<4.0"
+requires-python = ">=3.10,<4.0"
 version = "0.5.0"
 
 [project.optional-dependencies]

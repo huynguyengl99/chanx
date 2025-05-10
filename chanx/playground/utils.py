@@ -14,7 +14,6 @@ import inspect
 from types import ModuleType, UnionType
 from typing import (
     Any,
-    TypedDict,
     Union,
     cast,
     get_args,
@@ -26,6 +25,7 @@ from django.http import HttpRequest
 
 from polyfactory.factories.pydantic_factory import ModelFactory
 from pydantic import BaseModel
+from typing_extensions import TypedDict
 
 from chanx.constants import MISSING_PYHUMPS_ERROR
 from chanx.messages.base import BaseIncomingMessage

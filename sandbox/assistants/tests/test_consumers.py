@@ -1,4 +1,4 @@
-import asyncio
+import sys
 from typing import Any
 from unittest.mock import patch
 from uuid import uuid4
@@ -18,6 +18,9 @@ from chanx.utils.settings import override_chanx_settings
 from test_utils.testing import WebsocketTestCase
 
 from assistants.messages.assistant import MessagePayload, NewMessage, ReplyMessage
+
+if sys.version_info < (3, 11):
+    from asyncio.exceptions import TimeoutError
 
 
 class TestChatConsumer(WebsocketTestCase):
@@ -215,7 +218,7 @@ class TestChatConsumer(WebsocketTestCase):
         await self.auth_communicator.connect()
 
         # Should not receive auth message
-        with pytest.raises(asyncio.TimeoutError):
+        with pytest.raises(TimeoutError):
             await self.auth_communicator.receive_json_from(timeout=0.1)
 
     @override_chanx_settings(LOG_RECEIVED_MESSAGE=False)

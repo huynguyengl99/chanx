@@ -158,25 +158,6 @@ style = "sphinx"
 verbose = 0
 whitelist-regex = []
 
-[tool.pyright]
-exclude = [
-  "**/__pycache__",
-  "**/node_modules"
-]
-executionEnvironments = [
-  {root = "chanx"}
-]
-ignore = [
-  'sandbox/config/settings/test.py'
-]
-include = ["chanx", "sandbox"]
-pythonVersion = "3.11"
-reportIncompatibleVariableOverride = false
-reportMissingImports = "error"
-reportMissingTypeStubs = false
-reportPrivateUsage = false
-typeCheckingMode = "strict"
-
 [tool.tomlsort]
 all = true
 in_place = true

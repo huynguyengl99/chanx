@@ -10,6 +10,6 @@
   "reportMissingTypeArgument": "warning",
   "reportMissingTypeStubs": "warning",
   "reportPrivateUsage": "none",
-  "pythonVersion": "3.11",
+  "pythonVersion": "3.10",
   "reportIncompatibleVariableOverride": "none"
 }

@@ -3,6 +3,11 @@ WebSocket Playground
 Chanx includes a powerful WebSocket playground that provides a visual interface for exploring and testing
 WebSocket endpoints. This tool makes it easier to develop, debug, and document your WebSocket APIs.
 
+.. image:: /_static/pg-header.png
+   :alt: WebSocket Playground Header
+   :width: 100%
+   :align: center
+
 Features
 --------
 The WebSocket playground offers several key features:
@@ -18,7 +23,20 @@ Enabling the Playground
 -----------------------
 To enable the WebSocket playground in your project:
 
-1. Add the playground URLs to your project's URL configuration:
+1. Add 'chanx.playground' to your INSTALLED_APPS:
+
+.. code-block:: python
+
+    # settings.py
+    INSTALLED_APPS = [
+        # ...
+        'rest_framework',
+        'channels',
+        'chanx.playground',  # Add this for the WebSocket playground
+        # ...
+    ]
+
+2. Add the playground URLs to your project's URL configuration:
 
 .. code-block:: python
 
@@ -27,22 +45,11 @@ To enable the WebSocket playground in your project:
 
     urlpatterns = [
         # ...
-        path('chanx/', include('chanx.playground.urls')),
+        path('playground/', include('chanx.playground.urls')),
         # ...
     ]
 
-2. Ensure the playground templates and static files are accessible:
-
-.. code-block:: python
-
-    # settings.py
-    INSTALLED_APPS = [
-        # ...
-        'chanx',
-        # ...
-    ]
-
-3. Access the playground at ``/chanx/playground/websocket/`` in your browser
+3. Access the playground at ``/playground/websocket/`` in your browser
 
 Using the Playground
 --------------------
@@ -55,13 +62,15 @@ The left panel displays all discovered WebSocket endpoints with their URLs and d
 .. code-block:: python
 
     # routing.py example that will be discovered
-    from django.urls import re_path
+    from channels.routing import URLRouter
+    from chanx.urls import path, re_path
     from myapp.consumers import ChatConsumer, NotificationConsumer
 
-    websocket_urlpatterns = [
-        re_path(r'ws/chat/(?P<room_id>\w+)/$', ChatConsumer.as_asgi()),
-        re_path(r'ws/notifications/$', NotificationConsumer.as_asgi()),
-    ]
+    # Important: name this variable 'router'
+    router = URLRouter([
+        path('chat/<str:room_id>/', ChatConsumer.as_asgi()),
+        path('notifications/', NotificationConsumer.as_asgi()),
+    ])
 
 Connection Panel
 ^^^^^^^^^^^^^^^^
@@ -72,6 +81,11 @@ The connection panel allows you to:
 3. Add authentication headers or query parameters
 4. Connect and disconnect from the WebSocket
 
+.. image:: /_static/pg-header.png
+   :alt: Connection Panel
+   :width: 100%
+   :align: center
+
 For endpoints with URL parameters (like ``room_id`` in the example above), you'll be able to enter parameter values before connecting.
 
 Message Composer
@@ -81,6 +95,11 @@ The message composer provides:
 1. A JSON editor with syntax highlighting
 2. Example message templates based on your consumer's message schema
 3. A "Send" button to transmit the message
+
+.. image:: /_static/pg-msg.png
+   :alt: Message Composer
+   :width: 100%
+   :align: center
 
 Example messages are automatically generated from your ``INCOMING_MESSAGE_SCHEMA`` class, helping you send correctly structured messages.
 
@@ -93,18 +112,25 @@ The message history panel shows:
 3. Formatted JSON with syntax highlighting
 4. Timestamps for each message
 
+.. image:: /_static/pg-history.png
+   :alt: Message History
+   :width: 100%
+   :align: center
+
 Authentication Testing
 ^^^^^^^^^^^^^^^^^^^^^^
 The playground supports testing authenticated endpoints through:
 
 1. Cookie-based authentication (using your browser's cookies)
-2. Header-based authentication (by adding custom headers)
-3. Query parameter authentication
+2. Query parameter authentication (for token-based auth)
 
-For example, to test a token-authenticated endpoint:
+For example, to test a token-authenticated endpoint using query parameters:
 
-1. In the headers section, add: ``Authorization: Token your_token_here``
-2. Or in the URL parameters section, add: ``token=your_token_here``
+1. Click the "Query Params" tab
+2. Add a parameter with key "token" and your token as the value
+3. Connect to the WebSocket
+
+Since browsers don't allow custom headers for WebSocket connections, cookie-based authentication is the most reliable method for testing in the playground.
 
 Generating Example Messages
 ---------------------------
@@ -181,7 +207,7 @@ To disable the playground in production:
     if settings.DEBUG:
         # Only add playground URLs in development
         urlpatterns += [
-            path('chanx/', include('chanx.playground.urls')),
+            path('playground/', include('chanx.playground.urls')),
         ]
 
 Or restrict access with a decorator:
@@ -206,42 +232,38 @@ Or restrict access with a decorator:
         ),
     ]
 
-Customizing the Playground
---------------------------
-You can customize the playground by:
-
-1. **Override Templates**: Create your own version of the playground template
-2. **Extend Views**: Subclass the playground views to add custom behavior
-3. **Custom Styling**: Add your own CSS to modify the appearance
-
-To override the template:
-
-1. Create a file at ``templates/playground/websocket.html`` in your project
-2. Copy the original template content from the package
-3. Modify as needed
-
-Advanced Usage
---------------
-**Testing Different Authentication Methods**
-
-The playground allows you to test different authentication methods:
+Testing Different Authentication Methods
+----------------------------------------
+The playground has been designed to work with browser constraints regarding WebSocket authentication:
 
 1. **Session Authentication**: Works automatically with your browser's cookies
-2. **Token Authentication**: Add an Authorization header
-3. **Basic Authentication**: Add a Basic Authentication header
-4. **Custom Authentication**: Add any required headers or parameters
+2. **JWT in Cookies**: Store JWT tokens in cookies for easy testing
+3. **Query Parameters**: Add tokens or other authentication data as query parameters
 
-**Working with Binary Messages**
+For example, to authenticate with a JWT cookie:
 
-While the playground is designed for JSON messages, you can also work with binary data:
+1. Log in through your regular application interface
+2. Navigate to the playground (cookies will be included automatically)
+3. Connect to the authenticated endpoint
 
-1. Use the "Send Binary" option if available
-2. Or encode binary data in a compatible format (Base64)
+For query parameter authentication:
 
-**Multiple Connections**
+1. Click the "Query Params" tab in the Connection panel
+2. Add your authentication parameter (e.g., "token")
+3. Connect with the parameter included in the WebSocket URL
 
+Multiple Connections
+--------------------
 You can open multiple playground tabs to test:
 
 1. Group messaging between different clients
 2. User-to-user messaging
 3. Broadcast functionality
+
+Simply open the playground in multiple browser tabs, potentially with different user sessions, and connect to the same WebSocket endpoint.
+
+Next Steps
+----------
+- :doc:`authentication` - Learn more about WebSocket authentication
+- :doc:`messages` - Understand message formats and validation
+- :doc:`testing` - See how to automate WebSocket testing

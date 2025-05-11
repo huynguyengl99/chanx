@@ -31,7 +31,7 @@ Define message types in `echo/messages.py`:
 
 .. code-block:: python
 
-    from typing import Literal, Optional
+    from typing import Any, Literal, Optional
 
     from chanx.messages.base import BaseIncomingMessage, BaseMessage
     from chanx.messages.incoming import PingMessage
@@ -59,10 +59,14 @@ Create a consumer in `echo/consumers.py`:
 
 .. code-block:: python
 
+    from typing import Any
+
     from rest_framework.authentication import SessionAuthentication
     from rest_framework.permissions import IsAuthenticated
 
     from chanx.generic.websocket import AsyncJsonWebsocketConsumer
+    from chanx.messages.base import BaseMessage
+    from chanx.messages.incoming import PingMessage
     from chanx.messages.outgoing import PongMessage
 
     from echo.messages import EchoIncomingMessage, EchoMessage, StatusMessage
@@ -92,18 +96,21 @@ Create a consumer in `echo/consumers.py`:
                 StatusMessage(payload=f"Welcome, {user.username}!")
             )
 
-        async def receive_message(self, message, **kwargs):
+        async def receive_message(self, message: BaseMessage, **kwargs: Any) -> None:
             """Handle incoming messages."""
-            # Handle different message types based on action
-            if message.action == "ping":
-                # Respond to ping with pong
-                await self.send_message(PongMessage())
-
-            elif message.action == "echo":
-                # Echo the message back with the user's name
-                user = self.user
-                echo_text = f"{user.username}: {message.payload}"
-                await self.send_message(EchoMessage(payload=echo_text))
+            # Handle different message types using pattern matching
+            match message:
+                case PingMessage():
+                    # Respond to ping with pong
+                    await self.send_message(PongMessage())
+                case EchoMessage(payload=payload):
+                    # Echo the message back with the user's name
+                    user = self.user
+                    echo_text = f"{user.username}: {payload}"
+                    await self.send_message(EchoMessage(payload=echo_text))
+                case _:
+                    # Handle any other messages
+                    pass
 
 WebSocket Routing
 -----------------
@@ -111,13 +118,15 @@ Set up routing in `echo/routing.py`:
 
 .. code-block:: python
 
-    from django.urls import re_path
+    from channels.routing import URLRouter
+    from chanx.urls import path
 
     from echo.consumers import EchoConsumer
 
-    websocket_urlpatterns = [
-        re_path(r"ws/echo/$", EchoConsumer.as_asgi()),
-    ]
+    # Important: name this variable 'router' for string-based includes
+    router = URLRouter([
+        path('echo/', EchoConsumer.as_asgi()),
+    ])
 
 ASGI Configuration
 ------------------
@@ -127,20 +136,25 @@ Configure the ASGI application in `myproject/asgi.py`:
 
     import os
 
-    from channels.auth import AuthMiddlewareStack
-    from channels.routing import ProtocolTypeRouter, URLRouter
+    from channels.routing import ProtocolTypeRouter
+    from channels.security.websocket import OriginValidator
+    from channels.sessions import CookieMiddleware
     from django.core.asgi import get_asgi_application
-
-    from echo.routing import websocket_urlpatterns
+    from django.conf import settings
 
     os.environ.setdefault("DJANGO_SETTINGS_MODULE", "myproject.settings")
+    django_asgi_app = get_asgi_application()
 
-    application = ProtocolTypeRouter(
-        {
-            "http": get_asgi_application(),
-            "websocket": AuthMiddlewareStack(URLRouter(websocket_urlpatterns)),
-        }
-    )
+    # Import the router
+    from echo.routing import router
+
+    application = ProtocolTypeRouter({
+        "http": django_asgi_app,
+        "websocket": OriginValidator(
+            CookieMiddleware(router),
+            ["http://localhost:8000"],  # Allowed origins
+        ),
+    })
 
 Settings Configuration
 ----------------------
@@ -157,15 +171,16 @@ Update `myproject/settings.py` with Channels and Chanx settings:
         "django.contrib.messages",
         "django.contrib.staticfiles",
         # Third-party apps
+        "daphne",
         "channels",
         "rest_framework",
-        "chanx",
+        "chanx.playground",  # Enable the WebSocket playground
         # Local apps
         "echo",
     ]
 
     # Channels configuration
-    ASGI_APPLICATION = "myproject.asgi.py:application"
+    ASGI_APPLICATION = "myproject.asgi.application"
 
     CHANNEL_LAYERS = {
         "default": {
@@ -185,6 +200,10 @@ Update `myproject/settings.py` with Channels and Chanx settings:
         "LOG_RECEIVED_MESSAGE": True,
         "LOG_SENT_MESSAGE": True,
     }
+
+    # CORS/CSRF settings for WebSocket
+    CORS_ALLOWED_ORIGINS = ["http://localhost:8000"]
+    CSRF_TRUSTED_ORIGINS = ["http://localhost:8000"]
 
 HTML Template
 -------------
@@ -413,7 +432,7 @@ Add the view to your URL configuration in `myproject/urls.py`:
         # Echo application view
         path("echo/", views.echo_view, name="echo"),
         # Add the playground for development
-        path("chanx/", include("chanx.playground.urls")),
+        path("playground/", include("chanx.playground.urls")),
     ]
 
 Testing the Consumer
@@ -453,37 +472,33 @@ Let's write a test for our consumer in `echo/tests.py`:
 
         async def test_echo_message(self):
             """Test sending and receiving echo messages."""
-            # Create a WebSocket communicator
-            communicator = self.create_communicator()
-
-            # Connect to the WebSocket
-            connected, _ = await communicator.connect()
-            self.assertTrue(connected)
+            # Connect using the default communicator
+            await self.auth_communicator.connect()
 
             # Verify authentication succeeded
-            await communicator.assert_authenticated_status_ok()
+            await self.auth_communicator.assert_authenticated_status_ok()
 
             # Should receive welcome message
-            welcome = await communicator.receive_json_from()
-            self.assertEqual(welcome["action"], "status")
-            self.assertIn("Welcome", welcome["payload"])
+            welcome = await self.auth_communicator.receive_json_from()
+            assert welcome["action"] == "status"
+            assert "Welcome" in welcome["payload"]
 
             # Skip completion message
-            await communicator.receive_json_from()
+            await self.auth_communicator.receive_json_from()
 
             # Send an echo message
             test_message = "Hello, world!"
-            await communicator.send_message(EchoMessage(payload=test_message))
+            await self.auth_communicator.send_message(EchoMessage(payload=test_message))
 
             # Receive the echo response
-            response = await communicator.receive_json_from()
+            response = await self.auth_communicator.receive_json_from()
 
             # Verify the response
-            self.assertEqual(response["action"], "echo")
-            self.assertEqual(response["payload"], f"testuser: {test_message}")
+            assert response["action"] == "echo"
+            assert response["payload"] == f"testuser: {test_message}"
 
             # Disconnect
-            await communicator.disconnect()
+            await self.auth_communicator.disconnect()
 
 Running the Example
 -------------------
@@ -515,7 +530,7 @@ Running the Example
 
    - Login page: http://localhost:8000/admin/login/
    - Echo application: http://localhost:8000/echo/
-   - WebSocket playground: http://localhost:8000/chanx/playground/websocket/
+   - WebSocket playground: http://localhost:8000/playground/websocket/
 
 Key Concepts Demonstrated
 -------------------------
@@ -524,7 +539,7 @@ This example demonstrates several key Chanx features:
 1. **Authentication**: Using SessionAuthentication to secure WebSocket connections
 2. **Message Schemas**: Defining structured message types with Pydantic validation
 3. **Consumer Lifecycle**: Handling connection, authentication, and messages
-4. **Message Handling**: Processing different message types based on the action field
+4. **Message Handling**: Processing different message types using pattern matching
 5. **Testing**: Using WebsocketTestCase to test WebSocket consumers
 6. **Frontend Integration**: Building a simple JavaScript client
 

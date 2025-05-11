@@ -44,7 +44,7 @@ Settings Details
      - Whether to send authentication status message after connection authentication
    * - ``CAMELIZE``
      - ``False``
-     - Whether to convert message keys to camelCase format using pyhumps. Requires the pyhumps package to be installed.
+     - Whether to convert message keys to camelCase format using pyhumps. When enabled, requires either installing Chanx with the ``camel-case`` extra (``pip install chanx[camel-case]``) or manually installing the pyhumps package (``pip install pyhumps``).
    * - ``LOG_RECEIVED_MESSAGE``
      - ``True``
      - Whether to log received WebSocket messages
@@ -73,6 +73,18 @@ Chanx's settings are accessible through the ``chanx_settings`` object:
     if chanx_settings.SEND_COMPLETION:
         # Do something
 
+Optional Dependencies
+--------------------
+Some Chanx features require additional packages. You can install these along with Chanx using extras:
+
+.. code-block:: bash
+
+    # Install with camelCase conversion support
+    pip install chanx[camel-case]
+
+This installs the ``pyhumps`` package which is required when using the ``CAMELIZE`` setting. Without this package
+enabling the setting will raise a runtime error.
+
 Overriding Settings in Tests
 ----------------------------
 Chanx provides utilities for temporarily overriding settings in tests:
@@ -92,12 +104,3 @@ Chanx provides utilities for temporarily overriding settings in tests:
         with settings_context(SEND_AUTHENTICATION_MESSAGE=False):
             # SEND_AUTHENTICATION_MESSAGE will be False within this block
             ...
-
-Default Settings Source
------------------------
-The default settings are defined in ``chanx.settings.MySetting`` as a dataclass:
-
-.. literalinclude:: ../../chanx/settings.py
-   :language: python
-   :pyobject: MySetting
-   :linenos:

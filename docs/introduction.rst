@@ -27,82 +27,87 @@ Chanx fills these gaps with a cohesive framework that provides:
 
 1. **DRF-style Authentication**: Use the same authentication classes you already use in your REST API
 
-   .. code-block:: python
-      from chanx.generic.websocket import AsyncJsonWebsocketConsumer
+.. code-block:: python
 
-      class MyConsumer(AsyncJsonWebsocketConsumer):
-          authentication_classes = [TokenAuthentication, SessionAuthentication]
-          permission_classes = [IsAuthenticated]
+  from chanx.generic.websocket import AsyncJsonWebsocketConsumer
+
+  class MyConsumer(AsyncJsonWebsocketConsumer):
+      authentication_classes = [TokenAuthentication, SessionAuthentication]
+      permission_classes = [IsAuthenticated]
 
 2. **Type-safe Messaging**: Schema validation with Pydantic for incoming and outgoing messages
 
-   .. code-block:: python
-      from chanx.messages.base import BaseMessage
+.. code-block:: python
 
-      class ChatMessage(BaseMessage):
-          action: Literal["chat"] = "chat"
-          payload: str
+  from chanx.messages.base import BaseMessage
+
+  class ChatMessage(BaseMessage):
+      action: Literal["chat"] = "chat"
+      payload: str
 
 3. **Automatic Group Management**: Simplified pub/sub functionality
 
-   .. code-block:: python
+.. code-block:: python
 
-      async def build_groups(self):
-          return [f"room_{self.room_id}"]
+  async def build_groups(self):
+      return [f"room_{self.room_id}"]
 
-      async def receive_message(self, message):
-          await self.send_group_message(message)
+  async def receive_message(self, message):
+      await self.send_group_message(message)
 
 4. **Enhanced URL Routing**: Extended routing utilities for WebSocket endpoints (with type hints support)
 
-   .. code-block:: python
+.. code-block:: python
 
-      from chanx.urls import path, re_path
-      from chanx.routing import include
+  from chanx.urls import path, re_path
+  from chanx.routing import include
 
-      router = [
-          path('ws/chat/<str:room_id>/', ChatConsumer.as_asgi()),
-          path('ws/apps/', include('apps.routing')),
-      ]
+  router = [
+      path('ws/chat/<str:room_id>/', ChatConsumer.as_asgi()),
+      path('ws/apps/', include('apps.routing')),
+  ]
 
 5. **Testing Utilities**: Specialized tools for WebSocket testing, including multi-user scenarios
 
-   .. code-block:: python
-      from chanx.testing import WebsocketTestCase
+.. code-block:: python
 
-      class TestChat(WebsocketTestCase):
-          async def test_chat_message(self):
-              await self.auth_communicator.connect()
-              await self.auth_communicator.assert_authenticated_status_ok()
+  from chanx.testing import WebsocketTestCase
 
-              await self.auth_communicator.send_message(ChatMessage(payload="Hello"))
-              response = await self.auth_communicator.receive_all_json()
-              assert response[0]["payload"] == "Hello"
+  class TestChat(WebsocketTestCase):
+      async def test_chat_message(self):
+          await self.auth_communicator.connect()
+          await self.auth_communicator.assert_authenticated_status_ok()
 
-          async def test_multi_user(self):
-              # Create multiple communicators for different users
-              second_user_comm = self.create_communicator(headers=second_user_headers)
-              await second_user_comm.connect()
-              # Test group interactions...
+          await self.auth_communicator.send_message(ChatMessage(payload="Hello"))
+          response = await self.auth_communicator.receive_all_json()
+          assert response[0]["payload"] == "Hello"
+
+      async def test_multi_user(self):
+          # Create multiple communicators for different users
+          second_user_comm = self.create_communicator(headers=second_user_headers)
+          await second_user_comm.connect()
+          # Test group interactions...
 
 6. **Developer Tooling**: In-browser WebSocket playground for exploring and testing endpoints
 
 7. **Object-level Permissions**: Support for DRF object-level permission checks
 
-   .. code-block:: python
-      from chanx.generic.websocket import AsyncJsonWebsocketConsumer
+.. code-block:: python
 
-      class MyConsumer(AsyncJsonWebsocketConsumer):
-          queryset = Room.objects.all()
-          permission_classes = [IsRoomMember]
+  from chanx.generic.websocket import AsyncJsonWebsocketConsumer
+
+  class MyConsumer(AsyncJsonWebsocketConsumer):
+      queryset = Room.objects.all()
+      permission_classes = [IsRoomMember]
 
 8. **Discriminated Union Messages**: Runtime validation of message types with action discriminator
 
-   .. code-block:: python
-      from chanx.messages.base import BaseIncomingMessage
+.. code-block:: python
 
-      class MyIncomingMessage(BaseIncomingMessage):
-          message: PingMessage | ChatMessage | JoinMessage
+  from chanx.messages.base import BaseIncomingMessage
+
+  class MyIncomingMessage(BaseIncomingMessage):
+      message: PingMessage | ChatMessage | JoinMessage
 
 9. **Full Type Hints Support**: Complete mypy and pyright support for better IDE integration and type safety
 

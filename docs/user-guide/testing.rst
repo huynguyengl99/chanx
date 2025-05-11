@@ -10,6 +10,7 @@ Testing WebSocket consumers differs from testing regular HTTP views:
 2. Authentication happens once at connection time
 3. Multiple messages can be exchanged over a single connection
 4. Asynchronous code requires special testing approaches
+5. Group messaging requires multiple client testing
 
 Chanx addresses these challenges with the WebsocketTestCase class and enhanced WebsocketCommunicator.
 
@@ -26,73 +27,130 @@ The `WebsocketTestCase` class extends Django's `TransactionTestCase` with WebSoc
         ws_path = "/ws/myendpoint/"
 
         async def test_connect(self):
-            # Create a communicator (automatically tracked for cleanup)
-            communicator = self.create_communicator()
+            # Use the default authenticator communicator
+            await self.auth_communicator.connect()
 
-            # Connect and check result
-            connected, _ = await communicator.connect()
-            self.assertTrue(connected)
+            # Verify connection was successful
+            await self.auth_communicator.assert_authenticated_status_ok()
 
 Key features of `WebsocketTestCase`:
 
 1. **Automatic Router Discovery**: Finds your WebSocket application from ASGI configuration
 2. **Connection Tracking**: Manages test communicators to ensure proper cleanup
 3. **Helper Methods**: Provides utilities for common testing tasks
-4. **Authentication Support**: Simplifies testing authenticated connections
+4. **Default auth_communicator**: Access the main communicator via `self.auth_communicator`
+5. **Multi-user testing support**: Create additional communicators as needed
 
-Authentication in Tests
------------------------
-To test authenticated WebSocket consumers:
+Authentication in Testing
+-------------------------
+There are several ways to implement authentication in your tests. Here's an example of JWT-based authentication in a custom test case:
 
 .. code-block:: python
 
-    class TestAuthenticatedConsumer(WebsocketTestCase):
-        ws_path = "/ws/secure/"
+    from django.conf import settings
+    from accounts.factories.user import UserFactory
+    from accounts.models import User
+    from asgiref.sync import sync_to_async
+    from chanx.testing import WebsocketTestCase as BaseWebsocketTestCase
+    from rest_framework_simplejwt.tokens import RefreshToken
 
-        def setUp(self):
+
+    class WebsocketTestCase(BaseWebsocketTestCase):
+        def setUp(self) -> None:
+            # Create a user and authentication headers during setup
+            self.user, self.ws_headers = self.create_user_and_ws_headers()
             super().setUp()
-            # Create test user
-            self.user = User.objects.create_user(
-                username="testuser",
-                password="password"
+
+        def create_user_and_ws_headers(self) -> tuple[User, list[tuple[bytes, bytes]]]:
+            # Create a user and generate JWT tokens
+            user = UserFactory.create()
+            user_refresh_token = RefreshToken.for_user(user)
+
+            # Create cookie string with JWT tokens
+            cookie_string = (
+                f"jwt_auth_cookie={str(user_refresh_token.access_token)}; "
+                f"jwt_auth_refresh_cookie={str(user_refresh_token)}"
             )
 
-            # Log in with the Django test client
-            self.client.login(username="testuser", password="password")
-
-        def get_ws_headers(self):
-            """Provide session cookie for WebSocket authentication."""
-            cookies = self.client.cookies
-            return [
-                (b"cookie", f"sessionid={cookies['sessionid'].value}".encode()),
+            # Create WebSocket headers with the cookie and other required headers
+            ws_headers = [
+                (b"cookie", cookie_string.encode()),
+                (b"origin", settings.SERVER_URL.encode()),
+                (b"x-forwarded-for", b"127.0.0.1"),
             ]
+            return user, ws_headers
 
-        async def test_authenticated_connection(self):
-            communicator = self.create_communicator()
-            connected, _ = await communicator.connect()
+        async def acreate_user_and_ws_headers(self) -> tuple[User, list[tuple[bytes, bytes]]]:
+            """Async version for creating users during tests"""
+            return await sync_to_async(self.create_user_and_ws_headers)()
 
-            # Assert connection was successful
-            self.assertTrue(connected)
+        def get_ws_headers(self) -> list[tuple[bytes, bytes]]:
+            """Provide headers for the default auth_communicator"""
+            return self.ws_headers
 
-            # Verify authentication succeeded
-            await communicator.assert_authenticated_status_ok()
+For session-based authentication, you can use Django's test client:
 
-Enhanced WebsocketCommunicator
+.. code-block:: python
+
+    def get_ws_headers(self):
+        # Create a session using Django's test client
+        self.client.login(username="testuser", password="password")
+
+        # Get the session cookie
+        cookies = self.client.cookies
+        return [
+            (b"cookie", f"sessionid={cookies['sessionid'].value}".encode()),
+        ]
+
+Creating Multiple Communicators
+-------------------------------
+For testing scenarios with multiple users, use the `create_communicator` method:
+
+.. code-block:: python
+
+    async def test_multi_user_scenario(self) -> None:
+        # Get the default communicator for the first user
+        first_comm = self.auth_communicator
+
+        # Create a second user with different auth headers
+        second_user, second_ws_headers = await self.acreate_user_and_ws_headers()
+
+        # Create a communicator for the second user
+        second_comm = self.create_communicator(
+            headers=second_ws_headers,
+        )
+
+        # Connect both communicators
+        await first_comm.connect()
+        await first_comm.assert_authenticated_status_ok()
+
+        await second_comm.connect()
+        await second_comm.assert_authenticated_status_ok()
+
+        # Test interactions between the users
+        # ...
+
+The `create_communicator` method is essential for multi-user testing. It:
+
+- Creates WebsocketCommunicator instances with custom configuration
+- Automatically tracks communicators for proper cleanup
+- Supports custom headers for authentication
+- Lets you test group messaging scenarios
+
+WebsocketCommunicator Features
 ------------------------------
 Chanx extends the standard Channels WebsocketCommunicator with additional features:
 
 .. code-block:: python
 
-    from chanx.testing import WebsocketCommunicator
-
-    # Create communicator (normally done by WebsocketTestCase)
-    communicator = WebsocketCommunicator(application, "/ws/myendpoint/")
-
     # Connect with timeout
     connected, _ = await communicator.connect(timeout=3)
 
-    # Handle authentication message
+    # Wait for authentication message
     auth_message = await communicator.wait_for_auth()
+
+    # Assert authentication succeeded
+    await communicator.assert_authenticated_status_ok()
 
     # Send message objects directly
     from myapp.messages import ChatMessage
@@ -101,190 +159,239 @@ Chanx extends the standard Channels WebsocketCommunicator with additional featur
     # Receive all messages until completion
     messages = await communicator.receive_all_json()
 
-    # Assert authentication status
-    await communicator.assert_authenticated_status_ok()
+    # Receive messages including group completion
+    messages = await communicator.receive_all_json(wait_group=True)
 
-    # Check connection closed properly
+    # Verify connection closed properly
     await communicator.assert_closed()
 
 Testing Message Exchange
 ------------------------
-To test sending and receiving messages:
+Here's a complete example of testing message exchange with modern Python assertions:
 
 .. code-block:: python
 
-    from myapp.messages import PingMessage, ChatMessage
+    from typing import Any, cast
+    from chanx.messages.incoming import PingMessage
+    from chanx.messages.outgoing import PongMessage
+    from myapp.messages import ChatMessage, ChatResponse
 
     class TestChatConsumer(WebsocketTestCase):
         ws_path = "/ws/chat/room1/"
 
-        async def test_ping_pong(self):
-            communicator = self.create_communicator()
-            connected, _ = await communicator.connect()
-
-            # Wait for any authentication messages
-            await communicator.wait_for_auth()
+        async def test_ping_pong(self) -> None:
+            # Connect and authenticate
+            await self.auth_communicator.connect()
+            await self.auth_communicator.assert_authenticated_status_ok()
 
             # Send ping message
-            await communicator.send_message(PingMessage())
+            await self.auth_communicator.send_message(PingMessage())
 
             # Receive all messages until completion
-            responses = await communicator.receive_all_json()
+            responses = await self.auth_communicator.receive_all_json()
 
             # Check for pong response
-            self.assertEqual(responses[0]["action"], "pong")
+            assert len(responses) == 1
 
-        async def test_chat_message(self):
-            communicator = self.create_communicator()
-            await communicator.connect()
-            await communicator.wait_for_auth()
+            # You can either check raw JSON
+            assert responses[0]["action"] == "pong"
+
+            # Or validate with the message model
+            pong_message = PongMessage.model_validate(responses[0])
+            assert isinstance(pong_message, PongMessage)
+
+        async def test_chat_message(self) -> None:
+            await self.auth_communicator.connect()
+            await self.auth_communicator.assert_authenticated_status_ok()
 
             # Send chat message
-            await communicator.send_message(ChatMessage(payload="Test message"))
+            message_content = "Test message"
+            await self.auth_communicator.send_message(
+                ChatMessage(payload={"content": message_content})
+            )
 
             # Get responses up to completion marker
-            responses = await communicator.receive_all_json()
+            responses = await self.auth_communicator.receive_all_json()
 
             # Verify the response
-            self.assertEqual(len(responses), 1)
-            self.assertEqual(responses[0]["action"], "chat")
-            self.assertEqual(responses[0]["payload"], "Test message")
+            assert len(responses) == 1
+            response = responses[0]
+            assert response["action"] == "chat_response"
+            assert response["payload"]["content"] == f"Echo: {message_content}"
 
-Testing Group Messages
-----------------------
-For testing group messages, you'll need multiple communicators:
-
-.. code-block:: python
-
-    async def test_group_messaging(self):
-        # Create two communicators for the same room
-        com1 = self.create_communicator(ws_path="/ws/chat/room1/")
-        com2 = self.create_communicator(ws_path="/ws/chat/room1/")
-
-        # Connect both
-        await com1.connect()
-        await com2.connect()
-
-        # Handle authentication
-        await com1.wait_for_auth()
-        await com2.wait_for_auth()
-
-        # Send message from first client
-        await com1.send_message(ChatMessage(payload="Hello from com1"))
-
-        # Check that second client received it
-        responses = await com2.receive_all_json(wait_group=True)
-
-        # Verify the message
-        self.assertEqual(responses[0]["action"], "chat")
-        self.assertEqual(responses[0]["payload"], "Hello from com1")
-        self.assertFalse(responses[0]["is_mine"])  # Not sent by com2
-
-        # Disconnect both
-        await com1.disconnect()
-        await com2.disconnect()
-
-Testing Error Handling
-----------------------
-Always test error scenarios as well:
+Testing Group Messaging
+-----------------------
+Use multiple communicators to test group messaging:
 
 .. code-block:: python
 
-    async def test_invalid_message(self):
-        communicator = self.create_communicator()
-        connected, _ = await communicator.connect()
+    async def test_group_message_broadcast(self) -> None:
+        """Test that messages are broadcast to all group members"""
+        # Create a second user with different auth headers
+        second_user, second_ws_headers = await self.acreate_user_and_ws_headers()
 
-        # Wait for authentication
-        await communicator.wait_for_auth()
+        # Create communicators for both users in the same room
+        first_comm = self.auth_communicator
+        second_comm = self.create_communicator(headers=second_ws_headers)
 
-        # Send invalid message (missing required fields)
-        await communicator.send_json_to({"action": "chat"})  # Missing payload
+        # Connect both communicators
+        await first_comm.connect()
+        await first_comm.assert_authenticated_status_ok()
 
-        # Get error response
-        responses = await communicator.receive_all_json()
+        await second_comm.connect()
+        await second_comm.assert_authenticated_status_ok()
 
-        # Verify error response
-        self.assertEqual(responses[0]["action"], "error")
-        self.assertIn("payload", str(responses[0]["payload"]))
-
-Testing Disconnection
----------------------
-Test disconnection scenarios to ensure proper cleanup:
-
-.. code-block:: python
-
-    async def test_disconnect_handling(self):
-        communicator = self.create_communicator()
-        connected, _ = await communicator.connect()
-
-        # Perform actions...
-
-        # Then disconnect
-        await communicator.disconnect()
-
-        # After disconnection, can check database state
-        # to verify any cleanup operations happened
-
-Testing Permissions
--------------------
-Test permission checks for both success and failure:
-
-.. code-block:: python
-
-    async def test_permission_denied(self):
-        # Create a user who is not a member of the room
-        non_member = User.objects.create_user(
-            username="nonmember",
-            password="password"
+        # Send a message from the first user
+        message_content = "This is a group message"
+        await first_comm.send_message(
+            ChatMessage(payload={"content": message_content})
         )
 
-        # Login with this user
-        self.client.logout()
-        self.client.login(username="nonmember", password="password")
+        # Verify that the first user (sender) receives the message
+        first_responses = await first_comm.receive_all_json(wait_group=True)
+        assert len(first_responses) == 1
+        assert first_responses[0]["action"] == "chat_group"
+        assert first_responses[0]["payload"]["content"] == message_content
+        assert first_responses[0]["is_mine"] == True  # Sent by this user
 
-        # Try to connect
-        communicator = self.create_communicator()
-        connected, code = await communicator.connect()
+        # Verify that the second user receives the same message
+        second_responses = await second_comm.receive_all_json(wait_group=True)
+        assert len(second_responses) == 1
+        assert second_responses[0]["action"] == "chat_group"
+        assert second_responses[0]["payload"]["content"] == message_content
+        assert second_responses[0]["is_mine"] == False  # Not sent by this user
 
-        # Should be connected initially but disconnected after auth
-        self.assertTrue(connected)
-
-        # Wait for auth message
-        auth_message = await communicator.wait_for_auth()
-
-        # Verify authentication failed
-        self.assertEqual(auth_message.payload.status_code, 403)
-
-        # Connection should be closed
-        await communicator.assert_closed()
-
-Testing Utilities
------------------
-Chanx's testing utilities extend Django's testing tools with async support:
+Testing Object Permissions
+--------------------------
+Test consumer access with object-level permissions:
 
 .. code-block:: python
 
-    from chanx.utils.settings import override_chanx_settings
+    async def test_room_access_permission(self) -> None:
+        """Test that only room members can access the room consumer"""
+        # Create a room and add the default user as a member
+        room = await Room.objects.acreate(name="Test Room")
+        await RoomMember.objects.acreate(room=room, user=self.user)
 
-    # Test with different Chanx settings
-    @override_chanx_settings(SEND_COMPLETION=True)
-    async def test_with_custom_settings(self):
-        # SEND_COMPLETION will be True within this test
-        pass
+        # Create a non-member user
+        non_member, non_member_headers = await self.acreate_user_and_ws_headers()
+
+        # Test successful access with member
+        member_comm = self.auth_communicator
+        room_path = f"/ws/rooms/{room.id}/"
+        connected, _ = await member_comm.connect(ws_path=room_path)
+        assert connected == True
+
+        # Verify authentication succeeded
+        auth_message = await member_comm.wait_for_auth()
+        assert auth_message.payload.status_code == 200
+
+        # Test failed access with non-member
+        non_member_comm = self.create_communicator(headers=non_member_headers)
+        connected, _ = await non_member_comm.connect(ws_path=room_path)
+        assert connected == True  # Initial connection succeeds
+
+        # But authentication fails due to permission check
+        auth_message = await non_member_comm.wait_for_auth()
+        assert auth_message.payload.status_code == 403
+
+        # Connection should be closed
+        await non_member_comm.assert_closed()
+
+Mocking in WebSocket Tests
+--------------------------
+For isolated tests, mock external dependencies:
+
+.. code-block:: python
+
+    from unittest.mock import patch, AsyncMock
+
+    async def test_database_integration(self) -> None:
+        # Mock the database operation
+        with patch('myapp.services.message_service.save_message') as mock_save:
+            mock_save.return_value = AsyncMock(id=123, content="Test")
+
+            # Connect and send a message
+            await self.auth_communicator.connect()
+            await self.auth_communicator.assert_authenticated_status_ok()
+
+            await self.auth_communicator.send_message(
+                ChatMessage(payload={"content": "Test message"})
+            )
+
+            # Verify the mock was called
+            mock_save.assert_called_once()
+            args, kwargs = mock_save.call_args
+            assert kwargs["content"] == "Test message"
+
+            # Check response
+            responses = await self.auth_communicator.receive_all_json()
+            assert len(responses) == 1
+
+Testing Custom Apps
+-------------------
+Here's a complete example of a test for a chat application with custom test case:
+
+.. code-block:: python
+
+    from typing import Any, cast
+    from chanx.testing import WebsocketTestCase
+    from chat.messages.chat import ChatIncomingMessage, NewChatMessage, MessagePayload
+    from chat.messages.group import MemberMessage
+    from chat.models import ChatMember, ChatMessage, GroupChat
+
+    class ChatTestCase(WebsocketTestCase):
+        async def setUp(self) -> None:
+            await super().setUp()
+            # Create a group chat and add the user as a member
+            self.group_chat = await GroupChat.objects.acreate(name="Test Group")
+            self.member = await ChatMember.objects.acreate(
+                user=self.user,
+                group_chat=self.group_chat,
+                chat_role=ChatMember.ChatMemberRole.ADMIN,
+            )
+
+        async def test_connect_and_send_message(self) -> None:
+            """Test connection and sending a message to a group chat"""
+            # Connect to the chat endpoint
+            self.ws_path = f"/ws/chat/{self.group_chat.pk}/"
+            await self.auth_communicator.connect()
+            await self.auth_communicator.assert_authenticated_status_ok()
+
+            # Test sending a chat message
+            message_content = "Hello group chat!"
+            await self.auth_communicator.send_message(
+                NewChatMessage(payload=MessagePayload(content=message_content))
+            )
+
+            # Receive the message that was broadcast
+            messages = await self.auth_communicator.receive_all_json(wait_group=True)
+
+            # Check the message was received and has the correct content
+            assert len(messages) == 1
+            assert messages[0]["action"] == "member_message"
+            assert messages[0]["payload"]["content"] == message_content
+
+            # Verify the message was stored in the database
+            db_messages = await ChatMessage.objects.acount()
+            assert db_messages == 1
 
 Best Practices
 --------------
-1. **Test both success and failure** paths
-2. **Test authentication** thoroughly, including failure cases
-3. **Test message validation** by sending invalid messages
-4. **Test group messaging** with multiple communicators
-5. **Test lifecycle events** like connection, disconnection, and errors
-6. **Use async functions** with `async def test_*` naming
-7. **Clean up connections** properly (WebsocketTestCase handles this)
-8. **Mock external services** to isolate your tests
-9. **Use transaction isolation** to prevent test interference
+1. **Subclass WebsocketTestCase**: Create a custom test base class for your app
+2. **Set up authenticating fixtures**: Provide proper authentication in setUp
+3. **Use modern assert statements**: Use Python's built-in assert for cleaner tests
+4. **Test both success and failure**: Verify both positive and negative cases
+5. **Test group broadcasts**: Create multiple communicators to test group messaging
+6. **Use wait_group=True**: When testing group messages, use the wait_group parameter
+7. **Mock external services**: Use AsyncMock for external dependencies
+8. **Test database persistence**: Verify messages are properly stored/retrieved
+9. **Test lifecycle events**: Check connections, authentication, and disconnections
+10. **Use async test methods**: Write all test methods as async coroutines
 
 Next Steps
 ----------
-- :doc:`../examples/chat` - See complete testing examples
-- :doc:`playground` - Learn about the WebSocket playground for manual testing
+- :doc:`consumers` - Learn about WebSocket consumers
+- :doc:`messages` - Understand message validation
+- :doc:`playground` - Try the interactive WebSocket playground
+- :doc:`../examples/chat` - See complete test examples in the chat application

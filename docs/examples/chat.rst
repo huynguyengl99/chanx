@@ -45,7 +45,7 @@ First, let's define our chat room model:
 
 Message Definitions
 -------------------
-Now let's define our WebSocket message types:
+Now let's define our WebSocket message types using Pydantic for validation:
 
 .. code-block:: python
 
@@ -54,7 +54,7 @@ Now let's define our WebSocket message types:
     from typing import Literal, Optional, List, Dict, Any
 
     from pydantic import Field
-    from chanx.messages.base import BaseIncomingMessage, BaseMessage, BaseGroupMessage
+    from chanx.messages.base import BaseIncomingMessage, BaseMessage, BaseGroupMessage, BaseOutgoingGroupMessage
     from chanx.messages.incoming import PingMessage
 
 
@@ -87,27 +87,35 @@ Now let's define our WebSocket message types:
         message: PingMessage | ChatMessagePayload
 
 
+    class ChatOutgoingGroupMessage(BaseOutgoingGroupMessage):
+        """Container for outgoing group messages."""
+        group_message: UserJoinedPayload | UserLeftPayload | ChatMessagePayload
+
 WebSocket Consumer
 ------------------
-Now we'll create our chat consumer:
+Now we'll create our chat consumer with proper pattern matching:
 
 .. code-block:: python
 
     # myapp/consumers.py
     import json
-    from typing import Iterable, Optional, cast
+    from typing import Any, Iterable, Optional, cast
 
     from django.contrib.auth.models import User
     from rest_framework.authentication import SessionAuthentication
     from rest_framework.permissions import IsAuthenticated
 
     from chanx.generic.websocket import AsyncJsonWebsocketConsumer
+    from chanx.messages.base import BaseMessage
+    from chanx.messages.incoming import PingMessage
+    from chanx.messages.outgoing import PongMessage
     from chanx.utils.asyncio import create_task
 
     from myapp.models import ChatRoom, ChatMessage
     from myapp.permissions import IsChatRoomMember
     from myapp.messages import (
         ChatIncomingMessage,
+        ChatOutgoingGroupMessage,
         ChatMessagePayload,
         UserJoinedPayload,
         UserLeftPayload,
@@ -115,7 +123,7 @@ Now we'll create our chat consumer:
     )
 
 
-    class ChatConsumer(AsyncJsonWebsocketConsumer):
+    class ChatConsumer(AsyncJsonWebsocketConsumer[ChatRoom]):
         """WebSocket consumer for chat rooms."""
 
         # Authentication configuration
@@ -125,20 +133,24 @@ Now we'll create our chat consumer:
 
         # Message schema
         INCOMING_MESSAGE_SCHEMA = ChatIncomingMessage
+        OUTGOING_GROUP_MESSAGE_SCHEMA = ChatOutgoingGroupMessage
 
         # Enable completion messages
         send_completion = True
 
         async def build_groups(self) -> Iterable[str]:
             """Build channel groups based on the chat room."""
-            room = cast(ChatRoom, self.obj)
-            return [f"chat_room_{room.id}"]
+            assert self.obj is not None
+            return [f"chat_room_{self.obj.id}"]
 
         async def post_authentication(self) -> None:
             """Actions after successful authentication."""
-            # Announce user joined the room
-            room = cast(ChatRoom, self.obj)
-            user = cast(User, self.user)
+            # Ensure we have user and object
+            assert self.user is not None
+            assert self.obj is not None
+
+            room = self.obj
+            user = self.user
 
             # Send joined notification to the group
             await self.send_group_message(
@@ -156,7 +168,8 @@ Now we'll create our chat consumer:
 
         async def send_message_history(self) -> None:
             """Send recent message history to the user."""
-            room = cast(ChatRoom, self.obj)
+            assert self.obj is not None
+            room = self.obj
 
             # Get last 50 messages
             messages = await self.get_message_history(room, limit=50)
@@ -191,32 +204,35 @@ Now we'll create our chat consumer:
 
             return messages
 
-        async def receive_message(self, message, **kwargs):
-            """Handle incoming messages."""
-            if message.action == "chat":
-                # Handle chat message
-                await self.handle_chat_message(message)
-            elif message.action == "ping":
-                # Handle ping message
-                from chanx.messages.outgoing import PongMessage
-                await self.send_message(PongMessage())
+        async def receive_message(self, message: BaseMessage, **kwargs: Any) -> None:
+            """Handle incoming messages using pattern matching."""
+            match message:
+                case ChatMessagePayload(payload=text):
+                    # Handle chat message
+                    await self.handle_chat_message(text)
+                case PingMessage():
+                    # Handle ping message
+                    await self.send_message(PongMessage())
+                case _:
+                    # Handle any other message types
+                    pass
 
-        async def handle_chat_message(self, message: ChatMessagePayload) -> None:
+        async def handle_chat_message(self, text: str) -> None:
             """Process and broadcast a chat message."""
-            user = cast(User, self.user)
-            room = cast(ChatRoom, self.obj)
-            text = message.payload
+            assert self.user is not None
+            assert self.obj is not None
+
+            user = self.user
+            room = self.obj
 
             # Save message to database
             create_task(self.save_message_to_db(user, room, text))
 
-            # Add user and timestamp info to the message
-            enhanced_message = ChatMessagePayload(
-                payload=text
-            )
+            # Create chat message
+            chat_message = ChatMessagePayload(payload=text)
 
             # Broadcast to the group
-            await self.send_group_message(enhanced_message)
+            await self.send_group_message(chat_message)
 
         async def save_message_to_db(self, user: User, room: ChatRoom, text: str) -> None:
             """Save chat message to database."""
@@ -232,14 +248,14 @@ Now we'll create our chat consumer:
 
             await save_message()
 
-        async def websocket_disconnect(self, message):
+        async def websocket_disconnect(self, message) -> None:
             """Handle WebSocket disconnect."""
             if hasattr(self, 'user') and self.user and not self.user.is_anonymous:
                 # User was authenticated, send left notification
-                user = cast(User, self.user)
+                user = self.user
 
                 if hasattr(self, 'obj') and self.obj:
-                    room = cast(ChatRoom, self.obj)
+                    room = self.obj
 
                     # Send user left notification
                     await self.send_group_message(
@@ -279,12 +295,50 @@ Set up the WebSocket URL routing:
 .. code-block:: python
 
     # myapp/routing.py
-    from django.urls import re_path
-    from myapp.consumers import ChatConsumer
+    from channels.routing import URLRouter
+    from chanx.urls import path
 
-    websocket_urlpatterns = [
-        re_path(r'ws/chat/(?P<pk>\d+)/$', ChatConsumer.as_asgi()),
-    ]
+    # Important: Name this variable 'router' for string-based includes
+    router = URLRouter([
+        path('<int:pk>/', ChatConsumer.as_asgi()),
+    ])
+
+    # myproject/routing.py
+    from channels.routing import URLRouter
+    from chanx.urls import path
+    from chanx.routing import include
+
+    router = URLRouter([
+        path('ws/chat/', include('myapp.routing')),
+    ])
+
+ASGI Configuration
+------------------
+Configure the ASGI application:
+
+.. code-block:: python
+
+    # myproject/asgi.py
+    import os
+    from django.core.asgi import get_asgi_application
+    from channels.routing import ProtocolTypeRouter
+    from channels.security.websocket import OriginValidator
+    from channels.sessions import CookieMiddleware
+    from django.conf import settings
+
+    os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'myproject.settings')
+    django_asgi_app = get_asgi_application()
+
+    # Import the main router
+    from myproject.routing import router
+
+    application = ProtocolTypeRouter({
+        "http": django_asgi_app,
+        "websocket": OriginValidator(
+            CookieMiddleware(router),
+            settings.CORS_ALLOWED_ORIGINS,
+        ),
+    })
 
 Frontend Implementation
 -----------------------
@@ -318,6 +372,9 @@ Here's a simple JavaScript client for connecting to our chat:
             .message-time {
                 color: #888;
                 font-size: 0.8em;
+            }
+            .message-mine {
+                color: blue;
             }
         </style>
     </head>
@@ -546,15 +603,8 @@ Let's write tests for our chat consumer:
 .. code-block:: python
 
     # myapp/tests.py
-    import json
     from django.contrib.auth.models import User
-    from django.test import TestCase
-    from channels.testing import WebsocketCommunicator
-    from channels.routing import URLRouter
-    from django.urls import re_path
-
     from chanx.testing import WebsocketTestCase
-    from myapp.consumers import ChatConsumer
     from myapp.models import ChatRoom
     from myapp.messages import ChatMessagePayload
 
@@ -562,28 +612,30 @@ Let's write tests for our chat consumer:
     class ChatConsumerTest(WebsocketTestCase):
         """Test the chat consumer."""
 
-        def setUp(self):
-            super().setUp()
+        async def setUp(self):
             # Create test user
-            self.user = User.objects.create_user(
+            self.user = await User.objects.acreate_user(
                 username='testuser',
                 password='testpassword'
             )
 
             # Create chat room
-            self.room = ChatRoom.objects.create(
+            self.room = await ChatRoom.objects.acreate(
                 name='Test Room',
                 slug='test-room'
             )
 
             # Add user to room
-            self.room.members.add(self.user)
+            await self.room.members.aadd(self.user)
 
             # Set up WebSocket path
             self.ws_path = f'/ws/chat/{self.room.id}/'
 
             # Log in the test client
-            self.client.login(username='testuser', password='testpassword')
+            from asgiref.sync import sync_to_async
+            await sync_to_async(self.client.login)(username='testuser', password='testpassword')
+
+            await super().setUp()
 
         def get_ws_headers(self):
             """Get session cookie for authentication."""
@@ -595,20 +647,16 @@ Let's write tests for our chat consumer:
         async def test_connect_and_receive_history(self):
             """Test connecting to chat and receiving history."""
             # Connect to WebSocket
-            communicator = self.create_communicator()
-            connected, _ = await communicator.connect()
-
-            # Check connection succeeded
-            self.assertTrue(connected, "Connection failed")
+            await self.auth_communicator.connect()
 
             # Verify authentication success
-            await communicator.assert_authenticated_status_ok()
+            await self.auth_communicator.assert_authenticated_status_ok()
 
-            # Should receive user_joined notification
-            messages = await communicator.receive_all_json()
+            # Should receive user_joined notification and history
+            messages = await self.auth_communicator.receive_all_json()
 
-            # Verify at least one message received
-            self.assertGreaterEqual(len(messages), 1)
+            # Verify we received at least 2 messages (user_joined and history)
+            self.assertGreaterEqual(len(messages), 2)
 
             # Check for user_joined message
             join_messages = [m for m in messages if m.get('action') == 'user_joined']
@@ -620,43 +668,50 @@ Let's write tests for our chat consumer:
                 'testuser'
             )
 
-            await communicator.disconnect()
+            # Check for history message
+            history_messages = [m for m in messages if m.get('action') == 'history']
+            self.assertTrue(history_messages, "No history message received")
+
+            # Disconnect
+            await self.auth_communicator.disconnect()
 
         async def test_chat_message(self):
             """Test sending and receiving chat messages."""
             # Connect to WebSocket
-            communicator = self.create_communicator()
-            connected, _ = await communicator.connect()
-            self.assertTrue(connected)
+            await self.auth_communicator.connect()
+            await self.auth_communicator.assert_authenticated_status_ok()
 
-            # Skip authentication and join messages
-            await communicator.receive_all_json()
+            # Skip authentication, join and history messages
+            await self.auth_communicator.receive_all_json()
 
             # Send a chat message
             message = "Hello, this is a test message!"
-            await communicator.send_message(ChatMessagePayload(payload=message))
+            await self.auth_communicator.send_message(ChatMessagePayload(payload=message))
 
             # Receive response (should get the same message back)
-            response = await communicator.receive_all_json()
+            responses = await self.auth_communicator.receive_all_json(wait_group=True)
 
             # Check if message was received properly
-            self.assertEqual(len(response), 1)
-            self.assertEqual(response[0]['action'], 'chat')
-            self.assertEqual(response[0]['payload'], message)
+            self.assertEqual(len(responses), 1)
+            self.assertEqual(responses[0]['action'], 'chat')
+            self.assertEqual(responses[0]['payload'], message)
+            self.assertTrue(responses[0]['is_mine'])
 
-            await communicator.disconnect()
+            # Disconnect
+            await self.auth_communicator.disconnect()
 
 Key Components Explained
 ------------------------
 This example demonstrates several key Chanx features:
 
 1. **Authentication & Permissions**: Uses SessionAuthentication with a custom IsChatRoomMember permission
-2. **Structured Messages**: Defines message types with Pydantic models
-3. **Group Management**: Manages chat room groups with build_groups()
-4. **Database Integration**: Saves messages to database with background tasks
-5. **Lifecycle Hooks**: Uses post_authentication to send join messages
-6. **Error Handling**: Client-side error display for failed requests
-7. **Reconnection Logic**: Client auto-reconnects when connection drops
+2. **Structured Messages**: Defines message types with Pydantic models for validation
+3. **Pattern Matching**: Uses Python's match/case syntax for clean message handling
+4. **Group Management**: Manages chat room groups with build_groups()
+5. **Database Integration**: Saves messages to database with background tasks
+6. **Lifecycle Hooks**: Uses post_authentication to send join messages
+7. **Type Safety**: Employs proper typing and assertions for better code quality
+8. **Testing**: Uses WebsocketTestCase for comprehensive testing
 
 Additional Features
 -------------------
@@ -675,6 +730,7 @@ Conclusion
 This example demonstrates how Chanx simplifies building a real-time chat application with Django. The framework provides:
 
 - Structured message handling with validation
+- Pattern-matching for elegant message processing
 - Automatic group management for multi-user rooms
 - Authentication and permission checking
 - Integration with Django models and database

@@ -441,7 +441,9 @@ class AsyncJsonWebsocketConsumer(Generic[_M], BaseAsyncJsonWebsocketConsumer, AB
             message: Message object to send to the groups
             groups: Group names to send to (defaults to self.groups)
             kind: Format to send the message as:
+
                   - "message": Validated and wrapped via OUTGOING_GROUP_MESSAGE_SCHEMA (default)
+
                   - "json": Sent as raw JSON without validation or wrapping
             exclude_current: Whether to exclude the sending consumer from receiving
                             the broadcast (prevents echo effects)
@@ -462,7 +464,9 @@ class AsyncJsonWebsocketConsumer(Generic[_M], BaseAsyncJsonWebsocketConsumer, AB
         a message is sent to a group this consumer is part of.
 
         The method adds two metadata fields to all messages:
+
         - is_mine: True if the message originated from the current user
+
         - is_current: True if the message originated from this channel
 
         If the message is from the current channel and exclude_current is True, the message

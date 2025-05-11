@@ -19,6 +19,13 @@ You can install Chanx from PyPI:
 
     pip install chanx
 
+For installations with additional features:
+
+.. code-block:: bash
+
+    # Install with camelCase conversion support
+    pip install chanx[camel-case]
+
 Or install from source:
 
 .. code-block:: bash
@@ -26,6 +33,9 @@ Or install from source:
     git clone https://github.com/huynguyengl99/chanx.git
     cd chanx
     pip install -e .
+
+    # Or with extras
+    pip install -e ".[camel-case]"
 
 Basic Setup
 -----------
@@ -58,6 +68,32 @@ Basic Setup
         path('playground/', include('chanx.playground.urls')),
         # ...
     ]
+
+Optional Features
+----------------
+Chanx offers additional features through optional dependencies:
+
+**camelCase Conversion**
+
+If you want to automatically convert message keys between snake_case (Python) and camelCase (JavaScript),
+you need to install the pyhumps package:
+
+.. code-block:: bash
+
+    pip install chanx[camel-case]
+
+Then enable the feature in your settings:
+
+.. code-block:: python
+
+    # settings.py
+    CHANX = {
+        'CAMELIZE': True,
+        # Other settings...
+    }
+
+This will automatically convert snake_case fields to camelCase when sending to clients
+and convert camelCase back to snake_case when receiving from clients.
 
 Verifying Installation
 ----------------------

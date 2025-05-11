@@ -7,7 +7,6 @@ Chanx provides a robust message system built on Pydantic that enables:
 3. Discriminated unions for message type routing
 4. Standardized message formats
 
-
 Base Classes
 ------------
 The foundation of the message system consists of these base classes:
@@ -39,14 +38,21 @@ To create custom message types, define classes that inherit from ``BaseMessage``
 .. code-block:: python
 
     from typing import Literal, Optional
-    from pydantic import Field
+    from pydantic import Field, BaseModel
     from chanx.messages.base import BaseMessage
+
+
+    # Define a payload model for structured data
+    class ChatPayload(BaseModel):
+        content: str
+        sender_name: str = "Anonymous"
+        timestamp: Optional[str] = None
 
 
     class ChatMessage(BaseMessage):
         """Message for chat communication."""
         action: Literal["chat"] = "chat"
-        payload: str
+        payload: ChatPayload  # Using structured payload
 
 
     class NotificationMessage(BaseMessage):
@@ -100,19 +106,33 @@ If validation fails, Chanx sends an error message to the client:
 
 Handling Messages
 -----------------
-In your consumer, handle different message types based on the ``action`` field:
+In your consumer, use pattern matching to handle different message types:
 
 .. code-block:: python
 
-    async def receive_message(self, message, **kwargs):
-        """Process a validated received message."""
-        if message.action == "chat":
-            # Handle chat message
-            await self.handle_chat(message.payload)
+    from typing import Any
+    from chanx.messages.base import BaseMessage
+    from chanx.messages.incoming import PingMessage
+    from chanx.messages.outgoing import PongMessage
 
-        elif message.action == "notification":
-            # Handle notification
-            await self.handle_notification(message.payload)
+    async def receive_message(self, message: BaseMessage, **kwargs: Any) -> None:
+        """Process a validated received message."""
+        match message:
+            case ChatMessage(payload=payload):
+                # Handle chat message with extracted payload
+                await self.handle_chat(payload)
+
+            case NotificationMessage(payload=notification_payload):
+                # Handle notification with direct access to payload
+                await self.handle_notification(notification_payload)
+
+            case PingMessage():
+                # Handle standard ping message
+                await self.send_message(PongMessage())
+
+            case _:
+                # Handle any other message types
+                pass
 
 Sending Messages
 ----------------
@@ -120,7 +140,7 @@ To send a message to the connected client:
 
 .. code-block:: python
 
-    # Create a message instance
+    # Create a message instance with structured payload
     notification = NotificationMessage(payload={"type": "info", "text": "Update received"})
 
     # Send it to the client
@@ -128,23 +148,69 @@ To send a message to the connected client:
 
 Group Messages
 --------------
-For group broadcasting, use the group message methods:
+For group communication, first define group message types:
 
 .. code-block:: python
 
-    # Send to all clients in the group(s)
-    await self.send_group_message(
-        ChatMessage(payload="Hello everyone!"),
-        exclude_current=True  # Don't send to the sender
-    )
+    from chanx.messages.base import BaseGroupMessage, BaseOutgoingGroupMessage
+
+
+    class ChatGroupMessage(BaseGroupMessage):
+        """Message type for group chat."""
+        action: Literal["chat_group"] = "chat_group"
+        payload: ChatPayload
+
+
+    class MyOutgoingGroupMessage(BaseOutgoingGroupMessage):
+        """Container for outgoing group messages."""
+        group_message: ChatGroupMessage
+
+Then configure your consumer to use these types:
+
+.. code-block:: python
+
+    class ChatConsumer(AsyncJsonWebsocketConsumer):
+        INCOMING_MESSAGE_SCHEMA = MyIncomingMessage
+        OUTGOING_GROUP_MESSAGE_SCHEMA = MyOutgoingGroupMessage
+
+        async def receive_message(self, message: BaseMessage, **kwargs: Any) -> None:
+            match message:
+                case ChatMessage(payload=payload):
+                    # Create a group message from the chat message
+                    group_msg = ChatGroupMessage(payload=payload)
+
+                    # Send to all in the default groups
+                    await self.send_group_message(
+                        group_msg,
+                        exclude_current=False  # Include sender in recipients
+                    )
+
+                    # Or send to specific groups
+                    await self.send_group_message(
+                        group_msg,
+                        groups=["room_123", "announcements"],
+                        exclude_current=True  # Don't send to sender
+                    )
+
+                    # Or send as raw JSON (no wrapping)
+                    await self.send_group_message(
+                        group_msg,
+                        kind="json"  # Skip OUTGOING_GROUP_MESSAGE_SCHEMA wrapping
+                    )
+                case _:
+                    pass
 
 Group messages are automatically enhanced with metadata:
 
 .. code-block:: json
 
     {
-      "action": "chat",
-      "payload": "Hello everyone!",
+      "action": "chat_group",
+      "payload": {
+        "content": "Hello everyone!",
+        "sender_name": "Alice",
+        "timestamp": "2025-05-11T14:30:00Z"
+      },
       "is_mine": false,
       "is_current": false
     }
@@ -178,15 +244,45 @@ Chanx can automatically send completion messages after processing client message
       "action": "complete"
     }
 
+For group messages, a separate completion message is sent:
+
+.. code-block:: json
+
+    {
+      "action": "group_complete"
+    }
+
 Control this behavior with the ``send_completion`` setting:
 
 .. code-block:: python
 
     class MyConsumer(AsyncJsonWebsocketConsumer):
-        send_completion = True  # Send completion message
+        send_completion = True  # Send completion message after processing
+
+        # In testing, you can wait for both normal and group completions:
+        # await communicator.receive_all_json(wait_group=True)
 
 Advanced Usage
 --------------
+**Custom Message Validation**
+
+Use Pydantic's validators for complex validation logic:
+
+.. code-block:: python
+
+    from pydantic import validator
+
+    class RoomMessage(BaseMessage):
+        action: Literal["room_message"] = "room_message"
+        payload: RoomPayload
+
+        @validator("payload")
+        def validate_room_permissions(cls, payload):
+            # Custom validation logic
+            if payload.room_id.startswith("private-") and not payload.is_member:
+                raise ValueError("Cannot send messages to private rooms without membership")
+            return payload
+
 **Custom Message Serialization**
 
 For advanced needs, you can customize how messages are serialized:
@@ -255,16 +351,65 @@ or via the extras:
 
     pip install chanx[camel-case]
 
+Real-World Example
+------------------
+Here's a complete example of message definitions for a discussion app:
+
+.. code-block:: python
+
+    from typing import Literal
+
+    from chanx.messages.base import (
+        BaseGroupMessage,
+        BaseIncomingMessage,
+        BaseMessage,
+        BaseOutgoingGroupMessage,
+    )
+    from chanx.messages.incoming import PingMessage
+    from pydantic import BaseModel
+
+
+    class DiscussionMessagePayload(BaseModel):
+        content: str
+        raw: bool = False
+
+
+    class NewDiscussionMessage(BaseMessage):
+        action: Literal["new_message"] = "new_message"
+        payload: DiscussionMessagePayload
+
+
+    class ReplyMessage(BaseMessage):
+        action: Literal["reply"] = "reply"
+        payload: DiscussionMessagePayload
+
+
+    class DiscussionIncomingMessage(BaseIncomingMessage):
+        message: NewDiscussionMessage | PingMessage
+
+
+    class DiscussionMemberMessage(BaseGroupMessage):
+        action: Literal["member_message"] = "member_message"
+        payload: DiscussionMessagePayload
+
+
+    class DiscussionGroupMessage(BaseOutgoingGroupMessage):
+        group_message: DiscussionMemberMessage
+
 Best Practices
 --------------
 1. **Define clear message contracts**: Document the purpose and structure of each message type
-2. **Keep message types focused**: Each message type should have a single purpose
-3. **Use strict typing**: Take advantage of Pydantic's validation to catch errors early
-4. **Validate payloads**: Add validators for complex payloads
-5. **Handle validation errors**: Provide meaningful error handling for malformed messages
-6. **Test message serialization**: Write tests for serialization/deserialization
+2. **Use structured payload models**: Create Pydantic models for complex payloads
+3. **Keep message types focused**: Each message type should have a single purpose
+4. **Use strict typing**: Take advantage of Pydantic's validation to catch errors early
+5. **Use pattern matching**: Handle message types with Python's match/case syntax
+6. **Separate app-specific message types**: Keep message definitions in a dedicated module
+7. **Define both incoming and group schemas**: Always define both when using group messaging
+8. **Test message serialization**: Write tests for serialization/deserialization
 
 Next Steps
 ----------
 - :doc:`consumers` - Learn about consumer configuration
+- :doc:`routing` - Understand WebSocket URL routing
+- :doc:`testing` - See how to test message handling
 - :doc:`../examples/chat` - See the message system in a complete example

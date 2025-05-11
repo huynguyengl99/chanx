@@ -12,6 +12,7 @@ When a WebSocket connection is established:
 4. If authentication succeeds, the connection is accepted
 5. If authentication fails, the connection is closed with an error message
 
+Chanx supports authentication via cookies or query parameters that are passed during the initial WebSocket handshake. Since browsers don't allow custom headers in WebSocket connections, cookie-based authentication is the recommended approach for browser clients.
 
 Configuration
 -------------
@@ -19,7 +20,7 @@ To configure authentication for a WebSocket consumer, set the ``authentication_c
 
 .. code-block:: python
 
-    from rest_framework.authentication import TokenAuthentication, SessionAuthentication
+    from rest_framework.authentication import SessionAuthentication
     from rest_framework.permissions import IsAuthenticated
 
     from chanx.generic.websocket import AsyncJsonWebsocketConsumer
@@ -27,85 +28,42 @@ To configure authentication for a WebSocket consumer, set the ``authentication_c
 
 
     class SecureConsumer(AsyncJsonWebsocketConsumer):
-        authentication_classes = [TokenAuthentication, SessionAuthentication]
+        authentication_classes = [SessionAuthentication]  # Cookie-based authentication
         permission_classes = [IsAuthenticated]
 
         INCOMING_MESSAGE_SCHEMA = MyIncomingMessage
 
-        async def receive_message(self, message, **kwargs):
+        async def receive_message(self, message: BaseMessage, **kwargs: Any) -> None:
             # Only authenticated users reach this point
-            await self.send_message(...)
+            match message:
+                case PingMessage():
+                    await self.send_message(PongMessage())
+                case _:
+                    # Handle other message types
+                    pass
 
-Authentication Classes
-----------------------
-Chanx supports all standard DRF authentication classes:
+Client-Side Authentication Best Practices
+-----------------------------------------
+For browser-based WebSocket clients, cookie authentication is the most straightforward approach:
 
-.. list-table::
-   :header-rows: 1
-   :widths: 30 70
+1. **Session Authentication**: Have the user log in through your regular Django views or REST API
+2. **JWT in HTTP-only Cookie**: For token-based auth, store the JWT in an HTTP-only cookie
+3. **Query Parameters**: For simple testing or non-browser clients, query parameters can be used
 
-   * - Authentication Class
-     - Usage
-   * - ``SessionAuthentication``
-     - Authenticates based on Django's session framework
-   * - ``TokenAuthentication``
-     - Uses DRF token authentication
-   * - ``BasicAuthentication``
-     - Uses HTTP Basic authentication
-   * - ``JWTAuthentication``
-     - JWT token-based authentication (requires djangorestframework-jwt)
-   * - Custom authentication
-     - Any custom DRF authentication class
-
-Client-Side Authentication
---------------------------
-**Session Authentication**
-
-For session-based authentication, the client must include the session cookie:
+Example using HTTP-only cookie (recommended for browsers):
 
 .. code-block:: javascript
 
-    // JavaScript WebSocket client with session cookie
-    const socket = new WebSocket('ws://example.com/ws/endpoint/');
-    // Session cookie is included automatically by the browser
-
-**Token Authentication**
-
-For token authentication, include the token in the request headers:
-
-.. code-block:: javascript
-
-    // JavaScript WebSocket client with token
+    // JavaScript WebSocket client with cookie auth
+    // (Cookie is automatically included by the browser)
     const socket = new WebSocket('ws://example.com/ws/endpoint/');
 
-    socket.onopen = function(e) {
-        // Send token in the first message
-        socket.send(JSON.stringify({
-            action: 'authenticate',
-            token: 'your-auth-token'
-        }));
-    };
-
-Alternatively, use query parameters in the WebSocket URL:
+For non-browser clients or testing, query parameters can be used:
 
 .. code-block:: javascript
 
     // Using query parameter for token
     const socket = new WebSocket('ws://example.com/ws/endpoint/?token=your-auth-token');
-
-Custom Headers via HTTP Upgrade
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-For production deployments with proper WebSocket proxying (like Nginx, Daphne, etc.), you can pass headers during the WebSocket handshake:
-
-.. code-block:: javascript
-
-    // Using Authorization header
-    const socket = new WebSocket('ws://example.com/ws/endpoint/');
-
-    // Set headers for the WebSocket handshake
-    socket.setRequestHeader('Authorization', 'Token your-auth-token');
-
-Note that the ability to set headers depends on your deployment environment and the client's capabilities.
 
 Object-Level Permissions
 ------------------------
@@ -183,22 +141,32 @@ Or on failure:
 
 Custom Authentication
 ---------------------
-For more advanced authentication needs, you can create a custom authenticator:
+For more advanced authentication needs, you can create a custom authenticator by extending the ``ChanxWebsocketAuthenticator`` class:
 
 .. code-block:: python
 
-    from chanx.generic.authenticator import ChanxWebsocketAuthenticator
+    from chanx.generic.authenticator import ChanxWebsocketAuthenticator, AuthenticationResult
 
 
     class MyAuthenticator(ChanxWebsocketAuthenticator):
         async def authenticate(self, scope):
-            # Custom authentication logic
+            # First perform the standard authentication
             auth_result = await super().authenticate(scope)
 
-            # Additional verification...
+            # Add additional validation or processing
             if auth_result.is_authenticated:
-                # Perform extra checks
-                pass
+                # Example: Check if user is active in the current module
+                user = auth_result.user
+                if not await is_user_active_in_module(user):
+                    # Override authentication result
+                    return AuthenticationResult(
+                        is_authenticated=False,
+                        status_code=403,
+                        status_text="Forbidden",
+                        data={"detail": "User is not active in this module"},
+                        user=user,
+                        obj=None,
+                    )
 
             return auth_result
 
@@ -206,49 +174,16 @@ For more advanced authentication needs, you can create a custom authenticator:
     class MyConsumer(AsyncJsonWebsocketConsumer):
         authenticator_class = MyAuthenticator
 
-Testing Authentication
-----------------------
-Chanx provides a ``WebsocketTestCase`` class that simplifies testing authenticated endpoints:
-
-.. code-block:: python
-
-    from chanx.testing import WebsocketTestCase
-
-
-    class TestSecureConsumer(WebsocketTestCase):
-        ws_path = "/ws/secure/"
-
-        def setUp(self):
-            super().setUp()
-            # Create a test user
-            self.user = User.objects.create_user(username="testuser", password="password")
-            self.client.login(username="testuser", password="password")  # Django test client
-
-        def get_ws_headers(self):
-            # Get session cookie from test client
-            cookies = self.client.cookies
-            return [
-                (b"cookie", f"sessionid={cookies['sessionid'].value}".encode()),
-            ]
-
-        async def test_authenticated_connection(self):
-            communicator = self.create_communicator()
-            connected, _ = await communicator.connect()
-
-            # Assert connection was successful
-            self.assertTrue(connected)
-
-            # Check authentication message
-            await communicator.assert_authenticated_status_ok()
 
 Best Practices
 --------------
-1. **Always use authentication** for WebSocket endpoints that access user data
-2. **Keep permission logic consistent** between REST API and WebSockets
+1. **Use HTTP-only cookies** for browser-based clients to prevent XSS vulnerabilities
+2. **Keep authentication consistent** between your REST API and WebSockets
 3. **Test authentication thoroughly**, including failure scenarios
 4. **Use object-level permissions** when endpoints deal with specific resources
-5. **Consider rate limiting** for WebSocket connections with tools like Django Channels throttling
-6. **Implement periodic token validation** for long-lived connections
+5. **Avoid storing sensitive tokens** in JavaScript variables or localStorage
+6. **Set appropriate cookie security flags** (Secure, SameSite) in production
+7. **Implement periodic token validation** for long-lived connections
 
 Next Steps
 ----------

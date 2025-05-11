@@ -21,9 +21,19 @@ Contents
    user-guide/index
    user-guide/authentication
    user-guide/consumers
+   user-guide/routing
    user-guide/messages
    user-guide/testing
    user-guide/playground
+
+.. toctree::
+   :maxdepth: 1
+   :caption: Examples
+
+   examples/index
+   examples/complete
+   examples/basic
+   examples/chat
 
 .. toctree::
    :maxdepth: 2
@@ -35,15 +45,6 @@ Contents
    reference/routing
    reference/utils
    reference/settings
-
-.. toctree::
-   :maxdepth: 1
-   :caption: Examples
-
-   examples/index
-   examples/basic
-   examples/chat
-   examples/dashboard
 
 .. toctree::
    :maxdepth: 1

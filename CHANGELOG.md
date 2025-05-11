@@ -1,3 +1,16 @@
+## v0.6.0 (2025-05-11)
+
+### Feat
+
+- **python310**: add support for python version 310
+- **websocket**: add kind to send_group_message to handle both pydantic message and json case
+
+### Fix
+
+- **pyright**: remove pyright section in pyproject toml and use python 310 for pyright python target version
+- **sandbox**: update sandbox api schema auth and group chat serializer fields
+- **docs**: only create docs if the commit message is the bump version message
+
 ## v0.5.0 (2025-05-09)
 
 ### Feat

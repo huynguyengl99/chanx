@@ -1,3 +1,9 @@
+## v0.6.1 (2025-05-12)
+
+### Fix
+
+- **py.typed**: add py.typed to let static type checker know that chanx has fulfilled type hint
+
 ## v0.6.0 (2025-05-11)
 
 ### Feat

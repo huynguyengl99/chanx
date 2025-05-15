@@ -97,7 +97,7 @@ function showValidationWarning(row, message) {
 export function loadPathParameters(endpoint) {
     elements.pathParamsList.innerHTML = '';
 
-    if (!endpoint || !endpoint.path_params || endpoint.path_params.length === 0) {
+    if (!endpoint || !endpoint.pathParams || endpoint.pathParams.length === 0) {
         const emptyState = document.createElement('div');
         emptyState.className = 'empty-params-state';
         emptyState.textContent = 'No path parameters for this endpoint.';
@@ -110,10 +110,10 @@ export function loadPathParameters(endpoint) {
     }
 
     state.originalPathPattern = endpoint.url;
-    state.pathParameters = endpoint.path_params;
+    state.pathParameters = endpoint.pathParams;
 
     // Make sure each param has the pattern properly set
-    endpoint.path_params.forEach((param, index) => {
+    endpoint.pathParams.forEach((param, index) => {
         const paramWithPattern = {
             name: param.name || '',
             value: param.value || '',
@@ -128,8 +128,8 @@ export function loadPathParameters(endpoint) {
         elements.realUrlDisplay.style.display = 'block';
     }
 
-    if (endpoint.friendly_url) {
-        elements.wsUrlInput.value = endpoint.friendly_url;
+    if (endpoint.friendlyUrl) {
+        elements.wsUrlInput.value = endpoint.friendlyUrl;
         parseUrlAndUpdateParams();
         updateRealUrlDisplay();
     }
@@ -504,7 +504,7 @@ export function updateWebSocketUrl() {
 }
 
 export function updateTabVisibility(endpoint) {
-    const hasPathParams = endpoint && endpoint.path_params && endpoint.path_params.length > 0;
+    const hasPathParams = endpoint && endpoint.pathParams && endpoint.pathParams.length > 0;
     const pathParamsTab = document.querySelector('.tab-button[data-tab="connection-path-params"]');
     const queryParamsTab = document.querySelector('.tab-button[data-tab="connection-params"]');
     const pathParamsContent = document.getElementById('connection-path-params');

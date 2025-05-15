@@ -3,6 +3,7 @@
 import { addStatusMessage } from './messages.js';
 import { loadPathParameters, updateTabVisibility, parseExistingQueryParams } from './parameters.js';
 import { loadMessageExamples } from './messages.js';
+import { recursiveToCamel } from './utils.js';
 
 let websocketInfoUrl = '';
 let elements;
@@ -26,7 +27,7 @@ export function initEndpoints(infoUrl, domElements, appState) {
             elements.endpointDescription.textContent = selectedEndpoint.description || 'No description available';
 
             // Set the URL field (prefer friendly URL if available)
-            elements.wsUrlInput.value = selectedEndpoint.friendly_url || selectedUrl;
+            elements.wsUrlInput.value = selectedEndpoint.friendlyUrl || selectedUrl;
 
             // Load path parameters
             loadPathParameters(selectedEndpoint);
@@ -60,7 +61,8 @@ export async function loadEndpoints(elements, state) {
             throw new Error(`HTTP error ${response.status}`);
         }
 
-        const endpoints = await response.json();
+        const rawEndpoints = await response.json();
+        const endpoints = recursiveToCamel(rawEndpoints);
         state.availableEndpoints = endpoints;
 
         // Clear existing options
@@ -70,7 +72,7 @@ export async function loadEndpoints(elements, state) {
         for (const endpoint of endpoints) {
             const option = document.createElement('option');
             option.value = endpoint.url;
-            const displayUrl = endpoint.friendly_url || endpoint.url;
+            const displayUrl = endpoint.friendlyUrl || endpoint.url;
             option.textContent = `${endpoint.name} (${displayUrl})`;
             elements.wsEndpointSelect.appendChild(option);
         }

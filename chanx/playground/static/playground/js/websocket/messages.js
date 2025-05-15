@@ -116,11 +116,11 @@ export function initMessaging(domElements, appState) {
         }
 
         const selectedEndpoint = state.availableEndpoints.find(endpoint => endpoint.url === state.currentEndpoint);
-        if (!selectedEndpoint || !selectedEndpoint.message_examples) {
+        if (!selectedEndpoint || !selectedEndpoint.messageExamples) {
             return;
         }
 
-        const example = selectedEndpoint.message_examples.find(ex => ex.name === selectedName);
+        const example = selectedEndpoint.messageExamples.find(ex => ex.name === selectedName);
         if (example) {
             elements.jsonInput.value = JSON.stringify(example.example, null, 2);
             elements.messageExampleDescription.textContent = example.description || '';
@@ -137,7 +137,7 @@ export function loadMessageExamples(endpointUrl) {
     // Find the selected endpoint in available endpoints
     const selectedEndpoint = state.availableEndpoints.find(endpoint => endpoint.url === endpointUrl);
 
-    if (!selectedEndpoint || !selectedEndpoint.message_examples || selectedEndpoint.message_examples.length === 0) {
+    if (!selectedEndpoint || !selectedEndpoint.messageExamples || selectedEndpoint.messageExamples.length === 0) {
         elements.messageExampleSelect.disabled = true;
         addStatusMessage("No message examples available for this endpoint", "status");
         return;
@@ -147,14 +147,14 @@ export function loadMessageExamples(endpointUrl) {
     elements.messageExampleSelect.disabled = false;
 
     // Add new options
-    for (const example of selectedEndpoint.message_examples) {
+    for (const example of selectedEndpoint.messageExamples) {
         const option = document.createElement('option');
         option.value = example.name;
         option.textContent = example.name;
         elements.messageExampleSelect.appendChild(option);
     }
 
-    addStatusMessage(`Loaded ${selectedEndpoint.message_examples.length} message examples`);
+    addStatusMessage(`Loaded ${selectedEndpoint.messageExamples.length} message examples`);
 }
 
 // Add a raw text message to the log

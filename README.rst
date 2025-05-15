@@ -356,6 +356,20 @@ discover all registered WebSocket routes from your ``routing.py`` file, includin
 Testing
 -------
 
+Chanx provides specialized testing utilities for WebSocket consumers. For optimal testing, configure your test settings:
+
+.. code-block:: python
+
+    # settings/test.py
+    CHANX = {
+        "SEND_COMPLETION": True,  # Essential for receive_all_json() to work properly
+        "SEND_AUTHENTICATION_MESSAGE": True,  # Recommended for testing auth flows
+        "LOG_RECEIVED_MESSAGE": False,  # Optional: reduce test output
+        "LOG_SENT_MESSAGE": False,  # Optional: reduce test output
+    }
+
+**Important**: Setting ``SEND_COMPLETION: True`` is crucial for testing, as the ``receive_all_json()`` method relies on completion messages to know when to stop collecting messages.
+
 Write tests for your WebSocket consumers:
 
 .. code-block:: python

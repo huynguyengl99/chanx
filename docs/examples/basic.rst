@@ -142,19 +142,20 @@ Configure the ASGI application in `myproject/asgi.py`:
     from django.core.asgi import get_asgi_application
     from django.conf import settings
 
+    from chanx.routing import include
+
     os.environ.setdefault("DJANGO_SETTINGS_MODULE", "myproject.settings")
     django_asgi_app = get_asgi_application()
 
-    # Import the router
-    from echo.routing import router
-
-    application = ProtocolTypeRouter({
+    routing = {
         "http": django_asgi_app,
         "websocket": OriginValidator(
-            CookieMiddleware(router),
-            ["http://localhost:8000"],  # Allowed origins
+            CookieMiddleware(include("echo.routing")),
+            settings.CORS_ALLOWED_ORIGINS + settings.CSRF_TRUSTED_ORIGINS,
         ),
-    })
+    }
+
+    application = ProtocolTypeRouter(routing)
 
 Settings Configuration
 ----------------------
@@ -437,6 +438,15 @@ Add the view to your URL configuration in `myproject/urls.py`:
 
 Testing the Consumer
 --------------------
+For proper testing, make sure to configure completion messages in your test settings:
+
+.. code-block:: python
+
+    # settings/test.py
+    CHANX = {
+        "SEND_COMPLETION": True,  # Essential for receive_all_json() to work properly
+    }
+
 Let's write a test for our consumer in `echo/tests.py`:
 
 .. code-block:: python

@@ -70,6 +70,13 @@ Chanx fills these gaps with a cohesive framework that provides:
 
 .. code-block:: python
 
+  # settings/test.py - Configure test settings
+  CHANX = {
+      "SEND_COMPLETION": True,  # Essential for receive_all_json() to work properly
+  }
+
+.. code-block:: python
+
   from chanx.testing import WebsocketTestCase
 
   class TestChat(WebsocketTestCase):

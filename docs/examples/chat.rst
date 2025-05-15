@@ -597,6 +597,15 @@ Add the view to your URL patterns:
 
 Testing the Chat Consumer
 -------------------------
+For proper testing, make sure to configure completion messages in your test settings:
+
+.. code-block:: python
+
+    # settings/test.py
+    CHANX = {
+        "SEND_COMPLETION": True,  # Essential for receive_all_json() to work properly
+    }
+
 Let's write tests for our chat consumer:
 
 .. code-block:: python

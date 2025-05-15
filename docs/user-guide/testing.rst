@@ -2,6 +2,24 @@ Testing
 =======
 Chanx provides specialized testing utilities that make it easier to write comprehensive tests for WebSocket consumers. These tools handle connection management, authentication, message exchange, and test cleanup.
 
+Testing Configuration
+---------------------
+Before writing tests, configure your test settings for optimal testing performance:
+
+.. code-block:: python
+
+    # settings/test.py or in your test configuration
+    CHANX = {
+        "SEND_COMPLETION": True,  # Essential for receive_all_json() to work properly
+        "SEND_AUTHENTICATION_MESSAGE": True,  # Recommended for testing authentication flows
+        "LOG_RECEIVED_MESSAGE": False,  # Optional: reduce test output
+        "LOG_SENT_MESSAGE": False,  # Optional: reduce test output
+    }
+
+**Important**: Setting `SEND_COMPLETION: True` is crucial for testing. The `receive_all_json()` method relies on
+completion messages to know when to stop collecting messages, ensuring your tests receive all expected messages
+before assertions.
+
 Testing Overview
 ----------------
 Testing WebSocket consumers differs from testing regular HTTP views:
@@ -157,9 +175,11 @@ Chanx extends the standard Channels WebsocketCommunicator with additional featur
     await communicator.send_message(ChatMessage(payload="Hello"))
 
     # Receive all messages until completion
+    # NOTE: Requires SEND_COMPLETION=True in test settings
     messages = await communicator.receive_all_json()
 
     # Receive messages including group completion
+    # NOTE: Also requires SEND_COMPLETION=True
     messages = await communicator.receive_all_json(wait_group=True)
 
     # Verify connection closed properly
@@ -379,15 +399,17 @@ Here's a complete example of a test for a chat application with custom test case
 Best Practices
 --------------
 1. **Subclass WebsocketTestCase**: Create a custom test base class for your app
-2. **Set up authenticating fixtures**: Provide proper authentication in setUp
-3. **Use modern assert statements**: Use Python's built-in assert for cleaner tests
-4. **Test both success and failure**: Verify both positive and negative cases
-5. **Test group broadcasts**: Create multiple communicators to test group messaging
-6. **Use wait_group=True**: When testing group messages, use the wait_group parameter
-7. **Mock external services**: Use AsyncMock for external dependencies
-8. **Test database persistence**: Verify messages are properly stored/retrieved
-9. **Test lifecycle events**: Check connections, authentication, and disconnections
-10. **Use async test methods**: Write all test methods as async coroutines
+2. **Configure test settings**: Set `SEND_COMPLETION=True` in test environment for proper message collection
+3. **Set up authenticating fixtures**: Provide proper authentication in setUp
+4. **Use modern assert statements**: Use Python's built-in assert for cleaner tests
+5. **Test both success and failure**: Verify both positive and negative cases
+6. **Test group broadcasts**: Create multiple communicators to test group messaging
+7. **Use wait_group=True**: When testing group messages, use the wait_group parameter
+8. **Mock external services**: Use AsyncMock for external dependencies
+9. **Test database persistence**: Verify messages are properly stored/retrieved
+10. **Test lifecycle events**: Check connections, authentication, and disconnections
+11. **Use async test methods**: Write all test methods as async coroutines
+12. **Disable verbose logging**: Set logging flags to False in test settings to reduce output
 
 Next Steps
 ----------

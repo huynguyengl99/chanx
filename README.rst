@@ -50,6 +50,7 @@ Key Features
 - **Structured Messaging**: Type-safe message handling with Pydantic validation
 - **WebSocket Playground**: Interactive UI for testing WebSocket endpoints
 - **Group Management**: Simplified pub/sub messaging with automatic group handling
+- **Channels-friendly Routing**: Django-like ``path``, ``re_path``, and ``include`` functions designed specifically for WebSocket routing
 - **Comprehensive Logging**: Structured logging for WebSocket connections and messages
 - **Error Handling**: Robust error reporting and client feedback
 - **Testing Utilities**: Specialized tools for testing WebSocket consumers
@@ -63,6 +64,7 @@ Core Components
 - **AsyncJsonWebsocketConsumer**: Base consumer with authentication and structured messaging
 - **ChanxWebsocketAuthenticator**: Bridges WebSockets with DRF authentication
 - **Message System**: Type-safe message classes with automatic validation
+- **WebSocket Routing**: Django-style routing functions (``path``, ``re_path``, ``include``) optimized for Channels
 - **WebSocketTestCase**: Test utilities for WebSocket consumers
 - **Discriminated Union Messages**: Runtime validation of message types with action discriminator
 
@@ -95,6 +97,48 @@ of available settings with their default values and descriptions:
         # Playground configuration
         'WEBSOCKET_BASE_URL': 'ws://localhost:8000'  # Default WebSocket URL for discovery
     }
+
+WebSocket Routing
+-----------------
+
+Chanx provides Django-style routing functions specifically designed for WebSocket applications. These functions work similarly to Django's URL routing but are optimized for Channels and ASGI applications.
+
+**Key principles:**
+
+- Use ``chanx.routing`` for WebSocket routes in your ``routing.py`` files
+- Use ``django.urls`` for HTTP routes in your ``urls.py`` files
+- Maintain clear separation between HTTP and WebSocket routing
+
+**Available functions:**
+
+- ``path()``: Create URL patterns with path converters (e.g., ``'<int:id>/'``)
+- ``re_path()``: Create URL patterns with regular expressions
+- ``include()``: Include routing patterns from other modules
+
+**Example routing setup:**
+
+.. code-block:: python
+
+    # app/routing.py
+    from chanx.routing import path, re_path
+    from . import consumers
+
+    router = URLRouter([
+        path("", consumers.MyConsumer.as_asgi()),
+        path("room/<str:room_name>/", consumers.RoomConsumer.as_asgi()),
+        re_path(r"^admin/(?P<id>\d+)/$", consumers.AdminConsumer.as_asgi()),
+    ])
+
+    # project/routing.py
+    from chanx.routing import include, path
+    from channels.routing import URLRouter
+
+    router = URLRouter([
+        path("ws/", URLRouter([
+            path("app/", include("app.routing")),
+            path("chat/", include("chat.routing")),
+        ])),
+    ])
 
 Example: Building an Assistant App
 ----------------------------------
@@ -188,7 +232,7 @@ Let's create a simple assistant chatbot with authentication:
 
     from channels.routing import URLRouter
 
-    from chanx.urls import path
+    from chanx.routing import path
 
     from assistants.consumers import AssistantConsumer
 
@@ -204,8 +248,7 @@ Let's create a simple assistant chatbot with authentication:
 
     from channels.routing import URLRouter
 
-    from chanx.routing import include
-    from chanx.urls import path, re_path
+    from chanx.routing import include, path
 
     ws_router = URLRouter(
         [
@@ -232,18 +275,17 @@ Let's create a simple assistant chatbot with authentication:
     from django.conf import settings
     from django.core.asgi import get_asgi_application
 
+    from chanx.routing import include
+
     # Set Django settings module
     os.environ.setdefault("DJANGO_SETTINGS_MODULE", "yourproject.settings")
     django_asgi_app = get_asgi_application()
-
-    # Import your WebSocket routing
-    from yourproject.routing import router
 
     # Set up protocol routing
     routing = {
         "http": django_asgi_app,
         "websocket": OriginValidator(
-            CookieMiddleware(router),
+            CookieMiddleware(include("yourproject.routing")),
             settings.CORS_ALLOWED_ORIGINS + settings.CSRF_TRUSTED_ORIGINS,
         ),
     }

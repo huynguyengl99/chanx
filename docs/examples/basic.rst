@@ -119,7 +119,7 @@ Set up routing in `echo/routing.py`:
 .. code-block:: python
 
     from channels.routing import URLRouter
-    from chanx.urls import path
+    from chanx.routing import path
 
     from echo.consumers import EchoConsumer
 

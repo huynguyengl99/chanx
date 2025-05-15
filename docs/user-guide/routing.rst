@@ -1,15 +1,16 @@
 Routing
 =======
-Chanx provides enhanced routing utilities for WebSocket applications that build on Django Channels' routing system. This guide covers how to organize your WebSocket endpoints with Chanx's routing tools.
+Chanx provides Django-style routing utilities specifically designed for WebSocket applications. These functions work similarly to Django's URL routing but are optimized for Channels and ASGI applications.
 
 Key Components
 --------------
 Chanx's routing system includes:
 
-1. Enhanced URL pattern matching with ``path()`` and ``re_path()``
+1. Django-like URL pattern matching with ``path()`` and ``re_path()``
 2. Modular routing with ``include()``
 3. Type-safe URL converters
 4. Consistent naming conventions for better organization
+5. Separation between HTTP routing (``django.urls``) and WebSocket routing (``chanx.routing``)
 
 Routing Organization
 --------------------
@@ -18,6 +19,7 @@ For optimal organization, structure your routing like this:
 1. Create a ``routing.py`` file in each app with WebSocket consumers
 2. Name the main URLRouter variable ``router`` (similar to Django's ``urlpatterns``)
 3. Create a project-level ``routing.py`` that includes app-specific routers
+4. Use ``chanx.routing`` for WebSocket routes and ``django.urls`` for HTTP routes
 
 App-Level Routing
 ~~~~~~~~~~~~~~~~~
@@ -26,7 +28,7 @@ App-Level Routing
 
     # chat/routing.py
     from channels.routing import URLRouter
-    from chanx.urls import path, re_path
+    from chanx.routing import path, re_path
 
     from chat.consumers import ChatConsumer, ChatDetailConsumer
 
@@ -43,8 +45,7 @@ Project-Level Routing
 
     # myproject/routing.py
     from channels.routing import URLRouter
-    from chanx.urls import path
-    from chanx.routing import include
+    from chanx.routing import path, include
 
     # Main router for the project
     router = URLRouter([
@@ -67,33 +68,34 @@ ASGI Configuration
     from channels.sessions import CookieMiddleware
     from django.conf import settings
 
+    from chanx.routing import include
+
     os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'myproject.settings')
     django_asgi_app = get_asgi_application()
-
-    # Import the main router
-    from myproject.routing import router
 
     application = ProtocolTypeRouter({
         "http": django_asgi_app,
         "websocket": OriginValidator(
-            CookieMiddleware(router),
-            settings.CORS_ALLOWED_ORIGINS,
+            CookieMiddleware(include("myproject.routing")),
+            settings.CORS_ALLOWED_ORIGINS + settings.CSRF_TRUSTED_ORIGINS,
         ),
     })
 
 URL Patterns
 ------------
-Chanx provides ``path()`` and ``re_path()`` functions that work like Django's URL functions but are specialized for WebSocket routing:
+Chanx provides ``path()`` and ``re_path()`` functions that work exactly like Django's URL functions but are specifically designed for WebSocket routing:
 
 .. code-block:: python
 
-    from chanx.urls import path, re_path
+    from chanx.routing import path, re_path
 
     # Path with converter
     path('users/<int:user_id>/', UserConsumer.as_asgi())
 
     # Regular expression pattern
     re_path(r'^rooms/(?P<room_id>\w+)/$', RoomConsumer.as_asgi())
+
+**Note**: Use ``chanx.routing`` for WebSocket endpoints and ``django.urls`` for HTTP endpoints to maintain clear separation between routing concerns.
 
 URL Path Converters
 -------------------
@@ -159,9 +161,9 @@ Best Practices
 3. **Descriptive paths**: Use descriptive URL patterns that reflect resource hierarchy
 4. **Prefer path() over re_path()**: Use path converters when possible for readability
 5. **Type safety**: Use proper type hints in URL parameters
+6. **Separation of concerns**: Use ``chanx.routing`` for WebSocket routes and ``django.urls`` for HTTP routes
 
 Next Steps
 ----------
 - :doc:`consumers` - Learn about WebSocket consumers
 - :doc:`authentication` - Understand authentication with WebSockets
-- :doc:`../reference/urls` - See the URL reference documentation

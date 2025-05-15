@@ -296,7 +296,7 @@ Set up the WebSocket URL routing:
 
     # myapp/routing.py
     from channels.routing import URLRouter
-    from chanx.urls import path
+    from chanx.routing import path
 
     # Important: Name this variable 'router' for string-based includes
     router = URLRouter([
@@ -305,8 +305,7 @@ Set up the WebSocket URL routing:
 
     # myproject/routing.py
     from channels.routing import URLRouter
-    from chanx.urls import path
-    from chanx.routing import include
+    from chanx.routing import include, path
 
     router = URLRouter([
         path('ws/chat/', include('myapp.routing')),

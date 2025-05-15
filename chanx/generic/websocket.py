@@ -395,9 +395,11 @@ class AsyncJsonWebsocketConsumer(Generic[_M], BaseAsyncJsonWebsocketConsumer, AB
             exclude_current: Whether to exclude the sending consumer from receiving
                             the broadcast (prevents echo effects)
             kind: Type of message to send:
-                  - "json": Send as raw JSON directly to clients (default)
-                  - "message": Process through OUTGOING_GROUP_MESSAGE_SCHEMA validation
-                              (requires consumer to define this schema)
+
+                - "json": Send as raw JSON directly to clients (default)
+
+                - "message": Process through OUTGOING_GROUP_MESSAGE_SCHEMA validation (requires consumer to define this schema)
+
         """
         if groups is None:
             groups = self.groups or []

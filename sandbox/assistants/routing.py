@@ -1,6 +1,6 @@
 from channels.routing import URLRouter
 
-from chanx.urls import path
+from chanx.routing import path
 
 from assistants.consumers import AssistantConsumer
 

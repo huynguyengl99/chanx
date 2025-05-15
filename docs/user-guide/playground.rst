@@ -63,7 +63,7 @@ The left panel displays all discovered WebSocket endpoints with their URLs and d
 
     # routing.py example that will be discovered
     from channels.routing import URLRouter
-    from chanx.urls import path, re_path
+    from chanx.routing import path, re_path
     from myapp.consumers import ChatConsumer, NotificationConsumer
 
     # Important: name this variable 'router'

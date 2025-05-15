@@ -245,7 +245,7 @@ Here's a brief example:
 
     # chat/routing.py
     from channels.routing import URLRouter
-    from chanx.urls import path, re_path
+    from chanx.routing import path, re_path
     from chat.consumers import ChatConsumer
 
     router = URLRouter([

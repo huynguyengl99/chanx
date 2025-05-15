@@ -74,7 +74,7 @@ Chanx's settings are accessible through the ``chanx_settings`` object:
         # Do something
 
 Optional Dependencies
---------------------
+---------------------
 Some Chanx features require additional packages. You can install these along with Chanx using extras:
 
 .. code-block:: bash

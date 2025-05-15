@@ -11,7 +11,7 @@ from unittest.mock import MagicMock, Mock, patch
 from channels.routing import URLRouter
 from django.http import HttpRequest
 
-from chanx.urls import path
+from chanx.routing import path
 from chanx.utils.websocket import (
     RouteInfo,
     _extract_routes_from_router,

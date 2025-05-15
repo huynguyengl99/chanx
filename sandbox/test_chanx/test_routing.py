@@ -8,8 +8,7 @@ from channels.routing import URLRouter
 from django.urls import URLPattern
 
 import pytest
-from chanx.routing import include
-from chanx.urls import path
+from chanx.routing import include, path
 
 
 class TestIncludeFunction:

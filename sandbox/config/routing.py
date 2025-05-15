@@ -1,7 +1,6 @@
 from channels.routing import URLRouter
 
-from chanx.routing import include
-from chanx.urls import path, re_path
+from chanx.routing import include, path, re_path
 
 ws_router = URLRouter(
     [

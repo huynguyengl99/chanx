@@ -129,7 +129,7 @@ Let's create a basic echo consumer that authenticates users and echoes back mess
 .. code-block:: python
 
     # myapp/routing.py
-    from chanx.urls import path, re_path
+    from chanx.routing import path
     from channels.routing import URLRouter
 
     from myapp.consumers import EchoConsumer
@@ -143,13 +143,14 @@ Let's create a basic echo consumer that authenticates users and echoes back mess
 .. code-block:: python
 
     # myproject/routing.py
+    from chanx.routing import include, path
     from channels.routing import URLRouter
-    from chanx.routing import include
-    from chanx.urls import path
 
     router = URLRouter([
-        path('ws/', include('myapp.routing')),
-        # Add other app routing here
+        path('ws/', URLRouter([
+            path('myapp/', include('myapp.routing')),
+            # Add other app routing here
+        ])),
     ])
 
 5. Configure your ASGI application to use the WebSocket routing:
@@ -164,19 +165,20 @@ Let's create a basic echo consumer that authenticates users and echoes back mess
     from channels.sessions import CookieMiddleware
     from django.conf import settings
 
+    from chanx.routing import include
+
     os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'myproject.settings')
     django_asgi_app = get_asgi_application()
 
-    # Import your WebSocket routing
-    from myproject.routing import router
-
-    application = ProtocolTypeRouter({
+    routing = {
         "http": django_asgi_app,
         "websocket": OriginValidator(
-            CookieMiddleware(router),
-            settings.CORS_ALLOWED_ORIGINS,
+            CookieMiddleware(include("myproject.routing")),
+            settings.CORS_ALLOWED_ORIGINS + settings.CSRF_TRUSTED_ORIGINS,
         ),
-    })
+    }
+
+    application = ProtocolTypeRouter(routing)
 
 Test Your WebSocket Endpoint
 ----------------------------
@@ -199,7 +201,7 @@ Test Your WebSocket Endpoint
 
     # First, get a valid session cookie by logging in through the browser
     # Then use that cookie with wscat
-    wscat -c ws://localhost:8000/ws/echo/ -H "Cookie: sessionid=your_session_id"
+    wscat -c ws://localhost:8000/ws/myapp/echo/ -H "Cookie: sessionid=your_session_id"
 
 4. Send a JSON message:
 
@@ -287,7 +289,7 @@ Update the routing:
 .. code-block:: python
 
     # myapp/routing.py - updated
-    from chanx.urls import path, re_path
+    from chanx.routing import path, re_path
     from channels.routing import URLRouter
 
     from myapp.consumers import EchoConsumer, ChatConsumer

@@ -41,7 +41,6 @@ Contents
 
    reference/generic
    reference/messages
-   reference/urls
    reference/routing
    reference/utils
    reference/settings

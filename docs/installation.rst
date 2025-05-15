@@ -70,7 +70,7 @@ Basic Setup
     ]
 
 Optional Features
-----------------
+-----------------
 Chanx offers additional features through optional dependencies:
 
 **camelCase Conversion**

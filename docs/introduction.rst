@@ -55,12 +55,11 @@ Chanx fills these gaps with a cohesive framework that provides:
   async def receive_message(self, message):
       await self.send_group_message(message)
 
-4. **Enhanced URL Routing**: Extended routing utilities for WebSocket endpoints (with type hints support)
+4. **Enhanced URL Routing**: Django-style routing utilities for WebSocket endpoints with type hints support
 
 .. code-block:: python
 
-  from chanx.urls import path, re_path
-  from chanx.routing import include
+  from chanx.routing import path, re_path, include
 
   router = [
       path('ws/chat/<str:room_id>/', ChatConsumer.as_asgi()),
@@ -126,7 +125,7 @@ Chanx is built around several key components:
 
 - **WebSocket Consumers**: Base consumer classes with integrated authentication and permissions
 - **Message System**: Pydantic-based message validation with discriminated unions
-- **URL Routing**: Enhanced routing utilities for WebSocket endpoints with modular organization
+- **URL Routing**: Django-style routing utilities for WebSocket endpoints with modular organization
 - **Authenticator**: Bridge between WebSocket connections and DRF authentication
 - **Testing Framework**: Specialized test case and communicator classes with multi-user support
 - **Playground UI**: Visual interface for exploring and testing WebSocket endpoints

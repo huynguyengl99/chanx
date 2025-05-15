@@ -19,8 +19,8 @@ from chanx.messages.base import (
 )
 from chanx.messages.incoming import IncomingMessage, PingMessage
 from chanx.messages.outgoing import PongMessage
+from chanx.routing import path
 from chanx.testing import WebsocketTestCase
-from chanx.urls import path
 from chanx.utils.settings import override_chanx_settings
 from pydantic import BaseModel
 from structlog.testing import capture_logs

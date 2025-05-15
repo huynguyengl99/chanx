@@ -1,3 +1,9 @@
+## v0.7.0 (2025-05-15)
+
+### Feat
+
+- **routing**: migrate path and re_path from urls module to routing module for consistency and update docs
+
 ## v0.6.1 (2025-05-12)
 
 ### Fix

@@ -1,3 +1,9 @@
+## v0.8.0 (2025-05-15)
+
+### Feat
+
+- **path_param**: support for django path converter param within angle bracket
+
 ## v0.7.1 (2025-05-15)
 
 ### Fix

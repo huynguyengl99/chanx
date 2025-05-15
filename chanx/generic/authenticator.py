@@ -155,6 +155,8 @@ class ChanxWebsocketAuthenticator:
     ) = None
     queryset: QuerysetLike = True
     auth_method: Literal["get", "post", "put", "patch", "delete", "options"] = "get"
+    lookup_field: str = "pk"
+    lookup_url_kwarg: str | None = None
 
     def __init__(self) -> None:
         """Initialize the authenticator."""
@@ -300,6 +302,9 @@ class ChanxWebsocketAuthenticator:
             self._view.permission_classes = self.permission_classes
         if not isinstance(self.queryset, bool):  # Only set if it's not a boolean value
             self._view.queryset = self.queryset
+
+        self._view.lookup_field = self.lookup_field
+        self._view.lookup_url_kwarg = self.lookup_url_kwarg
 
     @sync_to_async
     def _perform_dispatch(

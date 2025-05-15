@@ -25,6 +25,19 @@ if TYPE_CHECKING:
 else:
     _ExtendedURLPattern = Any
 
+# Regular expressions for extracting path parameters
+REGEX_PARAM_PATTERN = r"\(\?P<([^>]+)>([^)]+)\)"
+DJANGO_PARAM_PATTERN = r"<(\w+):(\w+)>"
+
+# Django path converter mappings to regex patterns
+DJANGO_PATH_CONVERTERS = {
+    "str": r"[^/]+",
+    "int": r"[0-9]+",
+    "slug": r"[-a-zA-Z0-9_]+",
+    "uuid": r"[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}",
+    "path": r".+",
+}
+
 # Type for route callbacks/handlers
 RouteHandler = TypeVar("RouteHandler")
 
@@ -59,7 +72,10 @@ class RouteInfo:
 
         path = self.path
         for param_name, pattern in self.path_params.items():
+            # Replace regex patterns with :param format
             path = path.replace(f"(?P<{param_name}>{pattern})", f":{param_name}")
+            # Also handle Django-style path parameters
+            path = re.sub(rf"<\w+:{param_name}>", f":{param_name}", path)
         return path
 
 
@@ -222,6 +238,8 @@ def _get_pattern_string_and_params(route: Any) -> tuple[str, dict[str, str] | No
     Handles different route pattern implementations to extract
     the URL pattern string and identified named path parameters.
 
+    Supports both Django-style path parameters (<type:name>) and regex patterns.
+
     Args:
         route: The route object to extract pattern from.
 
@@ -241,16 +259,26 @@ def _get_pattern_string_and_params(route: Any) -> tuple[str, dict[str, str] | No
     else:
         pattern = str(route)
 
-    # Extract path parameters
+    # Dictionary to store path parameters
     path_params: dict[str, str] = {}
-    param_regex = r"\(\?P<([^>]+)>([^)]+)\)"
-    matches = re.findall(param_regex, pattern)
 
-    if matches:
-        for name, regex_pattern in matches:
+    # First, extract regex-style parameters: (?P<name>pattern)
+    regex_matches = re.findall(REGEX_PARAM_PATTERN, pattern)
+
+    if regex_matches:
+        for name, regex_pattern in regex_matches:
             path_params[name] = regex_pattern
 
-    # Clean up the pattern string (but keep path params for now)
+    # Second, extract Django-style path parameters: <type:name>
+    django_matches = re.findall(DJANGO_PARAM_PATTERN, pattern)
+
+    if django_matches:
+        for converter_type, param_name in django_matches:
+            # Get the regex pattern for this converter type
+            regex_pattern = DJANGO_PATH_CONVERTERS.get(converter_type, r"[^/]+")
+            path_params[param_name] = regex_pattern
+
+    # Clean up the pattern string (remove ^ and $ anchors)
     pattern = pattern.replace("^", "").replace("$", "")
 
     return pattern, path_params if path_params else None

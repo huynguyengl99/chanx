@@ -518,3 +518,41 @@ input[readonly] {
     background-color: #f5f5f5;
     cursor: not-allowed;
 }
+
+/* Parameter validation styles */
+.param-validation-warning {
+    grid-column: 1 / -1; /* Span all columns */
+    background-color: #fef2f2;
+    border: 1px solid #fecaca;
+    color: #dc2626;
+    padding: 8px 12px;
+    border-radius: 4px;
+    font-size: 0.875rem;
+    margin-top: 4px;
+}
+
+/* Error styling for invalid input */
+.param-error {
+    border-color: #dc2626 !important;
+    background-color: #fef2f2;
+}
+
+.param-error:focus {
+    outline: none;
+    border-color: #dc2626 !important;
+    box-shadow: 0 0 0 2px rgba(220, 38, 38, 0.2);
+}
+
+/* Update param-row to be flexible for validation messages */
+.param-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr 50px;
+    gap: 10px;
+    padding: 10px;
+    border-bottom: 1px solid #eee;
+    align-items: start;
+}
+
+.param-pattern {
+    display: none;
+}

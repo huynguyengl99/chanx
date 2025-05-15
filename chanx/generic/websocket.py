@@ -114,6 +114,8 @@ class AsyncJsonWebsocketConsumer(Generic[_M], BaseAsyncJsonWebsocketConsumer, AB
     ) = None
     queryset: QuerysetLike = True
     auth_method: Literal["get", "post", "put", "patch", "delete", "options"] = "get"
+    lookup_field: str = "pk"
+    lookup_url_kwarg: str | None = None
 
     authenticator_class: type[Any] = ChanxWebsocketAuthenticator
 
@@ -197,6 +199,8 @@ class AsyncJsonWebsocketConsumer(Generic[_M], BaseAsyncJsonWebsocketConsumer, AB
             "permission_classes",
             "queryset",
             "auth_method",
+            "lookup_field",
+            "lookup_url_kwarg",
         ]:
             if getattr(self, attr) is not None:
                 setattr(authenticator, attr, getattr(self, attr))

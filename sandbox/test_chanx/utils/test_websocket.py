@@ -311,7 +311,7 @@ class TestExtractRoutesFromRouter:
             assert routes == []
 
 
-class TestGetPatternString:
+class TestGetPatternStringAndParams:
     """Tests for the _get_pattern_string_and_params function."""
 
     def test_get_pattern_with_pattern_attribute_and_nested_pattern(self) -> None:
@@ -334,8 +334,8 @@ class TestGetPatternString:
         assert pattern == "another-pattern"
         assert params is None
 
-    def test_get_pattern_with_path_parameters(self) -> None:
-        """Test extracting pattern string with path parameters."""
+    def test_get_pattern_with_regex_path_parameters(self) -> None:
+        """Test extracting pattern string with regex path parameters."""
         mock_route = MagicMock()
         mock_pattern = MagicMock()
         mock_pattern.pattern = "^user/(?P<user_id>[0-9]+)/profile$"
@@ -345,8 +345,8 @@ class TestGetPatternString:
         assert pattern == "user/(?P<user_id>[0-9]+)/profile"
         assert params == {"user_id": "[0-9]+"}
 
-    def test_get_pattern_with_multiple_path_parameters(self) -> None:
-        """Test extracting pattern string with multiple path parameters."""
+    def test_get_pattern_with_multiple_regex_path_parameters(self) -> None:
+        """Test extracting pattern string with multiple regex path parameters."""
         mock_route = MagicMock()
         mock_pattern = MagicMock()
         mock_pattern.pattern = (
@@ -357,6 +357,115 @@ class TestGetPatternString:
         pattern, params = _get_pattern_string_and_params(mock_route)
         assert pattern == "projects/(?P<project_id>[0-9]+)/tasks/(?P<task_id>[a-z0-9]+)"
         assert params == {"project_id": "[0-9]+", "task_id": "[a-z0-9]+"}
+
+    def test_get_pattern_with_django_str_parameter(self) -> None:
+        """Test extracting Django-style string path parameter."""
+        mock_route = MagicMock()
+        mock_pattern = MagicMock()
+        mock_pattern.pattern = "^chat/<str:room_name>/$"
+        mock_route.pattern = mock_pattern
+
+        pattern, params = _get_pattern_string_and_params(mock_route)
+        assert pattern == "chat/<str:room_name>/"
+        assert params == {"room_name": "[^/]+"}
+
+    def test_get_pattern_with_django_int_parameter(self) -> None:
+        """Test extracting Django-style integer path parameter."""
+        mock_route = MagicMock()
+        mock_pattern = MagicMock()
+        mock_pattern.pattern = "^user/<int:user_id>/profile/$"
+        mock_route.pattern = mock_pattern
+
+        pattern, params = _get_pattern_string_and_params(mock_route)
+        assert pattern == "user/<int:user_id>/profile/"
+        assert params == {"user_id": "[0-9]+"}
+
+    def test_get_pattern_with_django_slug_parameter(self) -> None:
+        """Test extracting Django-style slug path parameter."""
+        mock_route = MagicMock()
+        mock_pattern = MagicMock()
+        mock_pattern.pattern = "^article/<slug:article_slug>/$"
+        mock_route.pattern = mock_pattern
+
+        pattern, params = _get_pattern_string_and_params(mock_route)
+        assert pattern == "article/<slug:article_slug>/"
+        assert params == {"article_slug": "[-a-zA-Z0-9_]+"}
+
+    def test_get_pattern_with_django_uuid_parameter(self) -> None:
+        """Test extracting Django-style UUID path parameter."""
+        mock_route = MagicMock()
+        mock_pattern = MagicMock()
+        mock_pattern.pattern = "^object/<uuid:object_id>/$"
+        mock_route.pattern = mock_pattern
+
+        pattern, params = _get_pattern_string_and_params(mock_route)
+        assert pattern == "object/<uuid:object_id>/"
+        assert params == {
+            "object_id": "[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}"
+        }
+
+    def test_get_pattern_with_django_path_parameter(self) -> None:
+        """Test extracting Django-style path parameter."""
+        mock_route = MagicMock()
+        mock_pattern = MagicMock()
+        mock_pattern.pattern = "^file/<path:file_path>/$"
+        mock_route.pattern = mock_pattern
+
+        pattern, params = _get_pattern_string_and_params(mock_route)
+        assert pattern == "file/<path:file_path>/"
+        assert params == {"file_path": ".+"}
+
+    def test_get_pattern_with_unknown_django_converter(self) -> None:
+        """Test extracting Django-style parameter with unknown converter type."""
+        mock_route = MagicMock()
+        mock_pattern = MagicMock()
+        mock_pattern.pattern = "^item/<custom:item_id>/$"
+        mock_route.pattern = mock_pattern
+
+        pattern, params = _get_pattern_string_and_params(mock_route)
+        assert pattern == "item/<custom:item_id>/"
+        # Unknown converter types default to [^/]+
+        assert params == {"item_id": "[^/]+"}
+
+    def test_get_pattern_with_multiple_django_parameters(self) -> None:
+        """Test extracting multiple Django-style path parameters."""
+        mock_route = MagicMock()
+        mock_pattern = MagicMock()
+        mock_pattern.pattern = "^<str:category>/<int:year>/<slug:title>/$"
+        mock_route.pattern = mock_pattern
+
+        pattern, params = _get_pattern_string_and_params(mock_route)
+        assert pattern == "<str:category>/<int:year>/<slug:title>/"
+        assert params == {
+            "category": "[^/]+",
+            "year": "[0-9]+",
+            "title": "[-a-zA-Z0-9_]+",
+        }
+
+    def test_get_pattern_with_mixed_parameters(self) -> None:
+        """Test extracting both Django-style and regex path parameters."""
+        mock_route = MagicMock()
+        mock_pattern = MagicMock()
+        mock_pattern.pattern = "^<str:room_name>/(?P<message_id>[0-9]+)/$"
+        mock_route.pattern = mock_pattern
+
+        pattern, params = _get_pattern_string_and_params(mock_route)
+        assert pattern == "<str:room_name>/(?P<message_id>[0-9]+)/"
+        assert params == {
+            "room_name": "[^/]+",
+            "message_id": "[0-9]+",
+        }
+
+    def test_get_pattern_no_parameters(self) -> None:
+        """Test extracting pattern with no parameters."""
+        mock_route = MagicMock()
+        mock_pattern = MagicMock()
+        mock_pattern.pattern = "^simple/path/$"
+        mock_route.pattern = mock_pattern
+
+        pattern, params = _get_pattern_string_and_params(mock_route)
+        assert pattern == "simple/path/"
+        assert params is None
 
 
 class TestIntegration:
@@ -408,3 +517,57 @@ class TestIntegration:
         assert routes[1].handler == mock_consumer
         assert routes[1].base_url == "ws://example.com"
         assert routes[1].full_url == "ws://example.com/ws/nested/"
+
+    @patch("chanx.utils.websocket.get_websocket_application")
+    def test_route_discovery_with_django_path_params(self, mock_get_app: Mock) -> None:
+        """Test route discovery with Django-style path parameters."""
+        # Create mock consumers
+        mock_chat_consumer = MagicMock()
+        mock_chat_consumer.__class__.__name__ = "ChatConsumer"
+        mock_user_consumer = MagicMock()
+        mock_user_consumer.__class__.__name__ = "UserConsumer"
+
+        # Create a route that will be converted to Django-style path
+        # We need to mock this because we can't easily create real Django URLRoute objects
+        mock_route1 = MagicMock()
+        mock_pattern1 = MagicMock()
+        mock_pattern1.pattern = "^chat/<str:room_name>/$"
+        mock_route1.pattern = mock_pattern1
+        mock_route1.callback = mock_chat_consumer
+
+        mock_route2 = MagicMock()
+        mock_pattern2 = MagicMock()
+        mock_pattern2.pattern = "^user/<int:user_id>/profile/$"
+        mock_route2.pattern = mock_pattern2
+        mock_route2.callback = mock_user_consumer
+
+        # Create a router with these routes
+        main_router = MagicMock(spec=URLRouter)
+        main_router.routes = [mock_route1, mock_route2]
+
+        # Set up our mock to return this router
+        mock_get_app.return_value = main_router
+
+        # Call the function being tested
+        mock_request = MagicMock(spec=HttpRequest)
+        mock_request.get_host.return_value = "example.com"
+        mock_request.is_secure.return_value = False
+
+        routes = get_websocket_routes(mock_request)
+
+        # Verify the correct routes were discovered
+        assert len(routes) == 2
+
+        # Check the first route (with str parameter)
+        assert routes[0].path == "chat/<str:room_name>/"
+        assert routes[0].handler == mock_chat_consumer
+        assert routes[0].base_url == "ws://example.com"
+        assert routes[0].path_params == {"room_name": "[^/]+"}
+        assert routes[0].friendly_path == "chat/:room_name/"
+
+        # Check the second route (with int parameter)
+        assert routes[1].path == "user/<int:user_id>/profile/"
+        assert routes[1].handler == mock_user_consumer
+        assert routes[1].base_url == "ws://example.com"
+        assert routes[1].path_params == {"user_id": "[0-9]+"}
+        assert routes[1].friendly_path == "user/:user_id/profile/"

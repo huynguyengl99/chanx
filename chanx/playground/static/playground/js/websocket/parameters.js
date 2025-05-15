@@ -1,6 +1,6 @@
 // Module for handling path and query parameters
 
-import { addStatusMessage } from './messages.js';
+import {addStatusMessage} from './messages.js';
 
 // Cache DOM elements and state
 let elements;
@@ -18,8 +18,7 @@ export function initParameters(domElements, appState) {
 
     // Add event listener to path parameter button
     elements.addPathParamBtn.addEventListener('click', () => {
-        addPathParamRow(elements.pathParamsList, { name: '', pattern: '', description: '' });
-        // After adding a path parameter, update the URL with trailing slash
+        addPathParamRow(elements.pathParamsList, {name: '', pattern: '', description: ''});
         updateUrlPlaceholdersWithTrailingSlash();
     });
 
@@ -31,57 +30,184 @@ export function initParameters(domElements, appState) {
 
     // Initialize with one empty row for query parameters
     document.addEventListener('DOMContentLoaded', () => {
-        // Clear existing rows
         while (elements.queryParamsList.firstChild) {
             elements.queryParamsList.removeChild(elements.queryParamsList.firstChild);
         }
-
         addQueryParamRow(elements.queryParamsList);
     });
 }
 
+// Validate path parameter value against its pattern
+function validatePathParam(value, pattern) {
+    if (!pattern || !value) {
+        return {isValid: true, message: ''};
+    }
+
+    try {
+        const regex = new RegExp(`^${pattern}$`);
+        const isValid = regex.test(value);
+
+        if (!isValid) {
+            let message = `Value doesn't match expected pattern: ${pattern}`;
+
+            // Provide user-friendly messages for common patterns
+            if (pattern === '[0-9]+' || pattern === '\\d+') {
+                message = 'Value must be a number (e.g., 123)';
+            } else if (pattern === '[^/]+') {
+                message = 'Value cannot contain forward slashes';
+            } else if (pattern === '[-a-zA-Z0-9_]+') {
+                message = 'Value must be alphanumeric with hyphens and underscores only';
+            } else if (pattern === '[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}') {
+                message = 'Value must be a valid UUID';
+            }
+
+            return {isValid: false, message};
+        }
+
+        return {isValid: true, message: ''};
+    } catch (error) {
+        console.error('Regex error:', error);
+        return {isValid: false, message: 'Invalid value for this parameter'};
+    }
+}
+
+// Show/hide validation warning for a parameter row
+function showValidationWarning(row, message) {
+    const existingWarning = row.querySelector('.param-validation-warning');
+    if (existingWarning) {
+        existingWarning.remove();
+    }
+
+    const valueInput = row.querySelector('.param-value-input');
+
+    if (message) {
+        const warning = document.createElement('div');
+        warning.className = 'param-validation-warning';
+        warning.textContent = message;
+
+        // Insert after the param-row
+        row.appendChild(warning);
+        valueInput.classList.add('param-error');
+    } else {
+        valueInput.classList.remove('param-error');
+    }
+}
+
 // When loading path parameters
 export function loadPathParameters(endpoint) {
-    // Clear existing path parameters
     elements.pathParamsList.innerHTML = '';
 
-    // If no endpoint is selected or no path params, show empty state
     if (!endpoint || !endpoint.path_params || endpoint.path_params.length === 0) {
-        // Add a placeholder message in the path params list
         const emptyState = document.createElement('div');
         emptyState.className = 'empty-params-state';
         emptyState.textContent = 'No path parameters for this endpoint.';
         elements.pathParamsList.appendChild(emptyState);
 
-        // Hide the real URL display since there are no path parameters
         if (elements.realUrlDisplay) {
             elements.realUrlDisplay.style.display = 'none';
         }
         return;
     }
 
-    // Store the original pattern for replacements
     state.originalPathPattern = endpoint.url;
     state.pathParameters = endpoint.path_params;
 
-    // Add UI for each path parameter - all are now editable
-    endpoint.path_params.forEach(param => {
-        addPathParamRow(elements.pathParamsList, param);
+    // Make sure each param has the pattern properly set
+    endpoint.path_params.forEach((param, index) => {
+        const paramWithPattern = {
+            name: param.name || '',
+            value: param.value || '',
+            description: param.description || `Path parameter: ${param.name}`,
+            pattern: param.pattern || ''
+        };
+
+        addPathParamRow(elements.pathParamsList, paramWithPattern);
     });
 
-    // Show the real URL display
     if (elements.realUrlDisplay) {
         elements.realUrlDisplay.style.display = 'block';
     }
 
-    // Initialize with friendly URL if available
     if (endpoint.friendly_url) {
         elements.wsUrlInput.value = endpoint.friendly_url;
-
-        // Parse initial values from the friendly URL
         parseUrlAndUpdateParams();
         updateRealUrlDisplay();
     }
+}
+
+// Add path parameter row with validation
+function addPathParamRow(container, param) {
+    const emptyState = container.querySelector('.empty-params-state');
+    if (emptyState) {
+        container.removeChild(emptyState);
+    }
+
+    const row = document.createElement('div');
+    row.className = 'param-row';
+
+    // Make sure we have all the necessary data
+    const name = param.name || '';
+    const value = param.value || '';
+    const description = param.description || '';
+    const pattern = param.pattern || '';
+
+    row.innerHTML = `
+        <input type="text" class="param-key-input" value="${name}" placeholder="Parameter">
+        <input type="text" class="param-value-input" value="${value}" placeholder="Value"
+               data-param-name="${name}" data-pattern="${pattern}">
+        <input type="text" class="param-desc-input" value="${description}" placeholder="Description">
+        <div class="param-actions">
+            <span class="param-pattern" >${pattern}</span>
+            <button class="remove-param">×</button>
+        </div>
+    `;
+
+    const valueInput = row.querySelector('.param-value-input');
+    const nameInput = row.querySelector('.param-key-input');
+    const removeBtn = row.querySelector('.remove-param');
+
+    // Add validation on input
+    valueInput.addEventListener('input', () => {
+        const currentValue = valueInput.value;
+        const currentPattern = valueInput.getAttribute('data-pattern');
+
+        const validation = validatePathParam(currentValue, currentPattern);
+        showValidationWarning(row, validation.isValid ? '' : validation.message);
+
+        updateRealUrlDisplay();
+    });
+
+    // Trigger initial validation if there's already a value and pattern
+    if (value && pattern) {
+        const validation = validatePathParam(value, pattern);
+        if (!validation.isValid) {
+            showValidationWarning(row, validation.message);
+        }
+    }
+
+    nameInput.addEventListener('input', (event) => {
+        valueInput.setAttribute('data-param-name', event.target.value);
+        updateUrlPlaceholders();
+        updateRealUrlDisplay();
+    });
+
+    removeBtn.addEventListener('click', () => {
+        container.removeChild(row);
+        if (container.children.length === 0) {
+            const emptyState = document.createElement('div');
+            emptyState.className = 'empty-params-state';
+            emptyState.textContent = 'No path parameters for this endpoint.';
+            container.appendChild(emptyState);
+
+            if (elements.realUrlDisplay) {
+                elements.realUrlDisplay.style.display = 'none';
+            }
+        }
+        updateUrlPlaceholders();
+        updateRealUrlDisplay();
+    });
+
+    container.appendChild(row);
 }
 
 // Parse the current URL and update both path and query parameters
@@ -92,20 +218,17 @@ function parseUrlAndUpdateParams() {
 
 // Extract path parameter from URL segment
 function extractPathParamFromSegment(segment) {
-    // Check if segment starts with ":" or contains regex pattern
     if (segment.startsWith(':')) {
-        return {
-            name: segment.substring(1), // Remove ":" prefix
-            value: ''
-        };
+        return {name: segment.substring(1), value: ''};
+    } else if (segment.includes('<') && segment.includes('>')) {
+        const djangoMatch = segment.match(/<\w+:(\w+)>/);
+        if (djangoMatch && djangoMatch[1]) {
+            return {name: djangoMatch[1], value: ''};
+        }
     } else if (segment.includes('(?P<') && segment.includes('>')) {
-        // Extract parameter name from regex pattern
         const match = segment.match(/\(\?P<([^>]+)>/);
         if (match && match[1]) {
-            return {
-                name: match[1],
-                value: ''
-            };
+            return {name: match[1], value: ''};
         }
     }
     return null;
@@ -114,11 +237,8 @@ function extractPathParamFromSegment(segment) {
 // Parse URL path to find all path parameters
 function extractPathParamsFromUrl(url) {
     try {
-        // Parse the URL and extract path segments
         const urlObj = new URL(url);
         const pathSegments = urlObj.pathname.split('/').filter(segment => segment.length > 0);
-
-        // Look for path parameters (segments starting with ":" or containing regex pattern)
         const params = [];
 
         for (const segment of pathSegments) {
@@ -127,7 +247,6 @@ function extractPathParamsFromUrl(url) {
                 params.push(paramMatch);
             }
         }
-
         return params;
     } catch (error) {
         console.warn('Error parsing URL:', error);
@@ -138,137 +257,129 @@ function extractPathParamsFromUrl(url) {
 // Parse path parameters from the URL
 export function parseExistingPathParams() {
     const currentUrl = elements.wsUrlInput.value;
-
-    // Get current parameter values before clearing the UI
     const currentParams = getPathParams();
     const valueMap = {};
+    const patternMap = {};
 
-    // Create a map of parameter names to their values
+    // Create maps of parameter names to their values and patterns
     currentParams.forEach(param => {
         if (param.name && param.value) {
             valueMap[param.name] = param.value;
         }
+        if (param.name && param.pattern) {
+            patternMap[param.name] = param.pattern;
+        }
     });
 
-    // Extract explicit path parameters from URL
-    const explicitParams = extractPathParamsFromUrl(currentUrl);
+    // Also preserve patterns from the original state
+    if (state.pathParameters) {
+        state.pathParameters.forEach(param => {
+            if (param.name && param.pattern) {
+                patternMap[param.name] = param.pattern;
+            }
+        });
+    }
 
-    // Clear existing path parameters - important for when parameters are removed from URL
+    const explicitParams = extractPathParamsFromUrl(currentUrl);
     elements.pathParamsList.innerHTML = '';
 
     if (explicitParams.length > 0) {
-        // Add UI for each explicit parameter, preserving values if they exist
         explicitParams.forEach(param => {
             const paramObj = {
                 name: param.name,
                 description: `Path parameter: ${param.name}`,
-                pattern: '',
+                // Use the pattern from the map if available, otherwise empty
+                pattern: patternMap[param.name] || '',
                 // Preserve previous value if it exists
                 value: valueMap[param.name] || ''
             };
             addPathParamRow(elements.pathParamsList, paramObj);
         });
 
-        // Update state
+        // Update state but preserve patterns
         state.pathParameters = explicitParams.map(param => ({
             name: param.name,
             description: `Path parameter: ${param.name}`,
-            pattern: ''
+            pattern: patternMap[param.name] || ''
         }));
 
-        // Show the real URL display since we have parameters
         if (elements.realUrlDisplay) {
             elements.realUrlDisplay.style.display = 'block';
         }
-
         return;
     }
 
-    // If no parameters found and we cleared the list, add empty state message
     if (elements.pathParamsList.children.length === 0) {
         const emptyState = document.createElement('div');
         emptyState.className = 'empty-params-state';
         emptyState.textContent = 'No path parameters for this endpoint.';
         elements.pathParamsList.appendChild(emptyState);
 
-        // Hide the real URL display
         if (elements.realUrlDisplay) {
             elements.realUrlDisplay.style.display = 'none';
         }
     }
 }
 
-// Add path parameter row - all parameters are now editable and removable
-function addPathParamRow(container, param) {
-    // If container has an empty state message, remove it
-    const emptyState = container.querySelector('.empty-params-state');
-    if (emptyState) {
-        container.removeChild(emptyState);
-    }
+// Function to collect path parameters
+function getPathParams() {
+    const params = [];
+    const rows = elements.pathParamsList.querySelectorAll('.param-row');
 
-    const row = document.createElement('div');
-    row.className = 'param-row';
+    rows.forEach(row => {
+        const keyInput = row.querySelector('.param-key-input');
+        const valueInput = row.querySelector('.param-value-input');
+        const descInput = row.querySelector('.param-desc-input');
+        const patternElem = row.querySelector('.param-pattern');
 
-    // Create HTML structure for the parameter row - all fields are editable now
-    row.innerHTML = `
-        <input type="text" class="param-key-input" value="${param.name}" placeholder="Parameter">
-        <input type="text" class="param-value-input" value="${param.value || ''}" placeholder="Value" data-param-name="${param.name}">
-        <input type="text" class="param-desc-input" value="${param.description || ''}" placeholder="Description">
-        <div class="param-actions">
-            <span class="param-pattern" title="Pattern: ${param.pattern || ''}">${param.pattern || ''}</span>
-            <button class="remove-param">×</button>
-        </div>
-    `;
+        const name = keyInput ? keyInput.value.trim() : '';
+        const value = valueInput ? valueInput.value.trim() : '';
+        const description = descInput ? descInput.value.trim() : '';
 
-    // Add event listener to value input for URL updating
-    const valueInput = row.querySelector('.param-value-input');
-    valueInput.addEventListener('input', () => {
-        // Only update the real URL display, not the editor
-        updateRealUrlDisplay();
-    });
-
-    // Add event listener to name input for placeholder updating
-    const nameInput = row.querySelector('.param-key-input');
-    nameInput.addEventListener('input', (event) => {
-        // Update data-param-name attribute when the name changes
-        valueInput.setAttribute('data-param-name', event.target.value);
-
-        // Update placeholders in the WebSocket URL editor
-        updateUrlPlaceholders();
-
-        // Update real URL display
-        updateRealUrlDisplay();
-    });
-
-    // Add event listener to remove button
-    const removeBtn = row.querySelector('.remove-param');
-    removeBtn.addEventListener('click', () => {
-        container.removeChild(row);
-
-        // If no parameters left, add empty state message
-        if (container.children.length === 0) {
-            const emptyState = document.createElement('div');
-            emptyState.className = 'empty-params-state';
-            emptyState.textContent = 'No path parameters for this endpoint.';
-            container.appendChild(emptyState);
-
-            // Hide the real URL display
-            if (elements.realUrlDisplay) {
-                elements.realUrlDisplay.style.display = 'none';
-            }
+        // Get pattern from both the display element and the data attribute
+        let pattern = '';
+        if (patternElem) {
+            pattern = patternElem.textContent.trim();
+        }
+        if (!pattern && valueInput) {
+            pattern = valueInput.getAttribute('data-pattern') || '';
         }
 
-        // Update placeholders in the WebSocket URL
-        updateUrlPlaceholders();
-
-        // Update real URL display
-        updateRealUrlDisplay();
+        if (name) {
+            params.push({name, value, description, pattern});
+        }
     });
 
-    container.appendChild(row);
+    return params;
 }
 
-// Check if a URL already has trailing slash
+// Update the real URL display under the URL editor
+function updateRealUrlDisplay() {
+    if (!elements.realUrlDisplay) return;
+
+    const urlInputValue = elements.wsUrlInput.value;
+    const pathParams = getPathParams();
+
+    if (pathParams.length === 0) {
+        elements.realUrlDisplay.style.display = 'none';
+        return;
+    }
+
+    let realUrl = urlInputValue;
+    pathParams.forEach(param => {
+        if (param.name) {
+            const valueToUse = param.value || `:${param.name}`;
+            realUrl = realUrl.replace(new RegExp(`:${param.name}(?=/|$)`, 'g'), encodeURIComponent(valueToUse));
+            realUrl = realUrl.replace(new RegExp(`<\\w+:${param.name}>`, 'g'), encodeURIComponent(valueToUse));
+            realUrl = realUrl.replace(new RegExp(`\\(\\?P<${param.name}>[^)]+\\)`, 'g'), encodeURIComponent(valueToUse));
+        }
+    });
+
+    elements.realUrlDisplay.textContent = `Real URL: ${realUrl}`;
+    elements.realUrlDisplay.style.display = 'block';
+}
+
+// Helper functions for URL management
 function hasTrailingSlash(url) {
     try {
         const urlObj = new URL(url);
@@ -278,12 +389,8 @@ function hasTrailingSlash(url) {
     }
 }
 
-// Update URL placeholders with trailing slash (for "Add Path Parameter" button)
 function updateUrlPlaceholdersWithTrailingSlash() {
-    // First do the normal placeholder update
     updateUrlPlaceholders();
-
-    // Then ensure we have a trailing slash
     const currentUrl = elements.wsUrlInput.value;
 
     if (!hasTrailingSlash(currentUrl)) {
@@ -291,8 +398,6 @@ function updateUrlPlaceholdersWithTrailingSlash() {
             const urlObj = new URL(currentUrl);
             urlObj.pathname = urlObj.pathname + '/';
             elements.wsUrlInput.value = urlObj.toString();
-
-            // Update real URL display
             updateRealUrlDisplay();
         } catch (error) {
             console.warn('Error adding trailing slash:', error);
@@ -300,191 +405,42 @@ function updateUrlPlaceholdersWithTrailingSlash() {
     }
 }
 
-// Helper to extract path structure from URL
-function getPathStructure(url) {
-    try {
-        const urlObj = new URL(url);
-        const fullPath = urlObj.pathname;
-
-        // Find positions of all parameter placeholders
-        const placeholderPositions = [];
-        let match;
-
-        // Find all ":param" placeholders
-        const paramRegex = /:([^\/]+)/g;
-        while ((match = paramRegex.exec(fullPath)) !== null) {
-            placeholderPositions.push({
-                start: match.index,
-                end: match.index + match[0].length,
-                name: match[1],
-                type: 'simple'
-            });
-        }
-
-        // Find all regex pattern placeholders
-        const regexParamRegex = /\(\?P<([^>]+)>[^)]+\)/g;
-        while ((match = regexParamRegex.exec(fullPath)) !== null) {
-            placeholderPositions.push({
-                start: match.index,
-                end: match.index + match[0].length,
-                name: match[1],
-                type: 'regex'
-            });
-        }
-
-        // Sort by position
-        placeholderPositions.sort((a, b) => a.start - b.start);
-
-        return {
-            fullPath,
-            placeholderPositions,
-            hasTrailingSlash: fullPath.endsWith('/')
-        };
-    } catch (error) {
-        console.warn('Error getting path structure:', error);
-        return {
-            fullPath: '',
-            placeholderPositions: [],
-            hasTrailingSlash: false
-        };
-    }
-}
-
-// Update placeholders in the WebSocket URL editor based on path parameter names
+// Simplified URL placeholder update
 function updateUrlPlaceholders() {
-    // Get current URL
     const currentUrl = elements.wsUrlInput.value;
+    const pathParams = getPathParams();
 
     try {
-        // Get path structure (to understand where parameters are in the path)
-        const { fullPath, placeholderPositions, hasTrailingSlash } = getPathStructure(currentUrl);
-
-        // Get all path parameters from the UI
-        const pathParams = getPathParams();
-
-        // If no parameters, remove all placeholders from URL
-        if (pathParams.length === 0) {
-            // Remove path parameter placeholders but preserve any normal segments
-            const cleanedPath = fullPath.replace(/\/:[^\/]+|\/\(\?P<[^>]+>[^)]+\)/g, '');
-
-            const urlObj = new URL(currentUrl);
-            urlObj.pathname = cleanedPath || '/';
-            elements.wsUrlInput.value = urlObj.toString();
-            return;
-        }
-
-        // Parse the URL
         const urlObj = new URL(currentUrl);
+        let newPath = urlObj.pathname;
 
-        // If there are placeholders, update them with current params
-        if (placeholderPositions.length > 0) {
-            // Create map of processed parameters
-            const processedParams = new Set();
+        // Remove existing placeholders and rebuild with current params
+        newPath = newPath.replace(/\/:[^\/]+/g, '')
+            .replace(/\/<\w+:\w+>/g, '')
+            .replace(/\/\(\?P<[^>]+>[^)]+\)/g, '');
 
-            // We'll build a new path by replacing placeholders
-            let newPath = fullPath;
-
-            // First handle updating existing placeholders
-            // We need to process them in reverse order to avoid position shifts
-            for (let i = placeholderPositions.length - 1; i >= 0; i--) {
-                const pos = placeholderPositions[i];
-
-                // Check if we have a parameter that matches this position
-                if (i < pathParams.length) {
-                    const param = pathParams[i];
-                    processedParams.add(i);
-
-                    // Replace the placeholder with the new parameter name
-                    if (pos.type === 'simple') {
-                        newPath = newPath.substring(0, pos.start) +
-                                  `:${param.name}` +
-                                  newPath.substring(pos.end);
-                    } else {
-                        // For regex placeholders, keep the pattern but update the name
-                        const before = newPath.substring(0, pos.start);
-                        const after = newPath.substring(pos.end);
-                        const middle = newPath.substring(pos.start, pos.end)
-                            .replace(/\(\?P<[^>]+>/, `(?P<${param.name}>`);
-
-                        newPath = before + middle + after;
-                    }
-                } else {
-                    // If we have more placeholders than parameters, remove excess ones
-                    // Check if this is a standalone parameter or part of a path segment
-                    const isStandalone = (
-                        (pos.start === 0 || newPath[pos.start - 1] === '/') &&
-                        (pos.end === newPath.length || newPath[pos.end] === '/')
-                    );
-
-                    if (isStandalone) {
-                        // Remove the entire segment including slash
-                        const slashPos = pos.start > 0 ? pos.start - 1 : pos.start;
-                        newPath = newPath.substring(0, slashPos) +
-                                 newPath.substring(pos.end);
-                    } else {
-                        // Just remove the placeholder itself
-                        newPath = newPath.substring(0, pos.start) +
-                                 newPath.substring(pos.end);
-                    }
-                }
-            }
-
-            // Handle any parameters that didn't match existing placeholders
-            pathParams.forEach((param, index) => {
-                if (!processedParams.has(index)) {
-                    // This is a new parameter, need to add it to the path
-                    if (newPath.endsWith('/')) {
-                        // If path ends with slash, just append the parameter
-                        newPath += `:${param.name}`;
-                    } else {
-                        // Otherwise add slash then parameter
-                        newPath += `/:${param.name}`;
-                    }
-                }
-            });
-
-            // Make sure we always end with a trailing slash
-            if (!newPath.endsWith('/')) {
+        // Add current parameters
+        pathParams.forEach((param, index) => {
+            if (index === 0 && !newPath.endsWith('/')) {
+                newPath += '/';
+            } else if (index > 0) {
                 newPath += '/';
             }
+            newPath += `:${param.name}`;
+        });
 
-            // Update the URL
-            urlObj.pathname = newPath;
-            elements.wsUrlInput.value = urlObj.toString();
+        if (!newPath.endsWith('/')) {
+            newPath += '/';
         }
-        // If no placeholders but we have parameters, add them
-        else if (pathParams.length > 0) {
-            let newPath = urlObj.pathname;
 
-            // Add parameters to the path
-            pathParams.forEach((param, index) => {
-                if (index === 0) {
-                    // For first parameter, check if we need a slash
-                    if (!newPath.endsWith('/')) {
-                        newPath += '/';
-                    }
-                    newPath += `:${param.name}`;
-                } else {
-                    // For subsequent parameters, always add a slash
-                    newPath += `/:${param.name}`;
-                }
-            });
-
-            // Always add trailing slash
-            if (!newPath.endsWith('/')) {
-                newPath += '/';
-            }
-
-            // Update URL
-            urlObj.pathname = newPath;
-            elements.wsUrlInput.value = urlObj.toString();
-        }
+        urlObj.pathname = newPath;
+        elements.wsUrlInput.value = urlObj.toString();
     } catch (error) {
         console.warn('Error updating URL placeholders:', error);
     }
 }
 
-// Add query parameter row
+// Query parameter functions
 function addQueryParamRow(container) {
     const row = document.createElement('div');
     row.className = 'param-row';
@@ -498,14 +454,12 @@ function addQueryParamRow(container) {
         </div>
     `;
 
-    // Add event listener to remove button
     const removeBtn = row.querySelector('.remove-param');
     removeBtn.addEventListener('click', () => {
         container.removeChild(row);
         updateWebSocketUrl();
     });
 
-    // Add event listeners to inputs for URL updating
     const inputs = row.querySelectorAll('input');
     inputs.forEach(input => {
         input.addEventListener('input', updateWebSocketUrl);
@@ -514,7 +468,6 @@ function addQueryParamRow(container) {
     container.appendChild(row);
 }
 
-// Function to collect query parameters
 function getQueryParams() {
     const params = [];
     const rows = elements.queryParamsList.querySelectorAll('.param-row');
@@ -534,68 +487,6 @@ function getQueryParams() {
     return params;
 }
 
-// Function to collect path parameters
-function getPathParams() {
-    const params = [];
-    const rows = elements.pathParamsList.querySelectorAll('.param-row');
-
-    rows.forEach(row => {
-        const keyInput = row.querySelector('.param-key-input');
-        const valueInput = row.querySelector('.param-value-input');
-        const descInput = row.querySelector('.param-desc-input');
-        const patternElem = row.querySelector('.param-pattern');
-
-        const name = keyInput.value.trim();
-        const value = valueInput.value.trim();
-        const description = descInput.value.trim();
-        const pattern = patternElem ? patternElem.textContent.trim() : '';
-
-        if (name) {
-            params.push({name, value, description, pattern});
-        }
-    });
-
-    return params;
-}
-
-// Update the real URL display under the URL editor
-function updateRealUrlDisplay() {
-    if (!elements.realUrlDisplay) return;
-
-    // Get the current URL input value (with placeholders)
-    const urlInputValue = elements.wsUrlInput.value;
-
-    // Parse path parameters
-    const pathParams = getPathParams();
-
-    // If no params, hide real URL display
-    if (pathParams.length === 0) {
-        elements.realUrlDisplay.style.display = 'none';
-        return;
-    }
-
-    // Calculate the real URL by applying all path parameter values
-    let realUrl = urlInputValue;
-    pathParams.forEach(param => {
-        if (param.name) {
-            const valueToUse = param.value || `:${param.name}`;
-
-            // Replace :paramName syntax with actual value
-            realUrl = realUrl.replace(new RegExp(`:${param.name}(?=/|$)`, 'g'), encodeURIComponent(valueToUse));
-
-            // Also replace regex patterns (?P<n>pattern) with the value
-            realUrl = realUrl.replace(new RegExp(`\\(\\?P<${param.name}>[^)]+\\)`, 'g'), encodeURIComponent(valueToUse));
-        }
-    });
-
-    // Update the display
-    elements.realUrlDisplay.textContent = `Real URL: ${realUrl}`;
-
-    // Show display
-    elements.realUrlDisplay.style.display = 'block';
-}
-
-// Update WebSocket URL with query parameters
 export function updateWebSocketUrl() {
     const baseUrl = elements.wsUrlInput.value.split('?')[0];
     const params = getQueryParams();
@@ -604,43 +495,31 @@ export function updateWebSocketUrl() {
         const queryString = params
             .map(param => `${encodeURIComponent(param.key)}=${encodeURIComponent(param.value)}`)
             .join('&');
-
         elements.wsUrlInput.value = `${baseUrl}?${queryString}`;
     } else {
         elements.wsUrlInput.value = baseUrl;
     }
 
-    // Update the real URL display
     updateRealUrlDisplay();
 }
 
-// When no endpoint has path parameters, show Query Params tab as active
 export function updateTabVisibility(endpoint) {
-    // Check if the endpoint has path parameters
     const hasPathParams = endpoint && endpoint.path_params && endpoint.path_params.length > 0;
-
-    // Get the tab buttons
     const pathParamsTab = document.querySelector('.tab-button[data-tab="connection-path-params"]');
     const queryParamsTab = document.querySelector('.tab-button[data-tab="connection-params"]');
-
-    // Get the tab content elements
     const pathParamsContent = document.getElementById('connection-path-params');
     const queryParamsContent = document.getElementById('connection-params');
 
     if (!hasPathParams) {
-        // If no path params, make Query Params tab active
         pathParamsTab.classList.remove('active');
         queryParamsTab.classList.add('active');
-
         pathParamsContent.classList.remove('active');
         queryParamsContent.classList.add('active');
 
-        // Hide the real URL display
         if (elements.realUrlDisplay) {
             elements.realUrlDisplay.style.display = 'none';
         }
     } else {
-        // If endpoint has path params, show the real URL display
         if (elements.realUrlDisplay) {
             elements.realUrlDisplay.style.display = 'block';
             updateRealUrlDisplay();
@@ -648,18 +527,15 @@ export function updateTabVisibility(endpoint) {
     }
 }
 
-// Parse existing query parameters from the URL
 export function parseExistingQueryParams() {
     try {
         const url = new URL(elements.wsUrlInput.value);
         const params = Array.from(url.searchParams.entries());
 
-        // Clear existing query params UI
         while (elements.queryParamsList.firstChild) {
             elements.queryParamsList.removeChild(elements.queryParamsList.firstChild);
         }
 
-        // Add UI for each param
         if (params.length > 0) {
             params.forEach(([key, value]) => {
                 const row = document.createElement('div');
@@ -674,14 +550,12 @@ export function parseExistingQueryParams() {
                     </div>
                 `;
 
-                // Add event listener to remove button
                 const removeBtn = row.querySelector('.remove-param');
                 removeBtn.addEventListener('click', () => {
                     elements.queryParamsList.removeChild(row);
                     updateWebSocketUrl();
                 });
 
-                // Add event listeners to inputs for URL updating
                 const inputs = row.querySelectorAll('input');
                 inputs.forEach(input => {
                     input.addEventListener('input', updateWebSocketUrl);
@@ -690,11 +564,9 @@ export function parseExistingQueryParams() {
                 elements.queryParamsList.appendChild(row);
             });
         } else {
-            // Add one empty row if no params found
             addQueryParamRow(elements.queryParamsList);
         }
     } catch (error) {
-        // If URL parsing fails, keep the UI as is
         console.warn('Failed to parse WebSocket URL:', error);
     }
 }

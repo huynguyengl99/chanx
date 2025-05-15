@@ -1,3 +1,9 @@
+## v0.7.1 (2025-05-15)
+
+### Fix
+
+- **docs**: update testing docs to remind user to set SEND_COMPLETION to true for properly testing
+
 ## v0.7.0 (2025-05-15)
 
 ### Feat

@@ -92,7 +92,7 @@ license = {file = "LICENSE"}
 name = "chanx"
 readme = "README.rst"
 requires-python = ">=3.10,<4.0"
-version = "0.8.0"
+version = "0.9.0"
 
 [project.optional-dependencies]
 camel-case = [

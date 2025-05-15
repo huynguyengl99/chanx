@@ -1,3 +1,9 @@
+## v0.9.0 (2025-05-15)
+
+### Feat
+
+- **playground**: camelize websocket endpoint responses and update affected variables
+
 ## v0.8.0 (2025-05-15)
 
 ### Feat

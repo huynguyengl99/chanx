@@ -12,10 +12,7 @@ complex applications. The IncomingMessage class only supports PingMessage.
 
 from typing import Literal
 
-from pydantic import Field
-
-from chanx.messages.base import BaseIncomingMessage, BaseMessage
-from chanx.settings import chanx_settings
+from chanx.messages.base import BaseMessage
 
 
 class PingMessage(BaseMessage):
@@ -25,16 +22,4 @@ class PingMessage(BaseMessage):
     payload: None = None
 
 
-class IncomingMessage(BaseIncomingMessage):
-    """
-    Ready-to-use implementation of BaseIncomingMessage.
-
-    Provides a concrete incoming message container with support for PingMessage only.
-    Can be used directly for simple applications that only need ping functionality,
-    or as a starting point for more complex implementations.
-
-    Attributes:
-        message: The wrapped message object, using action as discriminator
-    """
-
-    message: PingMessage = Field(discriminator=chanx_settings.MESSAGE_ACTION_KEY)
+IncomingMessage = PingMessage

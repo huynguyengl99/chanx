@@ -1,7 +1,6 @@
 from typing import Any, cast
 
 from chanx.generic.websocket import AsyncJsonWebsocketConsumer
-from chanx.messages.base import BaseMessage
 from chanx.messages.incoming import PingMessage
 from chanx.messages.outgoing import PongMessage
 
@@ -17,9 +16,9 @@ from chat.serializers import ChatMessageSerializer
 from chat.utils import name_group_chat
 
 
-class ChatDetailConsumer(AsyncJsonWebsocketConsumer[GroupChat]):
-    INCOMING_MESSAGE_SCHEMA = ChatIncomingMessage
-    OUTGOING_GROUP_MESSAGE_SCHEMA = OutgoingGroupMessage
+class ChatDetailConsumer(
+    AsyncJsonWebsocketConsumer[ChatIncomingMessage, OutgoingGroupMessage, GroupChat]
+):
     permission_classes = [IsGroupChatMember]
     queryset = GroupChat.objects.get_queryset()
 
@@ -27,21 +26,20 @@ class ChatDetailConsumer(AsyncJsonWebsocketConsumer[GroupChat]):
     groups: list[str]
 
     async def build_groups(self) -> list[str]:
-        assert self.obj
         self.group_name = name_group_chat(self.obj.pk)
         return [self.group_name]
 
     async def post_authentication(self) -> None:
         assert self.user is not None
-        assert self.obj
         self.member = await self.obj.members.select_related("user").aget(user=self.user)
 
-    async def receive_message(self, message: BaseMessage, **kwargs: Any) -> None:
+    async def receive_message(
+        self, message: ChatIncomingMessage, **kwargs: Any
+    ) -> None:
         match message:
             case PingMessage():
                 await self.send_message(PongMessage())
             case NewChatMessage(payload=message_payload):
-                assert self.obj
                 new_message = await ChatMessage.objects.acreate(
                     content=message_payload.content,
                     group_chat_id=self.obj.pk,
@@ -61,5 +59,3 @@ class ChatDetailConsumer(AsyncJsonWebsocketConsumer[GroupChat]):
                     join_group_payload.group_name, self.channel_name
                 )
                 self.groups.extend(join_group_payload.group_name)
-            case _:
-                pass

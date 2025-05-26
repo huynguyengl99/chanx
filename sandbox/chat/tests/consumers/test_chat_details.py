@@ -139,7 +139,7 @@ class TestChatDetailConsumer(WebsocketTestCase):
         all_json = await self.auth_communicator.receive_all_json()
         error_item = all_json[0]
         error_message = ErrorMessage.model_validate(error_item)
-        assert error_message.payload[0]["type"] == "literal_error"
+        assert error_message.payload[0]["type"] == "union_tag_invalid"
 
     @override_chanx_settings(SEND_COMPLETION=True)
     async def test_send_with_completion_message(self) -> None:

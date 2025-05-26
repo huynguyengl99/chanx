@@ -1,6 +1,6 @@
 from typing import Literal
 
-from chanx.messages.base import BaseIncomingMessage, BaseMessage
+from chanx.messages.base import BaseMessage
 from chanx.messages.incoming import PingMessage
 from pydantic import BaseModel
 
@@ -23,5 +23,4 @@ class ReplyMessage(BaseMessage):
     payload: MessagePayload
 
 
-class AssistantIncomingMessage(BaseIncomingMessage):
-    message: NewMessage | PingMessage
+AssistantIncomingMessage = NewMessage | PingMessage

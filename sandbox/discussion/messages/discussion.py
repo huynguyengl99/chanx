@@ -2,9 +2,7 @@ from typing import Literal
 
 from chanx.messages.base import (
     BaseGroupMessage,
-    BaseIncomingMessage,
     BaseMessage,
-    BaseOutgoingGroupMessage,
 )
 from chanx.messages.incoming import PingMessage
 from pydantic import BaseModel
@@ -25,8 +23,7 @@ class ReplyMessage(BaseMessage):
     payload: DiscussionMessagePayload
 
 
-class DiscussionIncomingMessage(BaseIncomingMessage):
-    message: NewDiscussionMessage | PingMessage
+DiscussionIncomingMessage = NewDiscussionMessage | PingMessage
 
 
 class DiscussionMemberMessage(BaseGroupMessage):
@@ -34,5 +31,4 @@ class DiscussionMemberMessage(BaseGroupMessage):
     payload: DiscussionMessagePayload
 
 
-class DiscussionGroupMessage(BaseOutgoingGroupMessage):
-    group_message: DiscussionMemberMessage
+DiscussionGroupMessage = DiscussionMemberMessage

@@ -1,6 +1,6 @@
 from typing import Any, Literal
 
-from chanx.messages.base import BaseGroupMessage, BaseOutgoingGroupMessage
+from chanx.messages.base import BaseGroupMessage
 
 
 class MemberMessage(BaseGroupMessage):
@@ -8,5 +8,4 @@ class MemberMessage(BaseGroupMessage):
     payload: dict[str, Any]
 
 
-class OutgoingGroupMessage(BaseOutgoingGroupMessage):
-    group_message: MemberMessage
+OutgoingGroupMessage = MemberMessage

@@ -13,9 +13,7 @@ from chanx.constants import MISSING_PYHUMPS_ERROR
 from chanx.generic.websocket import AsyncJsonWebsocketConsumer
 from chanx.messages.base import (
     BaseGroupMessage,
-    BaseIncomingMessage,
     BaseMessage,
-    BaseOutgoingGroupMessage,
 )
 from chanx.messages.incoming import IncomingMessage, PingMessage
 from chanx.messages.outgoing import PongMessage
@@ -26,7 +24,7 @@ from pydantic import BaseModel
 from structlog.testing import capture_logs
 
 
-class MyConsumer(AsyncJsonWebsocketConsumer):
+class MyConsumer(AsyncJsonWebsocketConsumer[IncomingMessage]):
     permission_classes = [AllowAny]
     authentication_classes = [SessionAuthentication]
     send_completion = True
@@ -35,14 +33,11 @@ class MyConsumer(AsyncJsonWebsocketConsumer):
     log_sent_message = True
     log_ignored_actions = set()
     send_authentication_message = True
-    INCOMING_MESSAGE_SCHEMA = IncomingMessage
 
-    async def receive_message(self, message: BaseMessage, **kwargs: Any) -> None:
+    async def receive_message(self, message: IncomingMessage, **kwargs: Any) -> None:
         match message:
             case PingMessage():
                 await self.send_message(PongMessage())
-            case _:
-                pass
 
 
 class MyConsumerTestCase(WebsocketTestCase):
@@ -88,13 +83,11 @@ class MyConsumerTestCase(WebsocketTestCase):
         assert not res
 
 
-class InvalidConsumer(AsyncJsonWebsocketConsumer):
-    async def receive_message(self, message: BaseMessage, **kwargs: Any) -> None:
+class InvalidConsumer(AsyncJsonWebsocketConsumer[IncomingMessage]):
+    async def receive_message(self, message: IncomingMessage, **kwargs: Any) -> None:
         match message:
             case PingMessage():
                 await self.send_message(PongMessage())
-            case _:
-                pass
 
 
 class InvalidConsumerTestCase(WebsocketTestCase):
@@ -109,8 +102,8 @@ class InvalidConsumerTestCase(WebsocketTestCase):
             assert str(e) == "INCOMING_MESSAGE_SCHEMA attribute is required."
 
 
-class NotImplementedConsumer(AsyncJsonWebsocketConsumer):
-    INCOMING_MESSAGE_SCHEMA = IncomingMessage
+class NotImplementedConsumer(AsyncJsonWebsocketConsumer[IncomingMessage]):
+    pass
 
 
 class NotImplementedConsumerTestCase(WebsocketTestCase):
@@ -130,11 +123,12 @@ class AnonymousGroupMemberMessage(BaseGroupMessage):
     payload: Any
 
 
-class AnonymousGroupMessage(BaseOutgoingGroupMessage):
-    group_message: AnonymousGroupMemberMessage
+AnonymousGroupMessage = AnonymousGroupMemberMessage
 
 
-class AnonymousGroupConsumer(AsyncJsonWebsocketConsumer):
+class AnonymousGroupConsumer(
+    AsyncJsonWebsocketConsumer[IncomingMessage, AnonymousGroupMessage]
+):
     permission_classes = [AllowAny]
     authentication_classes = []
     send_completion = False
@@ -143,8 +137,6 @@ class AnonymousGroupConsumer(AsyncJsonWebsocketConsumer):
     log_sent_message = True
     log_ignored_actions = set()
     send_authentication_message = True
-    INCOMING_MESSAGE_SCHEMA = IncomingMessage
-    OUTGOING_GROUP_MESSAGE_SCHEMA = AnonymousGroupMessage
 
     groups = ["anonymous_group"]
 
@@ -191,14 +183,12 @@ class SnakeMessage(BaseMessage):
     payload: SnakePayload
 
 
-class SnakeIncomingMessage(BaseIncomingMessage):
-    message: SnakeMessage
+SnakeIncomingMessage = SnakeMessage
 
 
-class CamelizeConsumer(AsyncJsonWebsocketConsumer):
+class CamelizeConsumer(AsyncJsonWebsocketConsumer[SnakeIncomingMessage]):
     permission_classes = [AllowAny]
     authentication_classes = []
-    INCOMING_MESSAGE_SCHEMA = SnakeIncomingMessage
 
     async def receive_message(self, message: BaseMessage, **kwargs: Any) -> None:
         match message:
@@ -251,3 +241,115 @@ class CamelizeConsumerTestCase(WebsocketTestCase):
             await self.auth_communicator.connect()
 
         assert MISSING_PYHUMPS_ERROR in str(excinfo.value)
+
+
+class TestInitSubclassValidation:
+    """Test cases for __init_subclass__ validation."""
+
+    def test_missing_generic_parameter_raises_error(self) -> None:
+        """Test that defining a consumer without generic parameters raises ValueError."""
+        with pytest.raises(ValueError) as excinfo:
+            # This should trigger the ValueError in __init_subclass__
+            class InvalidConsumerNoGenerics(AsyncJsonWebsocketConsumer):  # type: ignore[type-arg]
+                permission_classes = [AllowAny]
+
+                async def receive_message(self, message: Any, **kwargs: Any) -> None:
+                    pass
+
+        # Verify the error message contains the expected content
+        error_message = str(excinfo.value)
+        assert "InvalidConsumerNoGenerics" in error_message
+        assert (
+            "must specify at least the incoming message type as a generic parameter"
+            in error_message
+        )
+        assert (
+            "Hint: class InvalidConsumerNoGenerics(AsyncJsonWebsocketConsumer[YourMessageType])"
+            in error_message
+        )
+
+    def test_consumer_with_no_matching_base_class(self) -> None:
+        """Test that a consumer with no matching AsyncJsonWebsocketConsumer base doesn't set schemas."""
+
+        # Create a consumer that inherits from a different base but still has orig_bases
+        class SomeOtherBase:
+            pass
+
+        class ConsumerWithDifferentBase(
+            AsyncJsonWebsocketConsumer[IncomingMessage], SomeOtherBase
+        ):
+            permission_classes = [AllowAny]
+
+            async def receive_message(
+                self, message: IncomingMessage, **kwargs: Any
+            ) -> None:
+                pass
+
+        # This should work fine and set the schemas from the AsyncJsonWebsocketConsumer[IncomingMessage] base
+        assert (
+            getattr(ConsumerWithDifferentBase, "_INCOMING_MESSAGE_SCHEMA")
+            == IncomingMessage
+        )  # noqa
+
+    def test_consumer_inheriting_from_another_consumer(self) -> None:
+        """Test that a consumer inheriting from another consumer doesn't trigger validation again."""
+
+        # First create a valid consumer
+        class BaseConsumer(AsyncJsonWebsocketConsumer[IncomingMessage]):
+            permission_classes = [AllowAny]
+
+            async def receive_message(
+                self, message: IncomingMessage, **kwargs: Any
+            ) -> None:
+                pass
+
+        # Then inherit from it - this should not trigger the ValueError
+        # because it doesn't have AsyncJsonWebsocketConsumer as a direct base
+        class DerivedConsumer(BaseConsumer):
+            authentication_classes = [SessionAuthentication]
+
+        # Verify it inherits the schemas
+        assert getattr(DerivedConsumer, "_INCOMING_MESSAGE_SCHEMA") == IncomingMessage
+
+    def test_valid_generic_parameter_works(self) -> None:
+        """Test that defining a consumer with proper generic parameters works."""
+
+        # This should NOT raise an error
+        class ValidConsumerWithGenerics(AsyncJsonWebsocketConsumer[IncomingMessage]):
+            permission_classes = [AllowAny]
+
+            async def receive_message(
+                self, message: IncomingMessage, **kwargs: Any
+            ) -> None:
+                pass
+
+        # Verify the schemas were set correctly
+        assert (
+            getattr(ValidConsumerWithGenerics, "_INCOMING_MESSAGE_SCHEMA")
+            == IncomingMessage
+        )
+        assert (
+            getattr(ValidConsumerWithGenerics, "_OUTGOING_GROUP_MESSAGE_SCHEMA") is None
+        )
+
+    def test_multiple_generic_parameters_works(self) -> None:
+        """Test that defining a consumer with multiple generic parameters works."""
+
+        class MultiGenericConsumer(
+            AsyncJsonWebsocketConsumer[IncomingMessage, AnonymousGroupMessage]
+        ):
+            permission_classes = [AllowAny]
+
+            async def receive_message(
+                self, message: IncomingMessage, **kwargs: Any
+            ) -> None:
+                pass
+
+        # Verify both schemas were set correctly
+        assert (
+            getattr(MultiGenericConsumer, "_INCOMING_MESSAGE_SCHEMA") == IncomingMessage
+        )
+        assert (
+            getattr(MultiGenericConsumer, "_OUTGOING_GROUP_MESSAGE_SCHEMA")
+            == AnonymousGroupMessage
+        )

@@ -26,4 +26,4 @@ section-order = ["future", "standard-library", "django", "third-party", "first-p
 django = ["channels", "django", "rest_framework"]
 
 [lint.per-file-ignores]
-"sandbox/*/test_*.py" = ["C901", "N806", "PLR0911", "PLR2004"]
+"sandbox/*/test_*.py" = ["B009", "C901", "N806", "PLR0911", "PLR2004"]

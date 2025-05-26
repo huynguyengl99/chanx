@@ -59,8 +59,10 @@ class TestChatConsumer(WebsocketTestCase):
         all_json = await self.auth_communicator.receive_all_json()
         error_item = all_json[0]
         error_message = ErrorMessage.model_validate(error_item)
-        assert error_message.payload[0]["type"] == "literal_error"
-        assert error_message.payload[0]["msg"] == "Input should be 'new_message'"
+        assert error_message.payload[0]["type"] == "union_tag_invalid"
+        assert error_message.payload[0]["msg"] == (
+            "Input tag 'Invalid action' found using 'action' does not match any of the expected tags: 'new_message', 'ping'"
+        )
 
         await self.auth_communicator.disconnect()
 

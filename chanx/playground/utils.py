@@ -18,7 +18,6 @@ from typing import (
     cast,
     get_args,
     get_origin,
-    get_type_hints,
 )
 
 from django.http import HttpRequest
@@ -28,7 +27,7 @@ from pydantic import BaseModel
 from typing_extensions import TypedDict
 
 from chanx.constants import MISSING_PYHUMPS_ERROR
-from chanx.messages.base import BaseIncomingMessage
+from chanx.messages.base import BaseMessage
 from chanx.settings import chanx_settings
 from chanx.utils.websocket import RouteInfo, get_websocket_routes, transform_routes
 
@@ -165,8 +164,8 @@ def _get_handler_info(
     consumer_class: Any = handler.consumer_class
 
     # Try to get message schema from the consumer class
-    incoming_message_schema: type[BaseIncomingMessage] | None = getattr(
-        consumer_class, "INCOMING_MESSAGE_SCHEMA", None
+    incoming_message_schema: type[BaseMessage] | None = getattr(
+        consumer_class, "_INCOMING_MESSAGE_SCHEMA", None
     )
 
     message_examples = (
@@ -205,7 +204,7 @@ def _get_handler_info(
     }
 
 
-def _create_example(msg_type: type[BaseModel]) -> MessageExample:
+def _create_example(msg_type: type[BaseMessage]) -> MessageExample:
     """
     Create an example for a specific message type.
 
@@ -233,7 +232,7 @@ def _create_example(msg_type: type[BaseModel]) -> MessageExample:
 
 
 def get_message_examples(
-    message_type: type[BaseIncomingMessage] | None = None,
+    message_type: type[BaseMessage] | None = None,
 ) -> list[MessageExample]:
     """
     Generate examples for message types using discriminator pattern.
@@ -255,19 +254,13 @@ def get_message_examples(
 
     # Find the discriminated union field in the Message class
     try:
-        type_hints = get_type_hints(message_type)
-        message_field_type = type_hints.get("message")
-
-        if not message_field_type:
-            return examples
-
         # If it's not a union type, just generate a single example
-        origin = get_origin(message_field_type)
+        origin = get_origin(message_type)
         if not (origin is Union or origin is UnionType):
-            return [_create_example(message_field_type)]
+            return [_create_example(message_type)]
 
         # For each message type in the union, create an example
-        union_types = get_args(message_field_type)
+        union_types = get_args(message_type)
         for msg_type in union_types:
             examples.append(_create_example(msg_type))
     except Exception:

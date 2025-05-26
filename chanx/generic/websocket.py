@@ -22,15 +22,19 @@ messaging.
 """
 
 import asyncio
+import sys
 import uuid
 from abc import ABC, abstractmethod
 from collections.abc import Iterable, Sequence
 from types import ModuleType
 from typing import (
+    Annotated,
     Any,
     Generic,
     Literal,
     cast,
+    get_args,
+    get_origin,
 )
 
 from channels.generic.websocket import (
@@ -47,15 +51,14 @@ from rest_framework.permissions import (
 
 import structlog
 from asgiref.typing import WebSocketConnectEvent, WebSocketDisconnectEvent
-from pydantic import ValidationError
-from typing_extensions import TypeVar
+from pydantic import Field, TypeAdapter, ValidationError
+from typing_extensions import TypeVar, get_original_bases
 
 from chanx.constants import MISSING_PYHUMPS_ERROR
 from chanx.generic.authenticator import ChanxWebsocketAuthenticator, QuerysetLike
 from chanx.messages.base import (
-    BaseIncomingMessage,
+    BaseGroupMessage,
     BaseMessage,
-    BaseOutgoingGroupMessage,
 )
 from chanx.messages.outgoing import (
     AuthenticationMessage,
@@ -75,10 +78,16 @@ except ImportError:  # pragma: no cover
     humps = cast(ModuleType, None)  # pragma: no cover
 
 
-_M = TypeVar("_M", bound=Model, default=Model)
+IC = TypeVar("IC", bound=BaseMessage)  # Incoming messages
+OG = TypeVar(
+    "OG", bound=BaseGroupMessage | None, default=None
+)  # Outgoing group messages
+M = TypeVar("M", bound=Model | None, default=None)  # Object model
 
 
-class AsyncJsonWebsocketConsumer(Generic[_M], BaseAsyncJsonWebsocketConsumer, ABC):
+class AsyncJsonWebsocketConsumer(
+    Generic[IC, OG, M], BaseAsyncJsonWebsocketConsumer, ABC
+):
     """
     Base class for asynchronous JSON WebSocket consumers with authentication and permissions.
 
@@ -102,9 +111,6 @@ class AsyncJsonWebsocketConsumer(Generic[_M], BaseAsyncJsonWebsocketConsumer, AB
         log_sent_message: Whether to log sent messages
         log_ignored_actions: Message actions that should not be logged
         send_authentication_message: Whether to send auth status after connection
-        INCOMING_MESSAGE_SCHEMA: Pydantic model class for validating incoming messages
-        OUTGOING_GROUP_MESSAGE_SCHEMA: Pydantic model class for validating group broadcast messages,
-                                      required when using send_group_message with kind="message"
     """
 
     # Authentication attributes
@@ -128,8 +134,46 @@ class AsyncJsonWebsocketConsumer(Generic[_M], BaseAsyncJsonWebsocketConsumer, AB
     send_authentication_message: bool | None = None
 
     # Message schemas
-    INCOMING_MESSAGE_SCHEMA: type[BaseIncomingMessage]
-    OUTGOING_GROUP_MESSAGE_SCHEMA: type[BaseOutgoingGroupMessage]
+    _INCOMING_MESSAGE_SCHEMA: IC
+    _OUTGOING_GROUP_MESSAGE_SCHEMA: OG
+
+    # Object instance
+    obj: M
+
+    def __init_subclass__(cls, *args: Any, **kwargs: Any):
+        super().__init_subclass__(*args, **kwargs)
+
+        # Extract the actual type from Generic parameters
+        orig_bases = get_original_bases(cls)
+        for base in orig_bases:
+            if base is AsyncJsonWebsocketConsumer:
+                raise ValueError(
+                    f"Class {cls.__name__!r} must specify at least the incoming message type as a generic parameter. "
+                    f"Hint: class {cls.__name__}(AsyncJsonWebsocketConsumer[YourMessageType])"
+                )
+            if get_origin(base) is AsyncJsonWebsocketConsumer:
+                # Workaround for TypeVar defaults handling differences across Python versions:
+                # - In Python 3.10, get_args() only returns non-default types
+                # - In Python 3.11+, get_args() returns all type arguments including defaults
+                # We create a fixed-size array and populate it with available type arguments
+                if sys.version_info < (3, 11):  # pragma: no cover
+                    # Generic part of AsyncJsonWebsocketConsumer
+                    generic_types = get_original_bases(AsyncJsonWebsocketConsumer)[0]
+                    type_var_vals: list[Any] = [None] * len(get_args(generic_types))
+                    for i, var in enumerate(get_args(base)):
+                        if i < len(type_var_vals) and var is not None:
+                            type_var_vals[i] = var
+
+                    incoming_message_schema, outgoing_group_message_schema, _model = (
+                        type_var_vals
+                    )
+                else:
+                    incoming_message_schema, outgoing_group_message_schema, _model = (
+                        get_args(base)
+                    )
+                cls._INCOMING_MESSAGE_SCHEMA = incoming_message_schema
+                cls._OUTGOING_GROUP_MESSAGE_SCHEMA = outgoing_group_message_schema
+                break
 
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         """
@@ -143,7 +187,22 @@ class AsyncJsonWebsocketConsumer(Generic[_M], BaseAsyncJsonWebsocketConsumer, AB
             ValueError: If INCOMING_MESSAGE_SCHEMA is not set
         """
         super().__init__(*args, **kwargs)
-        # Initialize configuration from settings if not set
+
+        # Load configuration and validate
+        self._load_configuration_from_settings()
+        self._setup_message_adapters()
+
+        # Create authenticator
+        self.authenticator = self._create_authenticator()
+
+        # Initialize instance attributes
+        self._initialize_instance_attributes()
+
+        # Validate optional dependencies
+        self._validate_optional_dependencies()
+
+    def _load_configuration_from_settings(self) -> None:
+        """Load configuration values from settings if not already set."""
         if self.send_completion is None:
             self.send_completion = chanx_settings.SEND_COMPLETION
 
@@ -159,27 +218,40 @@ class AsyncJsonWebsocketConsumer(Generic[_M], BaseAsyncJsonWebsocketConsumer, AB
         if self.log_ignored_actions is None:
             self.log_ignored_actions = chanx_settings.LOG_IGNORED_ACTIONS
 
-        self.ignore_actions: set[str] = (
-            set(self.log_ignored_actions) if self.log_ignored_actions else set()
-        )
-
         if self.send_authentication_message is None:
             self.send_authentication_message = (
                 chanx_settings.SEND_AUTHENTICATION_MESSAGE
             )
 
-        if not hasattr(self, "INCOMING_MESSAGE_SCHEMA"):
-            raise ValueError("INCOMING_MESSAGE_SCHEMA attribute is required.")
+        # Process ignored actions
+        self.ignore_actions: set[str] = (
+            set(self.log_ignored_actions) if self.log_ignored_actions else set()
+        )
 
-        # Create authenticator
-        self.authenticator = self._create_authenticator()
+    def _setup_message_adapters(self) -> None:
+        """Set up Pydantic type adapters for message validation."""
+        self.incoming_message_adapter: TypeAdapter[IC] = TypeAdapter(
+            Annotated[
+                self._INCOMING_MESSAGE_SCHEMA,
+                Field(discriminator=chanx_settings.MESSAGE_ACTION_KEY),
+            ]
+        )
 
-        # Initialize instance attributes
+        self.outgoing_group_message_adapter: TypeAdapter[OG] = TypeAdapter(
+            Annotated[
+                self._OUTGOING_GROUP_MESSAGE_SCHEMA,
+                Field(discriminator=chanx_settings.MESSAGE_ACTION_KEY),
+            ]
+        )
+
+    def _initialize_instance_attributes(self) -> None:
+        """Initialize instance attributes to their default values."""
         self.user: User | AnonymousUser | None = None
-        self.obj: _M | None = None
         self.group_name: str | None = None
         self.connecting: bool = False
 
+    def _validate_optional_dependencies(self) -> None:
+        """Validate that optional dependencies are available when needed."""
         if chanx_settings.CAMELIZE:
             if not humps:
                 raise RuntimeError(MISSING_PYHUMPS_ERROR)
@@ -332,7 +404,7 @@ class AsyncJsonWebsocketConsumer(Generic[_M], BaseAsyncJsonWebsocketConsumer, AB
         structlog.contextvars.reset_contextvars(**token)
 
     @abstractmethod
-    async def receive_message(self, message: BaseMessage, **kwargs: Any) -> None:
+    async def receive_message(self, message: IC, **kwargs: Any) -> None:
         """
         Process a validated received message.
 
@@ -501,9 +573,8 @@ class AsyncJsonWebsocketConsumer(Generic[_M], BaseAsyncJsonWebsocketConsumer, AB
         )
 
         if kind == "message":
-            message = self.OUTGOING_GROUP_MESSAGE_SCHEMA.model_validate(
-                {"group_message": content}
-            ).group_message
+            message = self.outgoing_group_message_adapter.validate_python(content)
+            assert message is not None
             await self.send_message(message)
         else:
             await self.send_json(content)
@@ -527,9 +598,8 @@ class AsyncJsonWebsocketConsumer(Generic[_M], BaseAsyncJsonWebsocketConsumer, AB
             **kwargs: Additional keyword arguments
         """
         try:
-            message = self.INCOMING_MESSAGE_SCHEMA.model_validate(
-                {"message": content}
-            ).message
+
+            message = self.incoming_message_adapter.validate_python(content)
 
             await self.receive_message(message, **kwargs)
         except ValidationError as e:

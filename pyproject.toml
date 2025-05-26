@@ -105,18 +105,6 @@ Homepage = "https://github.com/huynguyengl99/chanx"
 Repository = "https://github.com/huynguyengl99/chanx"
 
 [tool.black]
-exclude = '''
-/(
-    \.git
- |  \.pytest_cache
- |  \.vscode
- |  __pycache__
- |  .venv
- |  .tox
- |  build
- |  coverage
-)/
-'''
 line-length = 88
 preview = true
 

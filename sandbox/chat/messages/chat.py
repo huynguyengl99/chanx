@@ -1,6 +1,6 @@
 from typing import Literal
 
-from chanx.messages.base import BaseIncomingMessage, BaseMessage
+from chanx.messages.base import BaseMessage
 from chanx.messages.incoming import PingMessage
 from pydantic import BaseModel
 
@@ -29,5 +29,4 @@ class JoinGroupMessage(BaseMessage):
     payload: JoinGroupPayload
 
 
-class ChatIncomingMessage(BaseIncomingMessage):
-    message: NewChatMessage | PingMessage | JoinGroupMessage
+ChatIncomingMessage = NewChatMessage | PingMessage | JoinGroupMessage

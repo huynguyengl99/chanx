@@ -1,7 +1,5 @@
 from typing import Any
 
-from rest_framework.permissions import IsAuthenticated
-
 from chanx.generic.websocket import AsyncJsonWebsocketConsumer
 from chanx.messages.incoming import PingMessage
 from chanx.messages.outgoing import PongMessage
@@ -17,7 +15,8 @@ from assistants.messages.assistant import (
 class AssistantConsumer(AsyncJsonWebsocketConsumer[AssistantIncomingMessage]):
     """Websocket to chat with server, like chat with chatbot system"""
 
-    permission_classes = [IsAuthenticated]
+    permission_classes = []
+    authentication_classes = []
 
     async def receive_message(
         self, message: AssistantIncomingMessage, **kwargs: Any

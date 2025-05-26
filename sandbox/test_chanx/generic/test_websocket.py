@@ -127,7 +127,7 @@ AnonymousGroupMessage = AnonymousGroupMemberMessage
 
 
 class AnonymousGroupConsumer(
-    AsyncJsonWebsocketConsumer[IncomingMessage, AnonymousGroupMessage]
+    AsyncJsonWebsocketConsumer[IncomingMessage, None, AnonymousGroupMessage]
 ):
     permission_classes = [AllowAny]
     authentication_classes = []
@@ -336,7 +336,7 @@ class TestInitSubclassValidation:
         """Test that defining a consumer with multiple generic parameters works."""
 
         class MultiGenericConsumer(
-            AsyncJsonWebsocketConsumer[IncomingMessage, AnonymousGroupMessage]
+            AsyncJsonWebsocketConsumer[IncomingMessage, None, AnonymousGroupMessage]
         ):
             permission_classes = [AllowAny]
 

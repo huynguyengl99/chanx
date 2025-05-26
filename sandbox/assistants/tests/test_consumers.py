@@ -3,6 +3,7 @@ from typing import Any
 from unittest.mock import patch
 from uuid import uuid4
 
+from django.conf import settings
 from rest_framework import status
 
 import pytest
@@ -288,3 +289,26 @@ class TestChatConsumer(WebsocketTestCase):
 
             # Should not log received message for silent action
             assert "ping" not in str(mock_logger.call_args_list)
+
+    async def test_unauthorized_connection(self) -> None:
+        # Test anonymous connection
+        anonymous_communicator = self.create_communicator(
+            headers=[
+                (b"origin", settings.SERVER_URL.encode()),
+            ]
+        )
+        await anonymous_communicator.connect()
+        await anonymous_communicator.assert_authenticated_status_ok()
+
+        # Test chat functionality
+        message_content = "My message content"
+        await anonymous_communicator.send_message(
+            NewMessage(payload=MessagePayload(content=message_content))
+        )
+
+        all_messages = await anonymous_communicator.receive_all_json()
+        assert all_messages == [
+            ReplyMessage(
+                payload=MessagePayload(content=f"Reply: {message_content}")
+            ).model_dump()
+        ]

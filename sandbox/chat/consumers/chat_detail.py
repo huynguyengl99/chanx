@@ -17,7 +17,9 @@ from chat.utils import name_group_chat
 
 
 class ChatDetailConsumer(
-    AsyncJsonWebsocketConsumer[ChatIncomingMessage, OutgoingGroupMessage, GroupChat]
+    AsyncJsonWebsocketConsumer[
+        ChatIncomingMessage, None, OutgoingGroupMessage, GroupChat
+    ]
 ):
     permission_classes = [IsGroupChatMember]
     queryset = GroupChat.objects.get_queryset()

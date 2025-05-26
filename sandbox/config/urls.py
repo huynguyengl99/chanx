@@ -21,6 +21,7 @@ from django.contrib import admin
 from django.urls import include, path
 from django.views.generic import RedirectView
 
+from discussion.views import NotifyView
 from drf_spectacular.views import (
     SpectacularAPIView,
     SpectacularRedocView,
@@ -31,6 +32,7 @@ api_urlpatterns = [
     path("accounts/", include("accounts.urls")),
     path("chat/", include("chat.urls")),
     path("playground/", include("chanx.playground.urls")),
+    path("notify/", NotifyView.as_view(), name="notify_people"),
     path("schema/", SpectacularAPIView.as_view(), name="schema"),
     path(
         "schema/swg/",

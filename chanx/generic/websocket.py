@@ -5,12 +5,13 @@ This module provides the core WebSocket consumer implementation for Chanx,
 offering a robust framework for building real-time applications with Django
 Channels and Django REST Framework. The AsyncJsonWebsocketConsumer serves as the
 foundation for WebSocket connections with integrated authentication, permissions,
-structured message handling, and group messaging capabilities.
+structured message handling, group messaging capabilities, and typed channel events.
 
 Key features:
 - DRF-style authentication and permission checking
 - Structured message handling with Pydantic validation
 - Automatic group management for pub/sub messaging
+- Typed channel event system with discriminated unions
 - Comprehensive error handling and reporting
 - Configurable logging and message completion signals
 - Support for object-level permissions and retrieval
@@ -25,13 +26,14 @@ import asyncio
 import sys
 import uuid
 from abc import ABC, abstractmethod
-from collections.abc import Iterable, Sequence
+from collections.abc import Awaitable, Callable, Iterable, Sequence
 from types import ModuleType
 from typing import (
     Annotated,
     Any,
     Generic,
     Literal,
+    TypedDict,
     cast,
     get_args,
     get_origin,
@@ -40,6 +42,7 @@ from typing import (
 from channels.generic.websocket import (
     AsyncJsonWebsocketConsumer as BaseAsyncJsonWebsocketConsumer,
 )
+from channels.layers import get_channel_layer
 from django.contrib.auth.models import AnonymousUser, User
 from django.db.models import Model
 from rest_framework.authentication import BaseAuthentication
@@ -50,6 +53,7 @@ from rest_framework.permissions import (
 )
 
 import structlog
+from asgiref.sync import async_to_sync
 from asgiref.typing import WebSocketConnectEvent, WebSocketDisconnectEvent
 from pydantic import Field, TypeAdapter, ValidationError
 from typing_extensions import TypeVar, get_original_bases
@@ -57,6 +61,7 @@ from typing_extensions import TypeVar, get_original_bases
 from chanx.constants import MISSING_PYHUMPS_ERROR
 from chanx.generic.authenticator import ChanxWebsocketAuthenticator, QuerysetLike
 from chanx.messages.base import (
+    BaseChannelEvent,
     BaseGroupMessage,
     BaseMessage,
 )
@@ -83,10 +88,15 @@ OG = TypeVar(
     "OG", bound=BaseGroupMessage | None, default=None
 )  # Outgoing group messages
 M = TypeVar("M", bound=Model | None, default=None)  # Object model
+Event = TypeVar("Event", bound=BaseChannelEvent | None, default=None)  # Channel Events
+
+
+class EventPayload(TypedDict):
+    event_data: dict[str, Any]
 
 
 class AsyncJsonWebsocketConsumer(
-    Generic[IC, OG, M], BaseAsyncJsonWebsocketConsumer, ABC
+    Generic[IC, Event, OG, M], BaseAsyncJsonWebsocketConsumer, ABC
 ):
     """
     Base class for asynchronous JSON WebSocket consumers with authentication and permissions.
@@ -98,6 +108,9 @@ class AsyncJsonWebsocketConsumer(
     For group messaging functionality, subclasses should also define
     `OUTGOING_GROUP_MESSAGE_SCHEMA` to enable proper validation and handling
     of group message broadcasts.
+
+    For typed channel events, subclasses can define a union type of channel events
+    and use the generic type parameter Event to enable type-safe channel event handling.
 
     Attributes:
         authentication_classes: DRF authentication classes for connection verification
@@ -135,6 +148,7 @@ class AsyncJsonWebsocketConsumer(
 
     # Message schemas
     _INCOMING_MESSAGE_SCHEMA: IC
+    _EVENT_SCHEMA: Event
     _OUTGOING_GROUP_MESSAGE_SCHEMA: OG
 
     # Object instance
@@ -164,14 +178,21 @@ class AsyncJsonWebsocketConsumer(
                         if i < len(type_var_vals) and var is not None:
                             type_var_vals[i] = var
 
-                    incoming_message_schema, outgoing_group_message_schema, _model = (
-                        type_var_vals
-                    )
+                    (
+                        incoming_message_schema,
+                        event_schema,
+                        outgoing_group_message_schema,
+                        _model,
+                    ) = type_var_vals
                 else:
-                    incoming_message_schema, outgoing_group_message_schema, _model = (
-                        get_args(base)
-                    )
+                    (
+                        incoming_message_schema,
+                        event_schema,
+                        outgoing_group_message_schema,
+                        _model,
+                    ) = get_args(base)
                 cls._INCOMING_MESSAGE_SCHEMA = incoming_message_schema
+                cls._EVENT_SCHEMA = event_schema
                 cls._OUTGOING_GROUP_MESSAGE_SCHEMA = outgoing_group_message_schema
                 break
 
@@ -234,6 +255,13 @@ class AsyncJsonWebsocketConsumer(
             Annotated[
                 self._INCOMING_MESSAGE_SCHEMA,
                 Field(discriminator=chanx_settings.MESSAGE_ACTION_KEY),
+            ]
+        )
+
+        self.event_adapter: TypeAdapter[Event] = TypeAdapter(
+            Annotated[
+                self._EVENT_SCHEMA,
+                Field(discriminator="handler"),
             ]
         )
 
@@ -581,6 +609,123 @@ class AsyncJsonWebsocketConsumer(
 
         if self.send_completion:
             await self.send_message(GroupCompleteMessage())
+
+    # Channel event system methods
+    @classmethod
+    async def asend_channel_event(
+        cls,
+        group_name: str,
+        event: Event,
+    ) -> None:
+        """
+        Send a typed channel event to one or more channel groups.
+
+        This is a class method that provides a type-safe way to send events through
+        the channel layer to consumers. It can be called from tasks, views, or other
+        places where you don't have a consumer instance.
+
+        Args:
+            event: The typed event to send (constrained by the consumer's Event type)
+            group_name: Group name to send to (required)
+
+        Example:
+            ```python
+            # From a Django task or view:
+            await ChatDetailConsumer.send_channel_event(
+                MemberAddedEvent(
+                    type="member_added",
+                    payload={"member_id": 123, "email": "user@example.com"}
+                ),
+                groups=["chat_room_1"],
+                from_user_pk=request.user.pk
+            )
+            ```
+        """
+        channel_layer = get_channel_layer()
+        assert channel_layer is not None
+
+        assert event is not None
+        await channel_layer.group_send(
+            group_name,
+            {
+                "type": "handle_channel_event",
+                "event_data": event.model_dump(),
+            },
+        )
+
+    @classmethod
+    def send_channel_event(
+        cls,
+        group_name: str,
+        event: Event,
+    ) -> None:
+        """
+        Synchronous version of send_channel_event for use in Django tasks/views.
+
+        This method provides the same functionality as send_channel_event but
+        can be called from synchronous code like Django tasks, views, or signals.
+
+        Args:
+            group_name: Group name to send to (required)
+            event: The typed event to send (constrained by the consumer's Event type)
+
+        Example:
+            ```python
+            # From a Django task:
+            ChatDetailConsumer.send_channel_event_sync(
+                "chat_room_1",
+                MemberAddedEvent(
+                    type="member_added",
+                    payload={"member_id": 123, "email": "user@example.com"}
+                ),
+            )
+            ```
+        """
+        async_to_sync(cls.asend_channel_event)(group_name, event)
+
+    async def handle_channel_event(self, event_payload: EventPayload) -> None:
+        """
+        Internal dispatcher for channel events with completion signal.
+
+        This method is called by the channel layer when an event is sent to a group
+        this consumer belongs to. It extracts the event data, checks exclusion rules,
+        finds the appropriate handler method, and calls it with proper error handling.
+
+        Args:
+            event_payload: The message from the channel layer containing event data
+                         and metadata about the sender
+        """
+        event_data_dict: dict[str, Any] = event_payload.get("event_data", {})
+        event_data = self.event_adapter.validate_python(event_data_dict)
+
+        assert event_data is not None
+
+        try:
+            handler_name = event_data.handler
+            if not handler_name:
+                await logger.awarning("Received channel event without handler field")
+                return
+
+            # Find and call the handler method
+            handler_method: Callable[[Event], Awaitable[None]] | None = getattr(
+                self, handler_name, None
+            )
+            if not callable(handler_method):
+                await logger.ainfo(
+                    f"Handler method '{handler_name}' is not available for sending event"
+                )
+                return
+
+                # Handler is async, await it
+            await handler_method(event_data)
+
+        except Exception as e:
+            await logger.aexception(f"Failed to process channel event: {str(e)}")
+            # Don't re-raise to avoid breaking the channel layer
+        finally:
+            # Send completion signal if configured
+            if self.send_completion:
+                await self.send_message(CompleteMessage())
 
     # Helper methods
 

@@ -1,25 +1,30 @@
 from typing import Any
 
+from rest_framework.permissions import IsAuthenticated
+
 from chanx.generic.websocket import AsyncJsonWebsocketConsumer
 from chanx.messages.incoming import PingMessage
 from chanx.messages.outgoing import PongMessage
 
 from discussion.messages.discussion import (
+    DiscussionEvent,
     DiscussionGroupMessage,
     DiscussionIncomingMessage,
     DiscussionMemberMessage,
     DiscussionMessagePayload,
     NewDiscussionMessage,
+    NotifyEvent,
 )
 
 
 class DiscussionConsumer(
-    AsyncJsonWebsocketConsumer[DiscussionIncomingMessage, DiscussionGroupMessage]
+    AsyncJsonWebsocketConsumer[
+        DiscussionIncomingMessage, DiscussionEvent, DiscussionGroupMessage
+    ]
 ):
     """Websocket to chat in discussion, with anonymous users."""
 
-    permission_classes = []
-    authentication_classes = []
+    permission_classes = [IsAuthenticated]
 
     groups = ["discussion"]
 
@@ -43,3 +48,12 @@ class DiscussionConsumer(
                             )
                         ),
                     )
+
+    async def notify_people(self, event: NotifyEvent) -> None:
+        notify_message = f"ATTENTION: {event.payload.content}"
+
+        await self.send_message(
+            DiscussionMemberMessage(
+                payload=DiscussionMessagePayload(content=notify_message)
+            )
+        )

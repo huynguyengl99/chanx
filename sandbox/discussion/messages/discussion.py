@@ -1,6 +1,7 @@
 from typing import Literal
 
 from chanx.messages.base import (
+    BaseChannelEvent,
     BaseGroupMessage,
     BaseMessage,
 )
@@ -32,3 +33,14 @@ class DiscussionMemberMessage(BaseGroupMessage):
 
 
 DiscussionGroupMessage = DiscussionMemberMessage
+
+
+class NotifyEvent(BaseChannelEvent):
+    class Payload(BaseModel):
+        content: str
+
+    handler: Literal["notify_people"] = "notify_people"
+    payload: Payload
+
+
+DiscussionEvent = NotifyEvent

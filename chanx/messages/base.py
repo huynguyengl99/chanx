@@ -21,11 +21,7 @@ JSON messages into the correct message type based on the 'action' field.
 """
 
 import abc
-from typing import (
-    Any,
-    Literal,
-    get_origin,
-)
+from typing import Any, Literal, get_origin
 
 from pydantic import BaseModel, ConfigDict
 from typing_extensions import Unpack
@@ -93,3 +89,8 @@ class BaseGroupMessage(BaseMessage, abc.ABC):
 
     is_mine: bool = False
     is_current: bool = False
+
+
+class BaseChannelEvent(BaseModel, abc.ABC):
+    handler: Any
+    payload: Any

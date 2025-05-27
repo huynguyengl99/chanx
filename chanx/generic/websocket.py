@@ -695,23 +695,20 @@ class AsyncJsonWebsocketConsumer(
             event_payload: The message from the channel layer containing event data
                          and metadata about the sender
         """
-        event_data_dict: dict[str, Any] = event_payload.get("event_data", {})
-        event_data = self.event_adapter.validate_python(event_data_dict)
-
-        assert event_data is not None
-
         try:
+            event_data_dict: dict[str, Any] = event_payload.get("event_data", {})
+            event_data = self.event_adapter.validate_python(event_data_dict)
+
+            assert event_data is not None
+
             handler_name = event_data.handler
-            if not handler_name:
-                await logger.awarning("Received channel event without handler field")
-                return
 
             # Find and call the handler method
             handler_method: Callable[[Event], Awaitable[None]] | None = getattr(
                 self, handler_name, None
             )
             if not callable(handler_method):
-                await logger.ainfo(
+                await logger.aerror(
                     f"Handler method '{handler_name}' is not available for sending event"
                 )
                 return
@@ -719,8 +716,8 @@ class AsyncJsonWebsocketConsumer(
                 # Handler is async, await it
             await handler_method(event_data)
 
-        except Exception as e:
-            await logger.aexception(f"Failed to process channel event: {str(e)}")
+        except Exception:
+            await logger.aexception("Failed to process channel event")
             # Don't re-raise to avoid breaking the channel layer
         finally:
             # Send completion signal if configured

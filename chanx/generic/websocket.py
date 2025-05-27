@@ -12,14 +12,22 @@ Key features:
 - Structured message handling with Pydantic validation
 - Automatic group management for pub/sub messaging
 - Typed channel event system with discriminated unions
+- Generic type parameters for compile-time type safety
 - Comprehensive error handling and reporting
 - Configurable logging and message completion signals
 - Support for object-level permissions and retrieval
 
-Developers should subclass AsyncJsonWebsocketConsumer and implement the
-receive_message method to handle incoming messages. The consumer automatically
-handles connection lifecycle, authentication, message validation, and group
-messaging.
+Generic Type System:
+The consumer uses four generic type parameters for type safety:
+- IC (Incoming): Union of BaseMessage subclasses for incoming messages
+- Event (optional): Union of BaseChannelEvent subclasses for channel events
+- OG (optional): BaseGroupMessage subclass for outgoing group messages
+- M (optional): Model subclass for object-level permissions
+
+Developers should subclass AsyncJsonWebsocketConsumer with appropriate generic parameters
+and implement the receive_message method to handle incoming messages. The consumer
+automatically handles connection lifecycle, authentication, message validation, and
+group messaging.
 """
 
 import asyncio
@@ -92,6 +100,13 @@ Event = TypeVar("Event", bound=BaseChannelEvent | None, default=None)  # Channel
 
 
 class EventPayload(TypedDict):
+    """
+    Channel layer message containing event data.
+
+    Attributes:
+        event_data: Serialized event data dictionary
+    """
+
     event_data: dict[str, Any]
 
 
@@ -99,18 +114,26 @@ class AsyncJsonWebsocketConsumer(
     Generic[IC, Event, OG, M], BaseAsyncJsonWebsocketConsumer, ABC
 ):
     """
-    Base class for asynchronous JSON WebSocket consumers with authentication and permissions.
+     Base class for asynchronous JSON WebSocket consumers with authentication and permissions.
 
     Provides DRF-style authentication/permissions, structured message handling with
-    Pydantic validation, logging, and error handling. Subclasses must implement
-    `receive_message` and set `INCOMING_MESSAGE_SCHEMA`.
-
-    For group messaging functionality, subclasses should also define
-    `OUTGOING_GROUP_MESSAGE_SCHEMA` to enable proper validation and handling
-    of group message broadcasts.
+    Pydantic validation, typed channel events, group messaging, logging, and error handling.
+    Subclasses must implement `receive_message` and specify the incoming message type as
+    a generic parameter.
 
     For typed channel events, subclasses can define a union type of channel events
-    and use the generic type parameter Event to enable type-safe channel event handling.
+    and use the Event generic parameter to enable type-safe channel event handling.
+
+    For group messaging functionality, subclasses should also define the outgoing group
+    message type using the OG generic parameter to enable proper validation and handling
+    of group message broadcasts.
+
+
+    Generic Parameters:
+        IC: Incoming message type (required) - Union of BaseMessage subclasses
+        Event: Channel event type (optional) - Union of BaseChannelEvent subclasses or None
+        OG: Outgoing group message type (optional) - BaseGroupMessage subclass or None
+        M: Model type for object-level permissions (optional) - Model subclass or None
 
     Attributes:
         authentication_classes: DRF authentication classes for connection verification
@@ -155,6 +178,24 @@ class AsyncJsonWebsocketConsumer(
     obj: M
 
     def __init_subclass__(cls, *args: Any, **kwargs: Any):
+        """
+        Validates and extracts generic type parameters during class definition.
+
+        This method automatically extracts the generic type parameters (IC, Event, OG, M)
+        from the class definition and stores them for runtime use. It ensures that
+        at least the incoming message type (IC) is specified.
+
+        Handles differences between Python versions:
+        - Python 3.10: Only returns non-default type arguments
+        - Python 3.11+: Returns all type arguments including defaults
+
+        Args:
+            *args: Variable arguments passed to parent __init_subclass__
+            **kwargs: Keyword arguments passed to parent __init_subclass__
+
+        Raises:
+            ValueError: If no generic parameters are specified (must specify at least IC)
+        """
         super().__init_subclass__(*args, **kwargs)
 
         # Extract the actual type from Generic parameters
@@ -437,9 +478,10 @@ class AsyncJsonWebsocketConsumer(
         Process a validated received message.
 
         Must be implemented by subclasses to handle messages after validation.
+        The message parameter is automatically typed based on the IC generic parameter.
 
         Args:
-            message: The validated message object
+            message: The validated message object (typed as IC)
             **kwargs: Additional keyword arguments
         """
 
@@ -539,18 +581,17 @@ class AsyncJsonWebsocketConsumer(
 
         Important:
             When using kind="message" (the default), your consumer class must define
-            OUTGOING_GROUP_MESSAGE_SCHEMA to properly validate and wrap the message.
-            This schema ensures that group messages follow the expected structure
-            and contain the required metadata. If not defined, use kind="json" instead.
+            the OG generic parameter (outgoing group message type) to properly validate
+            and handle the message. If not defined, use kind="json" instead.
 
         Args:
             message: Message object to send to the groups
             groups: Group names to send to (defaults to self.groups)
             kind: Format to send the message as:
 
-                  - "message": Validated and wrapped via OUTGOING_GROUP_MESSAGE_SCHEMA (default)
+                  - "message": Validated via OG generic parameter (default)
 
-                  - "json": Sent as raw JSON without validation or wrapping
+                  - "json": Sent as raw JSON without validation
             exclude_current: Whether to exclude the sending consumer from receiving
                             the broadcast (prevents echo effects)
         """
@@ -618,28 +659,16 @@ class AsyncJsonWebsocketConsumer(
         event: Event,
     ) -> None:
         """
-        Send a typed channel event to one or more channel groups.
+        Send a typed channel event to a channel group.
 
         This is a class method that provides a type-safe way to send events through
         the channel layer to consumers. It can be called from tasks, views, or other
-        places where you don't have a consumer instance.
+        places where you don't have a consumer instance. The event type is constrained
+        by the consumer's Event generic parameter.
 
         Args:
-            event: The typed event to send (constrained by the consumer's Event type)
-            group_name: Group name to send to (required)
-
-        Example:
-            ```python
-            # From a Django task or view:
-            await ChatDetailConsumer.send_channel_event(
-                MemberAddedEvent(
-                    type="member_added",
-                    payload={"member_id": 123, "email": "user@example.com"}
-                ),
-                groups=["chat_room_1"],
-                from_user_pk=request.user.pk
-            )
-            ```
+            group_name: Group name to send the event to
+            event: The typed event to send (must match the consumer's Event type)
         """
         channel_layer = get_channel_layer()
         assert channel_layer is not None
@@ -660,40 +689,32 @@ class AsyncJsonWebsocketConsumer(
         event: Event,
     ) -> None:
         """
-        Synchronous version of send_channel_event for use in Django tasks/views.
+        Synchronous version of asend_channel_event for use in Django tasks/views.
 
-        This method provides the same functionality as send_channel_event but
+        This method provides the same functionality as asend_channel_event but
         can be called from synchronous code like Django tasks, views, or signals.
 
         Args:
-            group_name: Group name to send to (required)
+            group_name: Group name to send to
             event: The typed event to send (constrained by the consumer's Event type)
-
-        Example:
-            ```python
-            # From a Django task:
-            ChatDetailConsumer.send_channel_event_sync(
-                "chat_room_1",
-                MemberAddedEvent(
-                    type="member_added",
-                    payload={"member_id": 123, "email": "user@example.com"}
-                ),
-            )
-            ```
         """
         async_to_sync(cls.asend_channel_event)(group_name, event)
 
     async def handle_channel_event(self, event_payload: EventPayload) -> None:
         """
-        Internal dispatcher for channel events with completion signal.
+        Internal dispatcher for typed channel events with completion signal.
 
         This method is called by the channel layer when an event is sent to a group
-        this consumer belongs to. It extracts the event data, checks exclusion rules,
-        finds the appropriate handler method, and calls it with proper error handling.
+        this consumer belongs to. It extracts the event data, validates it against
+        the Event generic parameter, finds the appropriate handler method, and calls
+        it with proper error handling.
+
+        The handler method name is determined by the event's 'handler' field, and it
+        must be an async method on the consumer class that accepts the event as a parameter.
 
         Args:
             event_payload: The message from the channel layer containing event data
-                         and metadata about the sender
+
         """
         try:
             event_data_dict: dict[str, Any] = event_payload.get("event_data", {})

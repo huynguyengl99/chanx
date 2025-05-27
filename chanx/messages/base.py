@@ -92,5 +92,17 @@ class BaseGroupMessage(BaseMessage, abc.ABC):
 
 
 class BaseChannelEvent(BaseModel, abc.ABC):
+    """
+    Base class for typed channel events.
+
+    Channel events provide a way to send typed messages through the channel layer
+    to specific consumer methods. Each event type must define a unique 'handler'
+    field that corresponds to a method name on the target consumer.
+
+    Attributes:
+        handler: Method name on the consumer that will handle this event
+        payload: Event-specific data payload
+    """
+
     handler: Any
     payload: Any

@@ -3,7 +3,7 @@ Messages Module
 .. module:: chanx.messages
 
 The ``messages`` module provides the foundation for Chanx's structured message system, including base message
-types, containers, and standard message implementations.
+types, channel events, and standard message implementations.
 
 Base Messages
 -------------
@@ -13,9 +13,7 @@ Base Messages
 
 .. autoclass:: chanx.messages.base.BaseGroupMessage
 
-.. autoclass:: chanx.messages.base.BaseIncomingMessage
-
-.. autoclass:: chanx.messages.base.BaseOutgoingGroupMessage
+.. autoclass:: chanx.messages.base.BaseChannelEvent
 
 Incoming Messages
 -----------------
@@ -23,7 +21,6 @@ Incoming Messages
 
 .. autoclass:: chanx.messages.incoming.PingMessage
 
-.. autoclass:: chanx.messages.incoming.IncomingMessage
 
 Outgoing Messages
 -----------------

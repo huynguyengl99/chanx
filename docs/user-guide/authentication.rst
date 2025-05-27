@@ -27,13 +27,11 @@ To configure authentication for a WebSocket consumer, set the ``authentication_c
     from myapp.messages import MyIncomingMessage
 
 
-    class SecureConsumer(AsyncJsonWebsocketConsumer):
+    class SecureConsumer(AsyncJsonWebsocketConsumer[MyIncomingMessage]):
         authentication_classes = [SessionAuthentication]  # Cookie-based authentication
         permission_classes = [IsAuthenticated]
 
-        INCOMING_MESSAGE_SCHEMA = MyIncomingMessage
-
-        async def receive_message(self, message: BaseMessage, **kwargs: Any) -> None:
+        async def receive_message(self, message: MyIncomingMessage, **kwargs: Any) -> None:
             # Only authenticated users reach this point
             match message:
                 case PingMessage():
@@ -71,6 +69,7 @@ Chanx supports object-level permissions just like DRF. To use them:
 
 1. Set a ``queryset`` on your consumer
 2. Use permission classes with ``has_object_permission``
+3. Specify the model type as the fourth generic parameter
 
 .. code-block:: python
 
@@ -84,13 +83,15 @@ Chanx supports object-level permissions just like DRF. To use them:
             return request.user in obj.members.all()
 
 
-    class RoomConsumer(AsyncJsonWebsocketConsumer):
+    class RoomConsumer(AsyncJsonWebsocketConsumer[ChatIncomingMessage, None, None, Room]):
         authentication_classes = [SessionAuthentication]
         permission_classes = [IsAuthenticated, RoomAccessPermission]
         queryset = Room.objects.all()
 
-        async def build_groups(self):
+        async def build_groups(self) -> list[str]:
             # self.obj now contains the Room instance
+            # and is properly typed as Room
+            assert self.obj
             return [f"room_{self.obj.id}"]
 
 With this setup, Chanx will:
@@ -106,7 +107,7 @@ By default, Chanx sends an authentication status message when a client connects.
 
 .. code-block:: python
 
-    class MyConsumer(AsyncJsonWebsocketConsumer):
+    class MyConsumer(AsyncJsonWebsocketConsumer[MyIncomingMessage]):
         send_authentication_message = True  # Default is True
 
 The authentication message looks like:
@@ -171,7 +172,7 @@ For more advanced authentication needs, you can create a custom authenticator by
             return auth_result
 
 
-    class MyConsumer(AsyncJsonWebsocketConsumer):
+    class MyConsumer(AsyncJsonWebsocketConsumer[MyIncomingMessage]):
         authenticator_class = MyAuthenticator
 
 
@@ -184,6 +185,7 @@ Best Practices
 5. **Avoid storing sensitive tokens** in JavaScript variables or localStorage
 6. **Set appropriate cookie security flags** (Secure, SameSite) in production
 7. **Implement periodic token validation** for long-lived connections
+8. **Use generic type parameters** for better type checking of models
 
 Next Steps
 ----------

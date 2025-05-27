@@ -6,6 +6,7 @@ Chanx provides a robust message system built on Pydantic that enables:
 2. Runtime validation of message structure
 3. Discriminated unions for message type routing
 4. Standardized message formats
+5. Generic type parameters for compile-time type checking
 
 Base Classes
 ------------
@@ -13,8 +14,7 @@ The foundation of the message system consists of these base classes:
 
 1. **BaseMessage**: Abstract base class for all message types
 2. **BaseGroupMessage**: Extended messages with group metadata
-3. **BaseIncomingMessage**: Container for all incoming messages
-4. **BaseOutgoingGroupMessage**: Container for outgoing group messages
+3. **BaseChannelEvent**: Base class for typed channel layer events
 
 Message Structure
 -----------------
@@ -60,32 +60,44 @@ To create custom message types, define classes that inherit from ``BaseMessage``
         action: Literal["notification"] = "notification"
         payload: dict[str, str] = Field(default_factory=dict)
 
-Defining Message Schema
------------------------
-For a consumer to handle these message types, you need to create a message container:
+Defining a Message Union
+------------------------
+Chanx uses union types to define message schemas:
 
 .. code-block:: python
 
-    from chanx.messages.base import BaseIncomingMessage
     from chanx.messages.incoming import PingMessage
 
+    # Define a union type of all supported incoming messages
+    ChatIncomingMessage = ChatMessage | NotificationMessage | PingMessage
 
-    class MyIncomingMessage(BaseIncomingMessage):
-        """Container for all incoming message types."""
-        message: PingMessage | ChatMessage | NotificationMessage
-
-Then set this as your consumer's schema:
+Then use this type in your consumer's generic parameter:
 
 .. code-block:: python
 
-    class MyConsumer(AsyncJsonWebsocketConsumer):
-        INCOMING_MESSAGE_SCHEMA = MyIncomingMessage
+    class ChatConsumer(AsyncJsonWebsocketConsumer[ChatIncomingMessage]):
+        # The incoming message type is specified as a generic parameter
+        # instead of using INCOMING_MESSAGE_SCHEMA attribute
+
+        async def receive_message(self, message: ChatIncomingMessage, **kwargs: Any) -> None:
+            # Message is automatically validated against the union type
+            match message:
+                case ChatMessage(payload=payload):
+                    # Handle chat message
+                    pass
+                case PingMessage():
+                    # Handle ping
+                    await self.send_message(PongMessage())
+                case NotificationMessage():
+                    pass
+                # Note: If you don't handle all message types in your union, static type checkers
+                # like mypy or pyright will warn about missing cases.
 
 Message Validation
 ------------------
 When a message is received, Chanx automatically:
 
-1. Validates the message against your schema
+1. Validates the message against your union type
 2. Deserializes it into the correct message type
 3. Routes it to your consumer's ``receive_message`` method
 
@@ -98,61 +110,19 @@ If validation fails, Chanx sends an error message to the client:
       "payload": [
         {
           "type": "missing",
-          "loc": ["message", "payload"],
+          "loc": ["payload"],
           "msg": "Field required"
         }
       ]
     }
 
-Handling Messages
------------------
-In your consumer, use pattern matching to handle different message types:
-
-.. code-block:: python
-
-    from typing import Any
-    from chanx.messages.base import BaseMessage
-    from chanx.messages.incoming import PingMessage
-    from chanx.messages.outgoing import PongMessage
-
-    async def receive_message(self, message: BaseMessage, **kwargs: Any) -> None:
-        """Process a validated received message."""
-        match message:
-            case ChatMessage(payload=payload):
-                # Handle chat message with extracted payload
-                await self.handle_chat(payload)
-
-            case NotificationMessage(payload=notification_payload):
-                # Handle notification with direct access to payload
-                await self.handle_notification(notification_payload)
-
-            case PingMessage():
-                # Handle standard ping message
-                await self.send_message(PongMessage())
-
-            case _:
-                # Handle any other message types
-                pass
-
-Sending Messages
-----------------
-To send a message to the connected client:
-
-.. code-block:: python
-
-    # Create a message instance with structured payload
-    notification = NotificationMessage(payload={"type": "info", "text": "Update received"})
-
-    # Send it to the client
-    await self.send_message(notification)
-
 Group Messages
 --------------
-For group communication, first define group message types:
+For group communication, define a BaseGroupMessage subclass:
 
 .. code-block:: python
 
-    from chanx.messages.base import BaseGroupMessage, BaseOutgoingGroupMessage
+    from chanx.messages.base import BaseGroupMessage
 
 
     class ChatGroupMessage(BaseGroupMessage):
@@ -160,20 +130,16 @@ For group communication, first define group message types:
         action: Literal["chat_group"] = "chat_group"
         payload: ChatPayload
 
-
-    class MyOutgoingGroupMessage(BaseOutgoingGroupMessage):
-        """Container for outgoing group messages."""
-        group_message: ChatGroupMessage
-
-Then configure your consumer to use these types:
+Then, specify it as the third generic parameter:
 
 .. code-block:: python
 
-    class ChatConsumer(AsyncJsonWebsocketConsumer):
-        INCOMING_MESSAGE_SCHEMA = MyIncomingMessage
-        OUTGOING_GROUP_MESSAGE_SCHEMA = MyOutgoingGroupMessage
+    class ChatConsumer(AsyncJsonWebsocketConsumer[ChatIncomingMessage, None, ChatGroupMessage]):
+        # First param: Incoming message type
+        # Second param: Channel event type (None means no events)
+        # Third param: Outgoing group message type
 
-        async def receive_message(self, message: BaseMessage, **kwargs: Any) -> None:
+        async def receive_message(self, message: ChatIncomingMessage, **kwargs: Any) -> None:
             match message:
                 case ChatMessage(payload=payload):
                     # Create a group message from the chat message
@@ -190,12 +156,6 @@ Then configure your consumer to use these types:
                         group_msg,
                         groups=["room_123", "announcements"],
                         exclude_current=True  # Don't send to sender
-                    )
-
-                    # Or send as raw JSON (no wrapping)
-                    await self.send_group_message(
-                        group_msg,
-                        kind="json"  # Skip OUTGOING_GROUP_MESSAGE_SCHEMA wrapping
                     )
                 case _:
                     pass
@@ -217,6 +177,68 @@ Group messages are automatically enhanced with metadata:
 
 - ``is_mine``: True if the message originated from the current user
 - ``is_current``: True if the message came from this specific connection
+
+Channel Events
+--------------
+Chanx provides a mechanism for typed channel events using the BaseChannelEvent class:
+
+.. code-block:: python
+
+    from typing import Literal
+    from chanx.messages.base import BaseChannelEvent
+    from pydantic import BaseModel
+
+
+    class NotifyEvent(BaseChannelEvent):
+        """Event for sending notifications to connected clients."""
+        class Payload(BaseModel):
+            content: str
+            level: str = "info"
+
+        # The handler field identifies which method to call
+        handler: Literal["notify"] = "notify"
+        payload: Payload
+
+
+    # Create a union type of supported events
+    ChatEvent = NotifyEvent
+
+
+In your consumer, define a handler method with the same name as the event's handler field:
+
+.. code-block:: python
+
+    class ChatConsumer(AsyncJsonWebsocketConsumer[ChatIncomingMessage, ChatEvent, ChatGroupMessage]):
+        # Specify channel event type as second generic parameter
+
+        async def notify(self, event: NotifyEvent) -> None:
+            """Handle notification events."""
+            notification = f"{event.payload.level.upper()}: {event.payload.content}"
+            await self.send_message(
+                NotificationMessage(payload={"text": notification})
+            )
+
+To send events from outside the consumer (e.g., from a view or task):
+
+.. code-block:: python
+
+    # Send from synchronous code
+    ChatConsumer.send_channel_event(
+        "general_announcements",  # Group name
+        NotifyEvent(payload=NotifyEvent.Payload(
+            content="Important system message",
+            level="warning"
+        ))
+    )
+
+    # Send from asynchronous code
+    await ChatConsumer.asend_channel_event(
+        "general_announcements",
+        NotifyEvent(payload=NotifyEvent.Payload(
+            content="Important system message",
+            level="warning"
+        ))
+    )
 
 Standard Message Types
 ----------------------
@@ -256,7 +278,7 @@ Control this behavior with the ``send_completion`` setting:
 
 .. code-block:: python
 
-    class MyConsumer(AsyncJsonWebsocketConsumer):
+    class MyConsumer(AsyncJsonWebsocketConsumer[PingMessage]):
         send_completion = True  # Send completion message after processing
 
         # In testing, you can wait for both normal and group completions:
@@ -360,10 +382,9 @@ Here's a complete example of message definitions for a discussion app:
     from typing import Literal
 
     from chanx.messages.base import (
+        BaseChannelEvent,
         BaseGroupMessage,
-        BaseIncomingMessage,
         BaseMessage,
-        BaseOutgoingGroupMessage,
     )
     from chanx.messages.incoming import PingMessage
     from pydantic import BaseModel
@@ -384,8 +405,8 @@ Here's a complete example of message definitions for a discussion app:
         payload: DiscussionMessagePayload
 
 
-    class DiscussionIncomingMessage(BaseIncomingMessage):
-        message: NewDiscussionMessage | PingMessage
+    # Define incoming message union
+    DiscussionIncomingMessage = NewDiscussionMessage | PingMessage
 
 
     class DiscussionMemberMessage(BaseGroupMessage):
@@ -393,8 +414,16 @@ Here's a complete example of message definitions for a discussion app:
         payload: DiscussionMessagePayload
 
 
-    class DiscussionGroupMessage(BaseOutgoingGroupMessage):
-        group_message: DiscussionMemberMessage
+    # Define channel event type
+    class NotifyEvent(BaseChannelEvent):
+        class Payload(BaseModel):
+            content: str
+
+        handler: Literal["notify_people"] = "notify_people"
+        payload: Payload
+
+
+    DiscussionEvent = NotifyEvent
 
 Best Practices
 --------------
@@ -404,7 +433,7 @@ Best Practices
 4. **Use strict typing**: Take advantage of Pydantic's validation to catch errors early
 5. **Use pattern matching**: Handle message types with Python's match/case syntax
 6. **Separate app-specific message types**: Keep message definitions in a dedicated module
-7. **Define both incoming and group schemas**: Always define both when using group messaging
+7. **Use union types**: Define message schema using union types for type-safe validation
 8. **Test message serialization**: Write tests for serialization/deserialization
 
 Next Steps

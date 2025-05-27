@@ -101,7 +101,7 @@ The message composer provides:
    :width: 100%
    :align: center
 
-Example messages are automatically generated from your ``INCOMING_MESSAGE_SCHEMA`` class, helping you send correctly structured messages.
+Example messages are automatically generated from your consumer's message schema, helping you send correctly structured messages.
 
 Message History
 ^^^^^^^^^^^^^^^
@@ -138,8 +138,9 @@ The playground automatically generates example messages based on your message sc
 
 .. code-block:: python
 
-    from typing import Literal, Optional
-    from chanx.messages.base import BaseIncomingMessage, BaseMessage
+    from typing import Literal
+    from chanx.messages.base import BaseMessage
+    from chanx.messages.incoming import PingMessage
 
 
     class ChatMessage(BaseMessage):
@@ -151,19 +152,18 @@ The playground automatically generates example messages based on your message sc
     class TypingMessage(BaseMessage):
         """Indicate user is typing."""
         action: Literal["typing"] = "typing"
-        payload: Optional[bool] = True
+        payload: bool = True
 
 
-    class MyChatMessages(BaseIncomingMessage):
-        """Chat application messages."""
-        message: ChatMessage | TypingMessage
+    # Define a union type for the incoming messages
+    ChatIncomingMessage = ChatMessage | TypingMessage | PingMessage
 
 For the consumer using this schema:
 
 .. code-block:: python
 
-    class ChatConsumer(AsyncJsonWebsocketConsumer):
-        INCOMING_MESSAGE_SCHEMA = MyChatMessages
+    class ChatConsumer(AsyncJsonWebsocketConsumer[ChatIncomingMessage]):
+        # Message schema is specified as a generic parameter
 
 The playground will generate these example messages:
 
@@ -179,6 +179,12 @@ The playground will generate these example messages:
     {
         "action": "typing",
         "payload": true
+    }
+
+    // PingMessage example
+    {
+        "action": "ping",
+        "payload": null
     }
 
 These examples help you understand the expected message format and quickly test your endpoints.

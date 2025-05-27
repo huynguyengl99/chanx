@@ -9,8 +9,9 @@ Chanx consumers extend Django Channels' WebSocket consumers with:
 1. DRF-style authentication and permissions
 2. Structured message handling with validation
 3. Automatic group management
-4. Comprehensive error handling
-5. Logging and diagnostics
+4. Typed channel events
+5. Comprehensive error handling
+6. Logging and diagnostics
 
 Minimal Consumer Example
 ------------------------
@@ -22,25 +23,20 @@ Here's a minimal Chanx consumer:
 
     from chanx.generic.websocket import AsyncJsonWebsocketConsumer
     from chanx.messages.base import BaseMessage
-    from chanx.messages.incoming import IncomingMessage, PingMessage
+    from chanx.messages.incoming import PingMessage
     from chanx.messages.outgoing import PongMessage
 
 
-    class MyConsumer(AsyncJsonWebsocketConsumer):
+    class MyConsumer(AsyncJsonWebsocketConsumer[PingMessage]):
         """Basic WebSocket consumer."""
 
-        # Required: Specify the message schema
-        INCOMING_MESSAGE_SCHEMA = IncomingMessage
-
-        async def receive_message(self, message: BaseMessage, **kwargs: Any) -> None:
+        async def receive_message(self, message: PingMessage, **kwargs: Any) -> None:
             """Handle incoming validated messages."""
             # Handle message using pattern matching
             match message:
                 case PingMessage():
                     await self.send_message(PongMessage())
-                case _:
-                    # Handle other message types or ignore
-                    pass
+
 
 Consumer Lifecycle
 ------------------
@@ -66,10 +62,10 @@ Configure authentication and permissions using DRF-style attributes:
 
     from chanx.generic.websocket import AsyncJsonWebsocketConsumer
     from chanx.messages.base import BaseMessage
-    from chanx.messages.incoming import IncomingMessage
+    from chat.models import Room
 
 
-    class SecureConsumer(AsyncJsonWebsocketConsumer):
+    class SecureConsumer(AsyncJsonWebsocketConsumer[PingMessage, None, None, Room]):
         # Authentication classes determine how users are identified
         authentication_classes = [SessionAuthentication]
 
@@ -82,44 +78,87 @@ Configure authentication and permissions using DRF-style attributes:
         # HTTP method to emulate for authentication
         auth_method = "get"  # Default is "get"
 
-        INCOMING_MESSAGE_SCHEMA = IncomingMessage
-
-        async def receive_message(self, message: BaseMessage, **kwargs: Any) -> None:
+        async def receive_message(self, message: PingMessage, **kwargs: Any) -> None:
             # Only authenticated users reach this point
             pass
 
+Generic Type Parameters
+-----------------------
+Chanx consumers support four generic type parameters for improved type safety:
+
+.. code-block:: python
+
+    class AsyncJsonWebsocketConsumer(Generic[IC, Event, OG, M]):
+        """
+        Base WebSocket consumer with generic type parameters.
+
+        Generic Parameters:
+            IC: Incoming message type (required) - Union of BaseMessage subclasses
+            Event: Channel event type (optional) - Union of BaseChannelEvent subclasses or None
+            OG: Outgoing group message type (optional) - BaseGroupMessage subclass or None
+            M: Model type for object-level permissions (optional) - Model subclass or None
+        """
+
+At minimum, you must specify the incoming message type:
+
+.. code-block:: python
+
+    # Simple consumer with just incoming message type
+    class SimpleConsumer(AsyncJsonWebsocketConsumer[PingMessage]):
+        ...
+
+    # Full consumer with all generic parameters
+    class FullConsumer(AsyncJsonWebsocketConsumer[
+        ChatIncomingMessage,       # Incoming message types
+        ChatEvent,                 # Channel events
+        ChatGroupMessage,          # Outgoing group message
+        Room                       # Model for object permissions
+    ]):
+        ...
+
 Message Handling
-----------------
+-----------------
 The core of a consumer is the ``receive_message`` method which processes validated messages:
 
 .. code-block:: python
 
-    async def receive_message(self, message: BaseMessage, **kwargs: Any) -> None:
+    async def receive_message(self, message: ChatIncomingMessage, **kwargs: Any) -> None:
         """
-        Handle incoming validated messages.
+        Process a validated received message.
 
         Args:
-            message: The validated message object
+            message: The validated message object (typed as ChatIncomingMessage)
             **kwargs: Additional arguments from receive_json
         """
         # Use pattern matching for cleaner message handling
         match message:
             case ChatMessage(payload=payload):
-                # Create response message
-                from myapp.messages import ChatResponse
-                response = ChatResponse(payload=f"Received: {payload}")
+                # Handle chat message with extracted payload
+                await self.handle_chat(payload)
 
-                # Send response to the client
-                await self.send_message(response)
+            case NotificationMessage(payload=notification_payload):
+                # Handle notification with direct access to payload
+                await self.handle_notification(notification_payload)
+
             case PingMessage():
-                from chanx.messages.outgoing import PongMessage
+                # Handle standard ping message
                 await self.send_message(PongMessage())
-            case _:
-                # Handle unknown message types
-                pass
+
+
+Sending Messages
+----------------
+To send a message to the connected client:
+
+.. code-block:: python
+
+    # Create a message instance with structured payload
+    notification = NotificationMessage(payload={"type": "info", "text": "Update received"})
+
+    # Send it to the client
+    await self.send_message(notification)
 
 Group Messaging
-----------------
+---------------
 Chanx simplifies WebSocket group management for pub/sub messaging.
 
 First, define your group message types:
@@ -127,34 +166,20 @@ First, define your group message types:
 .. code-block:: python
 
     from typing import Literal
-    from chanx.messages.base import BaseGroupMessage, BaseOutgoingGroupMessage
+    from chanx.messages.base import BaseGroupMessage
 
     # Define a group message type
     class ChatGroupMessage(BaseGroupMessage):
-        """Message type for group chat messages."""
-        action: Literal["chat_message"] = "chat_message"
-        payload: str
+        """Message type for group chat."""
+        action: Literal["chat_group"] = "chat_group"
+        payload: dict[str, str]
 
-    # Define container for outgoing group messages
-    class MyChatOutgoingGroupMessage(BaseOutgoingGroupMessage):
-        """Container for outgoing group messages."""
-        group_message: ChatGroupMessage
-
-Then, set up your consumer to use these group message types:
+Then, configure your consumer to use these group message types:
 
 .. code-block:: python
 
-    from typing import Any, Iterable
-
-    from chanx.generic.websocket import AsyncJsonWebsocketConsumer
-    from chanx.messages.base import BaseMessage
-
-    class ChatConsumer(AsyncJsonWebsocketConsumer):
-        # Specify both incoming and outgoing schemas
-        INCOMING_MESSAGE_SCHEMA = MyChatIncomingMessage
-        OUTGOING_GROUP_MESSAGE_SCHEMA = MyChatOutgoingGroupMessage
-
-        async def build_groups(self) -> Iterable[str]:
+    class ChatConsumer(AsyncJsonWebsocketConsumer[ChatIncomingMessage, None, ChatGroupMessage]):
+        async def build_groups(self) -> list[str]:
             """
             Define which groups this consumer should join.
 
@@ -167,122 +192,104 @@ Then, set up your consumer to use these group message types:
             # Return list of groups to join
             return [f"chat_room_{room_id}"]
 
-        async def receive_message(self, message: BaseMessage, **kwargs: Any) -> None:
+        async def receive_message(self, message: ChatIncomingMessage, **kwargs: Any) -> None:
             """Handle incoming messages and broadcast to groups."""
             match message:
                 case ChatMessage(payload=payload):
-                    # Using send_group_message with kind="message" (default)
-                    # This requires OUTGOING_GROUP_MESSAGE_SCHEMA to be defined
+                    # Using send_group_message
                     username = getattr(self.user, 'username', 'Anonymous')
                     await self.send_group_message(
-                        ChatGroupMessage(payload=f"{username}: {payload}"),
+                        ChatGroupMessage(payload={"username": username, "content": payload.content}),
                         exclude_current=False  # Include sender in recipients
                     )
                 case _:
                     pass
 
-Sending Messages
-----------------
-Chanx provides several methods for sending messages:
+Group messages are automatically enhanced with metadata:
+
+.. code-block:: json
+
+    {
+      "action": "chat_group",
+      "payload": {
+        "username": "Alice",
+        "content": "Hello everyone!"
+      },
+      "is_mine": false,
+      "is_current": false
+    }
+
+- ``is_mine``: True if the message originated from the current user
+- ``is_current``: True if the message came from this specific connection
+
+Channel Events
+--------------
+Chanx provides a type-safe channel event system for sending events between consumers through the channel layer:
 
 .. code-block:: python
 
-    # Send to the connected client
-    await self.send_message(MyMessage())
+    from typing import Literal
+    from chanx.messages.base import BaseChannelEvent
+    from pydantic import BaseModel
 
-    # Send to all clients in groups (excluding this one)
-    await self.send_group_message(
-        GroupMessage(),
-        exclude_current=True  # Don't echo to sender
-    )
+    # Define channel event types
+    class NotifyEvent(BaseChannelEvent):
+        class Payload(BaseModel):
+            content: str
+            level: str = "info"
 
-    # Send to specific groups
-    await self.send_group_message(
-        GroupMessage(),
-        groups=["custom_group"],  # Override default groups
-        exclude_current=False     # Include sender
-    )
+        handler: Literal["notify"] = "notify"
+        payload: Payload
 
-    # Send as raw JSON (bypassing OUTGOING_GROUP_MESSAGE_SCHEMA)
-    await self.send_group_message(
-        GroupMessage(),
-        kind="json",              # Send as raw JSON (default is "message")
-    )
+    # Define event union type
+    ChatEvent = NotifyEvent  # Can be a union of multiple event types
 
-Using Generic Type Parameters
------------------------------
-Chanx consumers support generic type parameters for object-level permissions:
+Configure your consumer to handle these events:
 
 .. code-block:: python
 
-    from typing import Any
-    from chanx.generic.websocket import AsyncJsonWebsocketConsumer
-    from chat.models import GroupChat
+    class ChatConsumer(AsyncJsonWebsocketConsumer[ChatIncomingMessage, ChatEvent]):
+        # Configure groups to receive events
+        groups = ["announcements"]
 
-    # Specify the model type for better type checking and IDE support
-    class ChatDetailConsumer(AsyncJsonWebsocketConsumer[GroupChat]):
-        queryset = GroupChat.objects.get_queryset()
-        permission_classes = [IsGroupChatMember]
+        # Define handler method matching the event's handler field
+        async def notify(self, event: NotifyEvent) -> None:
+            """Handle notification events from channel layer."""
+            notification = f"{event.payload.level.upper()}: {event.payload.content}"
+            await self.send_message(MessageResponse(payload={"text": notification}))
 
-        async def build_groups(self) -> list[str]:
-            # self.obj is now properly typed as GroupChat
-            assert self.obj
-            return [f"chat_{self.obj.pk}"]
-
-        async def post_authentication(self) -> None:
-            assert self.user is not None
-            assert self.obj
-            # Access relationships with proper typing
-            self.member = await self.obj.members.select_related("user").aget(user=self.user)
-
-Routing Configuration
----------------------
-Chanx provides enhanced URL routing capabilities for WebSocket endpoints. For details, see the :doc:`routing` documentation.
-
-Here's a brief example:
+To send events from outside the consumer (e.g., from a Django view or task):
 
 .. code-block:: python
 
-    # chat/routing.py
-    from channels.routing import URLRouter
-    from chanx.routing import path, re_path
-    from chat.consumers import ChatConsumer
+    # Using synchronous code (e.g., in a Django view)
+    def send_notification(request):
+        ChatConsumer.send_channel_event(
+            "announcements",  # Group name to send to
+            NotifyEvent(payload=NotifyEvent.Payload(
+                content="Important system notice",
+                level="warning"
+            ))
+        )
+        return JsonResponse({"status": "sent"})
 
-    router = URLRouter([
-        path('<str:room_id>/', ChatConsumer.as_asgi()),
-    ])
+    # Using asynchronous code
+    async def async_send_notification():
+        await ChatConsumer.asend_channel_event(
+            "announcements",
+            NotifyEvent(payload=NotifyEvent.Payload(
+                content="Important system notice",
+                level="warning"
+            ))
+        )
 
-    # myproject/routing.py
-    from chanx.routing import include
+The channel event system provides:
 
-    router = URLRouter([
-        path('chat/', include('chat.routing')),
-    ])
-
-Configuration Options
----------------------
-Chanx consumers have several configuration options:
-
-.. code-block:: python
-
-    class ConfiguredConsumer(AsyncJsonWebsocketConsumer):
-        # Authentication
-        authentication_classes = [SessionAuthentication]
-        permission_classes = [IsAuthenticated]
-        queryset = None
-        auth_method = "get"
-
-        # Message handling
-        INCOMING_MESSAGE_SCHEMA = MyIncomingMessage
-        OUTGOING_GROUP_MESSAGE_SCHEMA = MyOutgoingGroupMessage
-
-        # Behavior flags
-        send_completion = True  # Send completion messages
-        send_message_immediately = True  # Yield control after sending
-        log_received_message = True  # Log received messages
-        log_sent_message = True  # Log sent messages
-        log_ignored_actions = ["ping", "pong"]  # Don't log these actions
-        send_authentication_message = True  # Send auth status
+1. Type-safe event handling with Pydantic validation
+2. Method dispatch based on the event's handler field
+3. Automatic error handling and logging
+4. Support for both sync and async code
+5. Completion messages (if configured)
 
 Accessing User and Context
 --------------------------
@@ -290,7 +297,7 @@ Within a consumer, you can access user information and context:
 
 .. code-block:: python
 
-    async def receive_message(self, message: BaseMessage, **kwargs: Any) -> None:
+    async def receive_message(self, message: ChatIncomingMessage, **kwargs: Any) -> None:
         # Access the authenticated user
         user = self.user
 
@@ -298,7 +305,7 @@ Within a consumer, you can access user information and context:
         request = self.request
 
         # For consumers with object-level permissions, access the object
-        obj = self.obj
+        obj = self.obj  # Typed based on M generic parameter
 
         # Access the raw ASGI connection scope
         scope = self.scope
@@ -342,14 +349,12 @@ For custom error handling:
 
 .. code-block:: python
 
-    async def receive_message(self, message: BaseMessage, **kwargs: Any) -> None:
+    async def receive_message(self, message: ChatIncomingMessage, **kwargs: Any) -> None:
         try:
             match message:
                 case ChatMessage(payload=payload):
                     result = await self.process_chat(payload)
                     await self.send_message(SuccessMessage(payload=result))
-                case _:
-                    pass
         except ValueError as e:
             # Send custom error for specific exceptions
             from chanx.messages.outgoing import ErrorMessage
@@ -365,7 +370,6 @@ Here's a complete example of a chat consumer:
     from typing import Any, cast
 
     from chanx.generic.websocket import AsyncJsonWebsocketConsumer
-    from chanx.messages.base import BaseMessage
     from chanx.messages.incoming import PingMessage
     from chanx.messages.outgoing import PongMessage
 
@@ -374,16 +378,18 @@ Here's a complete example of a chat consumer:
         JoinGroupMessage,
         NewChatMessage,
     )
-    from chat.messages.group import MemberMessage, OutgoingGroupMessage
+    from chat.messages.group import MemberMessage
     from chat.models import ChatMember, ChatMessage, GroupChat
     from chat.permissions import IsGroupChatMember
     from chat.serializers import ChatMessageSerializer
     from chat.utils import name_group_chat
 
 
-    class ChatDetailConsumer(AsyncJsonWebsocketConsumer[GroupChat]):
-        INCOMING_MESSAGE_SCHEMA = ChatIncomingMessage
-        OUTGOING_GROUP_MESSAGE_SCHEMA = OutgoingGroupMessage
+    class ChatDetailConsumer(
+        AsyncJsonWebsocketConsumer[
+            ChatIncomingMessage, None, MemberMessage, GroupChat
+        ]
+    ):
         permission_classes = [IsGroupChatMember]
         queryset = GroupChat.objects.get_queryset()
 
@@ -400,7 +406,7 @@ Here's a complete example of a chat consumer:
             assert self.obj
             self.member = await self.obj.members.select_related("user").aget(user=self.user)
 
-        async def receive_message(self, message: BaseMessage, **kwargs: Any) -> None:
+        async def receive_message(self, message: ChatIncomingMessage, **kwargs: Any) -> None:
             match message:
                 case PingMessage():
                     await self.send_message(PongMessage())
@@ -425,20 +431,39 @@ Here's a complete example of a chat consumer:
                         join_group_payload.group_name, self.channel_name
                     )
                     self.groups.extend(join_group_payload.group_name)
-                case _:
-                    pass
+
+
+Configuration Options
+---------------------
+Chanx consumers have several configuration options:
+
+.. code-block:: python
+
+    class ConfiguredConsumer(AsyncJsonWebsocketConsumer[ChatIncomingMessage, None, ChatGroupMessage]):
+        # Authentication
+        authentication_classes = [SessionAuthentication]
+        permission_classes = [IsAuthenticated]
+        queryset = Room.objects.all()
+        auth_method = "get"
+
+        # Behavior flags
+        send_completion = True  # Send completion messages
+        send_message_immediately = True  # Yield control after sending
+        log_received_message = True  # Log received messages
+        log_sent_message = True  # Log sent messages
+        log_ignored_actions = ["ping", "pong"]  # Don't log these actions
+        send_authentication_message = True  # Send auth status
 
 Best Practices
 --------------
-1. **Use type hints**: Add proper type annotations for better IDE support
+1. **Use generic type parameters**: Specify the message, event, and model types for better IDE support
 2. **Use pattern matching**: Handle messages with clear match/case patterns
 3. **Keep consumers focused**: Each consumer should handle a specific domain
 4. **Document message formats**: Clearly document expected message structures
 5. **Implement proper error handling**: Provide meaningful error messages
 6. **Use object-level permissions**: For endpoints tied to specific resources
-7. **Define group message schemas**: Always define OUTGOING_GROUP_MESSAGE_SCHEMA when using group messaging
-8. **Include appropriate assertions**: Use assert for type-checking in async methods
-9. **Test thoroughly**: Test both happy paths and error scenarios
+7. **Include appropriate assertions**: Use assert for type-checking in async methods
+8. **Test thoroughly**: Test both happy paths and error scenarios
 
 Next Steps
 ----------

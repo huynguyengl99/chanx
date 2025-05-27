@@ -47,9 +47,10 @@ Key Features
 ~~~~~~~~~~~~
 
 - **REST Framework Integration**: Use DRF authentication and permission classes with WebSockets
-- **Structured Messaging**: Type-safe message handling with Pydantic validation
+- **Structured Messaging**: Type-safe message handling with Pydantic validation and generic type parameters
 - **WebSocket Playground**: Interactive UI for testing WebSocket endpoints
 - **Group Management**: Simplified pub/sub messaging with automatic group handling
+- **Typed Channel Events**: Type-safe channel layer events
 - **Channels-friendly Routing**: Django-like ``path``, ``re_path``, and ``include`` functions designed specifically for WebSocket routing
 - **Comprehensive Logging**: Structured logging for WebSocket connections and messages
 - **Error Handling**: Robust error reporting and client feedback
@@ -61,12 +62,74 @@ Key Features
 Core Components
 ~~~~~~~~~~~~~~~
 
-- **AsyncJsonWebsocketConsumer**: Base consumer with authentication and structured messaging
+- **AsyncJsonWebsocketConsumer**: Base consumer with authentication, structured messaging, and typed events
 - **ChanxWebsocketAuthenticator**: Bridges WebSockets with DRF authentication
-- **Message System**: Type-safe message classes with automatic validation
+- **Message System**: Type-safe message classes with automatic validation and generic type parameters
+- **Channel Event System**: Type-safe channel layer events
 - **WebSocket Routing**: Django-style routing functions (``path``, ``re_path``, ``include``) optimized for Channels
 - **WebSocketTestCase**: Test utilities for WebSocket consumers
-- **Discriminated Union Messages**: Runtime validation of message types with action discriminator
+- **Generic Type Safety**: Compile-time type checking with generic parameters for messages, events, and models
+
+Using Generic Type Parameters
+-----------------------------
+AsyncJsonWebsocketConsumer uses four generic type parameters for improved type safety:
+
+.. code-block:: python
+
+    class AsyncJsonWebsocketConsumer[IC, Event, OG, M]:
+        """
+        Typed WebSocket consumer with four generic parameters:
+
+        IC: Incoming message type (required) - Union of BaseMessage subclasses
+        Event: Channel event type (optional) - Union of BaseChannelEvent subclasses or None
+        OG: Outgoing group message type (optional) - Union of BaseGroupMessage subclasses or None
+        M: Model type (optional) - Django model for object-level permissions
+        """
+
+You can use these parameters in different combinations:
+
+.. code-block:: python
+
+    # Minimal usage - just specify incoming message type
+    class SimpleConsumer(AsyncJsonWebsocketConsumer[PingMessage]):
+        async def receive_message(self, message: PingMessage, **kwargs: Any) -> None:
+            # message is properly typed as PingMessage
+            ...
+
+    # With incoming messages and events
+    class EventConsumer(AsyncJsonWebsocketConsumer[ChatMessage, NotifyEvent]):
+        async def notify(self, event: NotifyEvent) -> None:
+            # Handle typed events
+            ...
+
+    # With group messaging
+    class GroupConsumer(AsyncJsonWebsocketConsumer[ChatMessage, None, GroupMessage]):
+        async def receive_message(self, message: ChatMessage, **kwargs: Any) -> None:
+            # Send typed group messages
+            await self.send_group_message(GroupMessage(...))
+
+    # Complete example with all generic parameters
+    class ChatConsumer(AsyncJsonWebsocketConsumer[ChatMessage, ChatEvent, GroupMessage, Room]):
+        # Room is used for object-level permissions
+        queryset = Room.objects.all()
+
+        async def build_groups(self) -> list[str]:
+            # self.obj is typed as Room
+            return [f"room_{self.obj.id}"]
+
+Making Parameters Optional
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+For parameters you don't need, use None:
+
+.. code-block:: python
+
+    # No events, no group messages, with model
+    class ModelConsumer(AsyncJsonWebsocketConsumer[ChatMessage, None, None, Room]):
+        ...
+
+    # No events, with group messages, no model
+    class GroupOnlyConsumer(AsyncJsonWebsocketConsumer[ChatMessage, None, GroupMessage]):
+        ...
 
 Configuration
 -------------
@@ -140,209 +203,10 @@ Chanx provides Django-style routing functions specifically designed for WebSocke
         ])),
     ])
 
-Example: Building an Assistant App
-----------------------------------
-
-Let's create a simple assistant chatbot with authentication:
-
-1. First, create a new Django app for your assistant:
-
-.. code-block:: bash
-
-    python manage.py startapp assistants
-
-2. Define your message types in ``assistants/messages/assistant.py``:
-
-.. code-block:: python
-
-    from typing import Literal
-
-    from chanx.messages.base import BaseIncomingMessage, BaseMessage
-    from chanx.messages.incoming import PingMessage
-    from pydantic import BaseModel
-
-
-    class MessagePayload(BaseModel):
-        content: str
-
-
-    class NewMessage(BaseMessage):
-        """
-        New message for assistant.
-        """
-        action: Literal["new_message"] = "new_message"
-        payload: MessagePayload
-
-
-    class ReplyMessage(BaseMessage):
-        action: Literal["reply"] = "reply"
-        payload: MessagePayload
-
-
-    class AssistantIncomingMessage(BaseIncomingMessage):
-        message: NewMessage | PingMessage
-
-3. Create your consumer in ``assistants/consumers.py``:
-
-.. code-block:: python
-
-    from typing import Any
-
-    from rest_framework.permissions import IsAuthenticated
-
-    from chanx.generic.websocket import AsyncJsonWebsocketConsumer
-    from chanx.messages.base import BaseMessage
-    from chanx.messages.incoming import PingMessage
-    from chanx.messages.outgoing import PongMessage
-
-    from assistants.messages.assistant import (
-        AssistantIncomingMessage,
-        MessagePayload,
-        NewMessage,
-        ReplyMessage,
-    )
-
-
-    class AssistantConsumer(AsyncJsonWebsocketConsumer):
-        """Websocket to chat with server, like chat with chatbot system"""
-
-        INCOMING_MESSAGE_SCHEMA = AssistantIncomingMessage
-        permission_classes = [IsAuthenticated]
-
-        async def receive_message(self, message: BaseMessage, **kwargs: Any) -> None:
-            match message:
-                case PingMessage():
-                    # Reply with a PONG message
-                    await self.send_message(PongMessage())
-                case NewMessage(payload=new_message_payload):
-                    # Echo back with a reply message
-                    await self.send_message(
-                        ReplyMessage(
-                            payload=MessagePayload(
-                                content=f"Reply: {new_message_payload.content}"
-                            )
-                        )
-                    )
-                case _:
-                    pass
-
-4. Set up WebSocket routing in ``assistants/routing.py``:
-
-.. code-block:: python
-
-    from channels.routing import URLRouter
-
-    from chanx.routing import path
-
-    from assistants.consumers import AssistantConsumer
-
-    router = URLRouter(
-        [
-            path("", AssistantConsumer.as_asgi()),
-        ]
-    )
-
-5. Create a project-level routing file in your project's root directory (same level as urls.py) as ``routing.py``:
-
-.. code-block:: python
-
-    from channels.routing import URLRouter
-
-    from chanx.routing import include, path
-
-    ws_router = URLRouter(
-        [
-            path("assistants/", include("assistants.routing")),
-            # Add other WebSocket routes here
-        ]
-    )
-
-    router = URLRouter(
-        [
-            path("ws/", include(ws_router)),
-        ]
-    )
-
-6. Configure your project's ``asgi.py`` to use the WebSocket routing:
-
-.. code-block:: python
-
-    import os
-
-    from channels.routing import ProtocolTypeRouter
-    from channels.security.websocket import OriginValidator
-    from channels.sessions import CookieMiddleware
-    from django.conf import settings
-    from django.core.asgi import get_asgi_application
-
-    from chanx.routing import include
-
-    # Set Django settings module
-    os.environ.setdefault("DJANGO_SETTINGS_MODULE", "yourproject.settings")
-    django_asgi_app = get_asgi_application()
-
-    # Set up protocol routing
-    routing = {
-        "http": django_asgi_app,
-        "websocket": OriginValidator(
-            CookieMiddleware(include("yourproject.routing")),
-            settings.CORS_ALLOWED_ORIGINS + settings.CSRF_TRUSTED_ORIGINS,
-        ),
-    }
-
-    application = ProtocolTypeRouter(routing)
-
-7. Ensure your settings.py has the required settings:
-
-.. code-block:: python
-
-    INSTALLED_APPS = [
-        # ...
-        'channels',
-        'chanx',
-        'assistants',
-        # ...
-    ]
-
-    # For WebSocket origin validation
-    CSRF_TRUSTED_ORIGINS = [
-        "http://localhost:8000",
-        # Add other trusted origins
-    ]
-
-8. Connect from your JavaScript client:
-
-.. code-block:: javascript
-
-    const socket = new WebSocket('ws://localhost:8000/ws/assistants/');
-
-    // Add authentication headers
-    socket.onopen = function() {
-        console.log('Connected to assistant');
-
-        // Send a message
-        socket.send(JSON.stringify({
-            action: 'new_message',
-            payload: {
-                content: 'Hello assistant!'
-            }
-        }));
-    };
-
-    socket.onmessage = function(e) {
-        const data = JSON.parse(e.data);
-
-        if (data.action === 'reply') {
-            console.log('Assistant replied:', data.payload.content);
-        }
-    };
-
-If you don't have a client application ready, you can use the WebSocket Playground (covered in the next section) to test your assistant endpoint without writing any JavaScript.
-
 WebSocket Playground
 --------------------
 
-Add the playground to your URLs:
+Add the playground to your URLs and explore your WebSocket endpoints interactively:
 
 .. code-block:: python
 
@@ -350,55 +214,27 @@ Add the playground to your URLs:
         path('playground/', include('chanx.playground.urls')),
     ]
 
-Then visit ``/playground/websocket/`` to explore and test your WebSocket endpoints. The playground will automatically
-discover all registered WebSocket routes from your ``routing.py`` file, including any nested routes from included routers.
+Visit ``/playground/websocket/`` to test your endpoints without writing JavaScript.
 
-Testing
--------
+Complete Example Project
+------------------------
 
-Chanx provides specialized testing utilities for WebSocket consumers. For optimal testing, configure your test settings:
+For a full production-ready implementation with advanced patterns and deployment configurations, check out the complete example project:
 
-.. code-block:: python
+**GitHub Repository**: `chanx-example <https://github.com/huynguyengl99/chanx-example>`_
 
-    # settings/test.py
-    CHANX = {
-        "SEND_COMPLETION": True,  # Essential for receive_all_json() to work properly
-        "SEND_AUTHENTICATION_MESSAGE": True,  # Recommended for testing auth flows
-        "LOG_RECEIVED_MESSAGE": False,  # Optional: reduce test output
-        "LOG_SENT_MESSAGE": False,  # Optional: reduce test output
-    }
+This repository demonstrates:
 
-**Important**: Setting ``SEND_COMPLETION: True`` is crucial for testing, as the ``receive_all_json()`` method relies on completion messages to know when to stop collecting messages.
+- Production deployment configurations
+- Advanced authentication patterns
+- Group messaging and channel events
+- Comprehensive testing strategies
+- Real-world usage patterns
 
-Write tests for your WebSocket consumers:
+Learn More
+----------
 
-.. code-block:: python
-
-    from chanx.testing import WebsocketTestCase
-    from chanx.messages.incoming import PingMessage
-    from chanx.messages.outgoing import PongMessage
-
-    class TestChatConsumer(WebsocketTestCase):
-        ws_path = "/ws/chat/room1/"
-
-        async def test_connection_and_ping(self) -> None:
-            # Connect and authenticate
-            await self.auth_communicator.connect()
-            await self.auth_communicator.assert_authenticated_status_ok()
-
-            # Test ping/pong functionality
-            await self.auth_communicator.send_message(PingMessage())
-            messages = await self.auth_communicator.receive_all_json()
-            assert messages == [PongMessage().model_dump()]
-
-        async def test_multi_user_scenario(self) -> None:
-            # Create communicators for multiple users
-            first_comm = self.auth_communicator
-            second_comm = self.create_communicator(headers=self.get_headers_for_user(user2))
-
-            # Connect both
-            await first_comm.connect()
-            await second_comm.connect()
-
-            # Test group broadcasting
-            # ...
+* `Quick Start Guide <https://chanx.readthedocs.io/en/latest/quick-start.html>`_ - Step-by-step setup instructions
+* `User Guide <https://chanx.readthedocs.io/en/latest/user-guide/index.html>`_ - Comprehensive feature documentation
+* `API Reference <https://chanx.readthedocs.io/en/latest/reference/index.html>`_ - Detailed API documentation
+* `Examples <https://chanx.readthedocs.io/en/latest/examples/index.html>`_ - Real-world usage examples

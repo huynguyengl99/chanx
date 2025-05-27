@@ -4,7 +4,7 @@ What is Chanx?
 --------------
 Chanx is a comprehensive toolkit for Django Channels that simplifies building real-time WebSocket applications.
 It extends Django Channels with crucial features that production applications need, including authentication,
-message validation, group management, and testing utilities.
+message validation, group management, channel events, and testing utilities.
 
 While Django Channels provides the core infrastructure for handling WebSockets in Django, Chanx adds higher-level
 abstractions to make development faster, more structured, and less error-prone.
@@ -31,28 +31,43 @@ Chanx fills these gaps with a cohesive framework that provides:
 
   from chanx.generic.websocket import AsyncJsonWebsocketConsumer
 
-  class MyConsumer(AsyncJsonWebsocketConsumer):
+  class MyConsumer(AsyncJsonWebsocketConsumer[MyIncomingMessage]):
       authentication_classes = [TokenAuthentication, SessionAuthentication]
       permission_classes = [IsAuthenticated]
 
-2. **Type-safe Messaging**: Schema validation with Pydantic for incoming and outgoing messages
+2. **Type-safe Messaging**: Schema validation with Pydantic and generic type parameters
 
 .. code-block:: python
 
+  from typing import Literal
   from chanx.messages.base import BaseMessage
 
   class ChatMessage(BaseMessage):
       action: Literal["chat"] = "chat"
       payload: str
 
+  class NotifyMessage(BaseMessage):
+      action: Literal["notify"] = "notify"
+      payload: str
+
+  AllMessages = ChatMessage | NotifyMessage
+
+  # Use as a generic parameter
+  class ChatConsumer(AsyncJsonWebsocketConsumer[AllMessages]):
+      async def receive_message(self, message: AllMessages, **kwargs: Any) -> None:
+          # Type-safe message handling
+          match message:
+              case ChatMessage():
+               ...
+
 3. **Automatic Group Management**: Simplified pub/sub functionality
 
 .. code-block:: python
 
-  async def build_groups(self):
+  async def build_groups(self) -> list[str]:
       return [f"room_{self.room_id}"]
 
-  async def receive_message(self, message):
+  async def receive_message(self, message: ChatMessage, **kwargs: Any) -> None:
       await self.send_group_message(message)
 
 4. **Enhanced URL Routing**: Django-style routing utilities for WebSocket endpoints with type hints support
@@ -102,20 +117,30 @@ Chanx fills these gaps with a cohesive framework that provides:
 
   from chanx.generic.websocket import AsyncJsonWebsocketConsumer
 
-  class MyConsumer(AsyncJsonWebsocketConsumer):
+  class MyConsumer(AsyncJsonWebsocketConsumer[MyIncomingMessage, None, None, Room]):
       queryset = Room.objects.all()
       permission_classes = [IsRoomMember]
 
-8. **Discriminated Union Messages**: Runtime validation of message types with action discriminator
+8. **Typed Channel Events**: Type-safe channel layer events
 
 .. code-block:: python
 
-  from chanx.messages.base import BaseIncomingMessage
+  from chanx.messages.base import BaseChannelEvent
 
-  class MyIncomingMessage(BaseIncomingMessage):
-      message: PingMessage | ChatMessage | JoinMessage
+  class NotifyEvent(BaseChannelEvent):
+      handler: Literal["notify"] = "notify"
+      payload: NotifyPayload
 
-9. **Full Type Hints Support**: Complete mypy and pyright support for better IDE integration and type safety
+  # In consumer
+  class MyConsumer(AsyncJsonWebsocketConsumer[MyIncomingMessage, NotifyEvent]):
+      async def notify(self, event: NotifyEvent) -> None:
+          # Handle the notification event
+          await self.send_message(NotificationMessage(payload=event.payload))
+
+  # Send from anywhere
+  MyConsumer.send_channel_event("group_name", NotifyEvent(payload=payload))
+
+9. **Generic Type Parameters**: Complete mypy and pyright support for better IDE integration and type safety
 
 Key Benefits
 ------------
@@ -130,8 +155,9 @@ Architecture Overview
 ---------------------
 Chanx is built around several key components:
 
-- **WebSocket Consumers**: Base consumer classes with integrated authentication and permissions
+- **WebSocket Consumers**: Base consumer classes with integrated authentication, permissions, and generic type parameters
 - **Message System**: Pydantic-based message validation with discriminated unions
+- **Channel Event System**: Type-safe channel layer events for cross-consumer communication
 - **URL Routing**: Django-style routing utilities for WebSocket endpoints with modular organization
 - **Authenticator**: Bridge between WebSocket connections and DRF authentication
 - **Testing Framework**: Specialized test case and communicator classes with multi-user support

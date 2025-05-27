@@ -11,7 +11,7 @@ Key features:
 - DRF-style authentication and permission checking
 - Structured message handling with Pydantic validation
 - Automatic group management for pub/sub messaging
-- Typed channel event system with discriminated unions
+- Typed channel event system
 - Generic type parameters for compile-time type safety
 - Comprehensive error handling and reporting
 - Configurable logging and message completion signals

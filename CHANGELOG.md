@@ -1,3 +1,10 @@
+## v0.10.0 (2025-05-27)
+
+### Feat
+
+- **event**: add typed channel event system with static type checking
+- **generic**: add generic type parameters and simplify message architecture
+
 ## v0.9.0 (2025-05-15)
 
 ### Feat

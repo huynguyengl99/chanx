@@ -1,3 +1,9 @@
+## v0.11.0 (2025-05-28)
+
+### Feat
+
+- **event**: replace dynamic method dispatch with receive_event for channel events
+
 ## v0.10.0 (2025-05-27)
 
 ### Feat

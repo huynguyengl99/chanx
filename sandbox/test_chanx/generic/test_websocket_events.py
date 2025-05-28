@@ -55,10 +55,14 @@ class MyEventsConsumer(AsyncJsonWebsocketConsumer[IncomingMessage, MyEvent]):
             case PingMessage():
                 await self.send_message(PongMessage())
 
-    async def notify(self, event: NotifyEvent) -> None:
-        notify_message = f"ATTENTION: {event.payload.content}"
+    async def receive_event(self, event: MyEvent) -> None:
+        match event:
+            case NotifyEvent():
+                notify_message = f"ATTENTION: {event.payload.content}"
 
-        await self.send_message(ReplyMessage(payload=notify_message))
+                await self.send_message(ReplyMessage(payload=notify_message))
+            case _:
+                raise ValueError("Unhandled event")
 
 
 class MyEventsConsumerTestCase(WebsocketTestCase):
@@ -108,10 +112,8 @@ class MyEventsConsumerTestCase(WebsocketTestCase):
             )
             await asyncio.sleep(0.1)  # wait for processing
         err_log = logs[0]
-        assert (
-            err_log["event"]
-            == "Handler method 'unhandled' is not available for sending event"
-        )
+        assert err_log["event"] == "Failed to process channel event"
+        assert "Unhandled event" in str(err_log["exc_info"])
         assert err_log["log_level"] == "error"
 
     @override_chanx_settings(

@@ -49,11 +49,13 @@ class DiscussionConsumer(
                         ),
                     )
 
-    async def notify_people(self, event: NotifyEvent) -> None:
-        notify_message = f"ATTENTION: {event.payload.content}"
+    async def receive_event(self, event: DiscussionEvent) -> None:
+        match event:
+            case NotifyEvent():
+                notify_message = f"ATTENTION: {event.payload.content}"
 
-        await self.send_message(
-            DiscussionMemberMessage(
-                payload=DiscussionMessagePayload(content=notify_message)
-            )
-        )
+                await self.send_message(
+                    DiscussionMemberMessage(
+                        payload=DiscussionMessagePayload(content=notify_message)
+                    )
+                )

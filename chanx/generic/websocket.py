@@ -25,16 +25,16 @@ The consumer uses four generic type parameters for type safety:
 - M (optional): Model subclass for object-level permissions
 
 Developers should subclass AsyncJsonWebsocketConsumer with appropriate generic parameters
-and implement the receive_message method to handle incoming messages. The consumer
-automatically handles connection lifecycle, authentication, message validation, and
-group messaging.
+and implement the receive_message method to handle incoming messages (and optionally
+the receive_event method to handle channel events). The consumer automatically handles
+connection lifecycle, authentication, message validation, and group messaging.
 """
 
 import asyncio
 import sys
 import uuid
 from abc import ABC, abstractmethod
-from collections.abc import Awaitable, Callable, Iterable, Sequence
+from collections.abc import Iterable, Sequence
 from types import ModuleType
 from typing import (
     Annotated,
@@ -123,6 +123,9 @@ class AsyncJsonWebsocketConsumer(
 
     For typed channel events, subclasses can define a union type of channel events
     and use the Event generic parameter to enable type-safe channel event handling.
+    Override the receive_event() method to process events sent via send_channel_event()
+    or asend_channel_event(). Events are automatically validated against the Event
+    type before being passed to your handler method.
 
     For group messaging functionality, subclasses should also define the outgoing group
     message type using the OG generic parameter to enable proper validation and handling
@@ -705,12 +708,8 @@ class AsyncJsonWebsocketConsumer(
         Internal dispatcher for typed channel events with completion signal.
 
         This method is called by the channel layer when an event is sent to a group
-        this consumer belongs to. It extracts the event data, validates it against
-        the Event generic parameter, finds the appropriate handler method, and calls
-        it with proper error handling.
-
-        The handler method name is determined by the event's 'handler' field, and it
-        must be an async method on the consumer class that accepts the event as a parameter.
+        this consumer belongs to. It validates the event data and forwards it to
+        the receive_event method.
 
         Args:
             event_payload: The message from the channel layer containing event data
@@ -722,20 +721,7 @@ class AsyncJsonWebsocketConsumer(
 
             assert event_data is not None
 
-            handler_name = event_data.handler
-
-            # Find and call the handler method
-            handler_method: Callable[[Event], Awaitable[None]] | None = getattr(
-                self, handler_name, None
-            )
-            if not callable(handler_method):
-                await logger.aerror(
-                    f"Handler method '{handler_name}' is not available for sending event"
-                )
-                return
-
-                # Handler is async, await it
-            await handler_method(event_data)
+            await self.receive_event(event_data)
 
         except Exception:
             await logger.aexception("Failed to process channel event")
@@ -744,6 +730,27 @@ class AsyncJsonWebsocketConsumer(
             # Send completion signal if configured
             if self.send_completion:
                 await self.send_message(CompleteMessage())
+
+    async def receive_event(self, event: Event) -> None:
+        """
+        Process typed channel events received through the channel layer.
+
+        This method is called when a channel event is sent to a group this consumer
+        belongs to. Override this method to handle events sent via send_channel_event()
+        or asend_channel_event().
+
+        Channel events provide a way to send typed messages to consumers from outside
+        the WebSocket connection (e.g., from Django views, tasks, or other consumers).
+        Use pattern matching to handle different event types based on your Event
+        generic parameter.
+
+        Args:
+            event: The validated event object (typed based on Event generic parameter)
+
+        Note:
+            This method is only called if your consumer defines the Event generic
+            parameter. If Event is None, channel events are not supported.
+        """
 
     # Helper methods
 

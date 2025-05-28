@@ -252,11 +252,13 @@ Configure your consumer to handle these events:
         # Configure groups to receive events
         groups = ["announcements"]
 
-        # Define handler method matching the event's handler field
-        async def notify(self, event: NotifyEvent) -> None:
-            """Handle notification events from channel layer."""
-            notification = f"{event.payload.level.upper()}: {event.payload.content}"
-            await self.send_message(MessageResponse(payload={"text": notification}))
+        # Override receive_event method to handle all event types
+        async def receive_event(self, event: ChatEvent) -> None:
+            """Handle channel events using pattern matching."""
+            match event:
+                case NotifyEvent():
+                    notification = f"{event.payload.level.upper()}: {event.payload.content}"
+                    await self.send_message(MessageResponse(payload={"text": notification}))
 
 To send events from outside the consumer (e.g., from a Django view or task):
 
@@ -286,10 +288,11 @@ To send events from outside the consumer (e.g., from a Django view or task):
 The channel event system provides:
 
 1. Type-safe event handling with Pydantic validation
-2. Method dispatch based on the event's handler field
-3. Automatic error handling and logging
-4. Support for both sync and async code
-5. Completion messages (if configured)
+2. Single method override (``receive_event``) for handling all event types
+3. Pattern matching for different event types within the method
+4. Automatic error handling and logging
+5. Support for both sync and async code
+6. Completion messages (if configured)
 
 Accessing User and Context
 --------------------------

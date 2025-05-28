@@ -97,10 +97,14 @@ You can use these parameters in different combinations:
             ...
 
     # With incoming messages and events
-    class EventConsumer(AsyncJsonWebsocketConsumer[ChatMessage, NotifyEvent]):
-        async def notify(self, event: NotifyEvent) -> None:
-            # Handle typed events
-            ...
+    async def receive_event(self, event: NotifyEvent) -> None:
+        # Handle typed events using pattern matching
+        match event:
+            case NotifyEvent():
+                # Process the notification event
+                await self.send_message(ResponseMessage(payload=event.payload))
+            case _:
+                pass
 
     # With group messaging
     class GroupConsumer(AsyncJsonWebsocketConsumer[ChatMessage, None, GroupMessage]):

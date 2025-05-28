@@ -133,9 +133,12 @@ Chanx fills these gaps with a cohesive framework that provides:
 
   # In consumer
   class MyConsumer(AsyncJsonWebsocketConsumer[MyIncomingMessage, NotifyEvent]):
-      async def notify(self, event: NotifyEvent) -> None:
-          # Handle the notification event
-          await self.send_message(NotificationMessage(payload=event.payload))
+      async def receive_event(self, event: NotifyEvent) -> None:
+          """Handle channel events using pattern matching."""
+          match event:
+              case NotifyEvent():
+                  # Handle the notification event
+                  await self.send_message(NotificationMessage(payload=event.payload))
 
   # Send from anywhere
   MyConsumer.send_channel_event("group_name", NotifyEvent(payload=payload))

@@ -195,7 +195,7 @@ Chanx provides a mechanism for typed channel events using the BaseChannelEvent c
             content: str
             level: str = "info"
 
-        # The handler field identifies which method to call
+        # The handler field is used for event identification
         handler: Literal["notify"] = "notify"
         payload: Payload
 
@@ -204,19 +204,21 @@ Chanx provides a mechanism for typed channel events using the BaseChannelEvent c
     ChatEvent = NotifyEvent
 
 
-In your consumer, define a handler method with the same name as the event's handler field:
+In your consumer, override the ``receive_event`` method to handle events:
 
 .. code-block:: python
 
     class ChatConsumer(AsyncJsonWebsocketConsumer[ChatIncomingMessage, ChatEvent, ChatGroupMessage]):
         # Specify channel event type as second generic parameter
 
-        async def notify(self, event: NotifyEvent) -> None:
-            """Handle notification events."""
-            notification = f"{event.payload.level.upper()}: {event.payload.content}"
-            await self.send_message(
-                NotificationMessage(payload={"text": notification})
-            )
+        async def receive_event(self, event: ChatEvent) -> None:
+            """Handle channel events using pattern matching."""
+            match event:
+                case NotifyEvent():
+                    notification = f"{event.payload.level.upper()}: {event.payload.content}"
+                    await self.send_message(
+                        NotificationMessage(payload={"text": notification})
+                    )
 
 To send events from outside the consumer (e.g., from a view or task):
 

@@ -326,14 +326,16 @@ Let's add support for system notifications using channel events:
 
         # ... existing code ...
 
-        async def notify(self, event: NotifyEvent) -> None:
-            """Handle notification events."""
-            notification = f"{event.payload.level.upper()}: {event.payload.content}"
+        async def receive_event(self, event: ChatEvent) -> None:
+            """Handle channel events using pattern matching."""
+            match event:
+                case NotifyEvent():
+                    notification = f"{event.payload.level.upper()}: {event.payload.content}"
 
-            # Send to the connected client
-            await self.send_message(
-                EchoMessage(payload=MessagePayload(content=notification))
-            )
+                    # Send to the connected client
+                    await self.send_message(
+                        EchoMessage(payload=MessagePayload(content=notification))
+                    )
 
 3. Create a view to send notifications:
 

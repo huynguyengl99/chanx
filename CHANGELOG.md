@@ -1,3 +1,9 @@
+## v0.11.1 (2025-06-02)
+
+### Fix
+
+- **websocket**: add AbstractBaseUser support for custom user models
+
 ## v0.11.0 (2025-05-28)
 
 ### Feat

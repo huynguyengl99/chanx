@@ -51,6 +51,7 @@ from channels.generic.websocket import (
     AsyncJsonWebsocketConsumer as BaseAsyncJsonWebsocketConsumer,
 )
 from channels.layers import get_channel_layer
+from django.contrib.auth.base_user import AbstractBaseUser
 from django.contrib.auth.models import AnonymousUser, User
 from django.db.models import Model
 from rest_framework.authentication import BaseAuthentication
@@ -318,7 +319,7 @@ class AsyncJsonWebsocketConsumer(
 
     def _initialize_instance_attributes(self) -> None:
         """Initialize instance attributes to their default values."""
-        self.user: User | AnonymousUser | None = None
+        self.user: User | AnonymousUser | AbstractBaseUser | None = None
         self.group_name: str | None = None
         self.connecting: bool = False
 

@@ -521,7 +521,7 @@ class AsyncJsonWebsocketConsumer(
         Args:
             message: The Message object to send
         """
-        await self.send_json(message.model_dump())
+        await self.send_json(message.model_dump(mode="json"))
 
     # Group operations methods
 

@@ -1,3 +1,9 @@
+## v0.11.2 (2025-06-06)
+
+### Fix
+
+- **websocket**: use json mode for message serialization
+
 ## v0.11.1 (2025-06-02)
 
 ### Fix

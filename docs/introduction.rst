@@ -117,7 +117,7 @@ Chanx fills these gaps with a cohesive framework that provides:
 
   from chanx.generic.websocket import AsyncJsonWebsocketConsumer
 
-  class MyConsumer(AsyncJsonWebsocketConsumer[MyIncomingMessage, None, None, Room]):
+  class MyConsumer(AsyncJsonWebsocketConsumer[MyIncomingMessage, None, Room]):
       queryset = Room.objects.all()
       permission_classes = [IsRoomMember]
 

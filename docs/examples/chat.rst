@@ -54,7 +54,7 @@ Now let's define our WebSocket message types using Pydantic for validation:
     from typing import Literal, Optional, List, Dict, Any
 
     from pydantic import Field
-    from chanx.messages.base import BaseIncomingMessage, BaseMessage, BaseGroupMessage, BaseOutgoingGroupMessage
+    from chanx.messages.base import BaseMessage, BaseGroupMessage
     from chanx.messages.incoming import PingMessage
 
 
@@ -82,14 +82,8 @@ Now let's define our WebSocket message types using Pydantic for validation:
         payload: List[Dict[str, Any]]
 
 
-    class ChatIncomingMessage(BaseIncomingMessage):
-        """Container for incoming chat message types."""
-        message: PingMessage | ChatMessagePayload
-
-
-    class ChatOutgoingGroupMessage(BaseOutgoingGroupMessage):
-        """Container for outgoing group messages."""
-        group_message: UserJoinedPayload | UserLeftPayload | ChatMessagePayload
+    # Define incoming message union
+    ChatIncomingMessage = PingMessage | ChatMessagePayload
 
 WebSocket Consumer
 ------------------
@@ -115,7 +109,6 @@ Now we'll create our chat consumer with proper pattern matching:
     from myapp.permissions import IsChatRoomMember
     from myapp.messages import (
         ChatIncomingMessage,
-        ChatOutgoingGroupMessage,
         ChatMessagePayload,
         UserJoinedPayload,
         UserLeftPayload,
@@ -123,17 +116,13 @@ Now we'll create our chat consumer with proper pattern matching:
     )
 
 
-    class ChatConsumer(AsyncJsonWebsocketConsumer[ChatRoom]):
+    class ChatConsumer(AsyncJsonWebsocketConsumer[ChatIncomingMessage, None, ChatRoom]):
         """WebSocket consumer for chat rooms."""
 
         # Authentication configuration
         authentication_classes = [SessionAuthentication]
         permission_classes = [IsAuthenticated, IsChatRoomMember]
         queryset = ChatRoom.objects.all()
-
-        # Message schema
-        INCOMING_MESSAGE_SCHEMA = ChatIncomingMessage
-        OUTGOING_GROUP_MESSAGE_SCHEMA = ChatOutgoingGroupMessage
 
         # Enable completion messages
         send_completion = True
@@ -204,7 +193,7 @@ Now we'll create our chat consumer with proper pattern matching:
 
             return messages
 
-        async def receive_message(self, message: BaseMessage, **kwargs: Any) -> None:
+        async def receive_message(self, message: ChatIncomingMessage, **kwargs: Any) -> None:
             """Handle incoming messages using pattern matching."""
             match message:
                 case ChatMessagePayload(payload=text):

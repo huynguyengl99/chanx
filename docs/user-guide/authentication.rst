@@ -83,7 +83,7 @@ Chanx supports object-level permissions just like DRF. To use them:
             return request.user in obj.members.all()
 
 
-    class RoomConsumer(AsyncJsonWebsocketConsumer[ChatIncomingMessage, None, None, Room]):
+    class RoomConsumer(AsyncJsonWebsocketConsumer[ChatIncomingMessage, None, Room]):
         authentication_classes = [SessionAuthentication]
         permission_classes = [IsAuthenticated, RoomAccessPermission]
         queryset = Room.objects.all()

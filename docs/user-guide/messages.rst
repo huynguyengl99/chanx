@@ -130,15 +130,11 @@ For group communication, define a BaseGroupMessage subclass:
         action: Literal["chat_group"] = "chat_group"
         payload: ChatPayload
 
-Then, specify it as the third generic parameter:
+Use it in your consumer:
 
 .. code-block:: python
 
-    class ChatConsumer(AsyncJsonWebsocketConsumer[ChatIncomingMessage, None, ChatGroupMessage]):
-        # First param: Incoming message type
-        # Second param: Channel event type (None means no events)
-        # Third param: Outgoing group message type
-
+    class ChatConsumer(AsyncJsonWebsocketConsumer[ChatIncomingMessage]):
         async def receive_message(self, message: ChatIncomingMessage, **kwargs: Any) -> None:
             match message:
                 case ChatMessage(payload=payload):
@@ -208,7 +204,7 @@ In your consumer, override the ``receive_event`` method to handle events:
 
 .. code-block:: python
 
-    class ChatConsumer(AsyncJsonWebsocketConsumer[ChatIncomingMessage, ChatEvent, ChatGroupMessage]):
+    class ChatConsumer(AsyncJsonWebsocketConsumer[ChatIncomingMessage, ChatEvent]):
         # Specify channel event type as second generic parameter
 
         async def receive_event(self, event: ChatEvent) -> None:

@@ -65,7 +65,7 @@ Configure authentication and permissions using DRF-style attributes:
     from chat.models import Room
 
 
-    class SecureConsumer(AsyncJsonWebsocketConsumer[PingMessage, None, None, Room]):
+    class SecureConsumer(AsyncJsonWebsocketConsumer[PingMessage, None, Room]):
         # Authentication classes determine how users are identified
         authentication_classes = [SessionAuthentication]
 
@@ -84,18 +84,17 @@ Configure authentication and permissions using DRF-style attributes:
 
 Generic Type Parameters
 -----------------------
-Chanx consumers support four generic type parameters for improved type safety:
+Chanx consumers support three generic type parameters for improved type safety:
 
 .. code-block:: python
 
-    class AsyncJsonWebsocketConsumer(Generic[IC, Event, OG, M]):
+    class AsyncJsonWebsocketConsumer(Generic[IC, Event, M]):
         """
         Base WebSocket consumer with generic type parameters.
 
         Generic Parameters:
             IC: Incoming message type (required) - Union of BaseMessage subclasses
             Event: Channel event type (optional) - Union of BaseChannelEvent subclasses or None
-            OG: Outgoing group message type (optional) - BaseGroupMessage subclass or None
             M: Model type for object-level permissions (optional) - Model subclass or None
         """
 
@@ -107,11 +106,14 @@ At minimum, you must specify the incoming message type:
     class SimpleConsumer(AsyncJsonWebsocketConsumer[PingMessage]):
         ...
 
+    # Consumer with events
+    class EventConsumer(AsyncJsonWebsocketConsumer[ChatIncomingMessage, ChatEvent]):
+        ...
+
     # Full consumer with all generic parameters
     class FullConsumer(AsyncJsonWebsocketConsumer[
         ChatIncomingMessage,       # Incoming message types
         ChatEvent,                 # Channel events
-        ChatGroupMessage,          # Outgoing group message
         Room                       # Model for object permissions
     ]):
         ...
@@ -174,11 +176,11 @@ First, define your group message types:
         action: Literal["chat_group"] = "chat_group"
         payload: dict[str, str]
 
-Then, configure your consumer to use these group message types:
+Then, configure your consumer to handle group messaging:
 
 .. code-block:: python
 
-    class ChatConsumer(AsyncJsonWebsocketConsumer[ChatIncomingMessage, None, ChatGroupMessage]):
+    class ChatConsumer(AsyncJsonWebsocketConsumer[ChatIncomingMessage]):
         async def build_groups(self) -> list[str]:
             """
             Define which groups this consumer should join.
@@ -389,9 +391,7 @@ Here's a complete example of a chat consumer:
 
 
     class ChatDetailConsumer(
-        AsyncJsonWebsocketConsumer[
-            ChatIncomingMessage, None, MemberMessage, GroupChat
-        ]
+        AsyncJsonWebsocketConsumer[ChatIncomingMessage, None, GroupChat]
     ):
         permission_classes = [IsGroupChatMember]
         queryset = GroupChat.objects.get_queryset()
@@ -442,7 +442,7 @@ Chanx consumers have several configuration options:
 
 .. code-block:: python
 
-    class ConfiguredConsumer(AsyncJsonWebsocketConsumer[ChatIncomingMessage, None, ChatGroupMessage]):
+    class ConfiguredConsumer(AsyncJsonWebsocketConsumer[ChatIncomingMessage]):
         # Authentication
         authentication_classes = [SessionAuthentication]
         permission_classes = [IsAuthenticated]

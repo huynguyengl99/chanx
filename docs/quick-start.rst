@@ -246,7 +246,7 @@ Now let's enhance our consumer to support group messaging. First, we need to add
         ChatGroupMessage
     )
 
-    class ChatConsumer(AsyncJsonWebsocketConsumer[MyIncomingMessage, None, ChatGroupMessage]):
+    class ChatConsumer(AsyncJsonWebsocketConsumer[MyIncomingMessage]):
         """Chat consumer with room-based groups."""
         authentication_classes = [SessionAuthentication]
         permission_classes = [IsAuthenticated]
@@ -320,7 +320,7 @@ Let's add support for system notifications using channel events:
 .. code-block:: python
 
     # myapp/consumers.py - updated further
-    class ChatConsumer(AsyncJsonWebsocketConsumer[MyIncomingMessage, ChatEvent, ChatGroupMessage]):
+    class ChatConsumer(AsyncJsonWebsocketConsumer[MyIncomingMessage, ChatEvent]):
         """Chat consumer with room-based groups and event handling."""
         # Add ChatEvent as the second generic parameter
 

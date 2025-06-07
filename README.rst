@@ -72,17 +72,16 @@ Core Components
 
 Using Generic Type Parameters
 -----------------------------
-AsyncJsonWebsocketConsumer uses four generic type parameters for improved type safety:
+AsyncJsonWebsocketConsumer uses three generic type parameters for improved type safety:
 
 .. code-block:: python
 
-    class AsyncJsonWebsocketConsumer[IC, Event, OG, M]:
+    class AsyncJsonWebsocketConsumer[IC, Event, M]:
         """
-        Typed WebSocket consumer with four generic parameters:
+        Typed WebSocket consumer with three generic parameters:
 
         IC: Incoming message type (required) - Union of BaseMessage subclasses
         Event: Channel event type (optional) - Union of BaseChannelEvent subclasses or None
-        OG: Outgoing group message type (optional) - Union of BaseGroupMessage subclasses or None
         M: Model type (optional) - Django model for object-level permissions
         """
 
@@ -97,23 +96,29 @@ You can use these parameters in different combinations:
             ...
 
     # With incoming messages and events
-    async def receive_event(self, event: NotifyEvent) -> None:
-        # Handle typed events using pattern matching
-        match event:
-            case NotifyEvent():
-                # Process the notification event
-                await self.send_message(ResponseMessage(payload=event.payload))
-            case _:
-                pass
+    class EventConsumer(AsyncJsonWebsocketConsumer[ChatMessage, ChatEvent]):
+        async def receive_message(self, message: ChatMessage, **kwargs: Any) -> None:
+            # Handle incoming messages
+            ...
+
+        async def receive_event(self, event: ChatEvent) -> None:
+            # Handle typed events using pattern matching
+            match event:
+                case NotifyEvent():
+                    # Process the notification event
+                    await self.send_message(ResponseMessage(payload=event.payload))
+                case _:
+                    pass
 
     # With group messaging
-    class GroupConsumer(AsyncJsonWebsocketConsumer[ChatMessage, None, GroupMessage]):
+    class GroupConsumer(AsyncJsonWebsocketConsumer[ChatMessage]):
         async def receive_message(self, message: ChatMessage, **kwargs: Any) -> None:
-            # Send typed group messages
-            await self.send_group_message(GroupMessage(...))
+            # Send typed group messages using send_group_message
+            group_msg = MemberMessage(payload={"content": "Hello group!"})
+            await self.send_group_message(group_msg)
 
     # Complete example with all generic parameters
-    class ChatConsumer(AsyncJsonWebsocketConsumer[ChatMessage, ChatEvent, GroupMessage, Room]):
+    class ChatConsumer(AsyncJsonWebsocketConsumer[ChatMessage, ChatEvent, Room]):
         # Room is used for object-level permissions
         queryset = Room.objects.all()
 
@@ -127,12 +132,12 @@ For parameters you don't need, use None:
 
 .. code-block:: python
 
-    # No events, no group messages, with model
-    class ModelConsumer(AsyncJsonWebsocketConsumer[ChatMessage, None, None, Room]):
+    # No events, with model
+    class ModelConsumer(AsyncJsonWebsocketConsumer[ChatMessage, None, Room]):
         ...
 
-    # No events, with group messages, no model
-    class GroupOnlyConsumer(AsyncJsonWebsocketConsumer[ChatMessage, None, GroupMessage]):
+    # With events, no model
+    class EventOnlyConsumer(AsyncJsonWebsocketConsumer[ChatMessage, ChatEvent]):
         ...
 
 Configuration

@@ -33,7 +33,7 @@ Define message types in `echo/messages.py`:
 
     from typing import Any, Literal, Optional
 
-    from chanx.messages.base import BaseIncomingMessage, BaseMessage
+    from chanx.messages.base import BaseMessage
     from chanx.messages.incoming import PingMessage
 
 
@@ -49,9 +49,8 @@ Define message types in `echo/messages.py`:
         payload: str
 
 
-    class EchoIncomingMessage(BaseIncomingMessage):
-        """Container for incoming message types."""
-        message: PingMessage | EchoMessage
+    # Define incoming message union
+    EchoIncomingMessage = PingMessage | EchoMessage
 
 WebSocket Consumer
 ------------------
@@ -65,14 +64,13 @@ Create a consumer in `echo/consumers.py`:
     from rest_framework.permissions import IsAuthenticated
 
     from chanx.generic.websocket import AsyncJsonWebsocketConsumer
-    from chanx.messages.base import BaseMessage
     from chanx.messages.incoming import PingMessage
     from chanx.messages.outgoing import PongMessage
 
     from echo.messages import EchoIncomingMessage, EchoMessage, StatusMessage
 
 
-    class EchoConsumer(AsyncJsonWebsocketConsumer):
+    class EchoConsumer(AsyncJsonWebsocketConsumer[EchoIncomingMessage]):
         """
         Simple echo consumer that responds to messages.
 
@@ -81,9 +79,6 @@ Create a consumer in `echo/consumers.py`:
         # Authentication setup
         authentication_classes = [SessionAuthentication]
         permission_classes = [IsAuthenticated]
-
-        # Message schema
-        INCOMING_MESSAGE_SCHEMA = EchoIncomingMessage
 
         # Enable completion messages
         send_completion = True
@@ -96,7 +91,7 @@ Create a consumer in `echo/consumers.py`:
                 StatusMessage(payload=f"Welcome, {user.username}!")
             )
 
-        async def receive_message(self, message: BaseMessage, **kwargs: Any) -> None:
+        async def receive_message(self, message: EchoIncomingMessage, **kwargs: Any) -> None:
             """Handle incoming messages."""
             # Handle different message types using pattern matching
             match message:

@@ -1,3 +1,9 @@
+## v0.13.0 (2025-06-07)
+
+### Feat
+
+- **messages**: remove outgoing group message system and simplify generic types
+
 ## v0.12.0 (2025-06-07)
 
 ### Feat

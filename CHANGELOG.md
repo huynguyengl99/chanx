@@ -1,3 +1,9 @@
+## v0.12.0 (2025-06-07)
+
+### Feat
+
+- **testing**: add receive_until_action method for flexible message collection
+
 ## v0.11.2 (2025-06-06)
 
 ### Fix

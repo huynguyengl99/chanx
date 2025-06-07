@@ -44,6 +44,7 @@ Contents
    reference/routing
    reference/utils
    reference/settings
+   reference/testing
 
 .. toctree::
    :maxdepth: 1

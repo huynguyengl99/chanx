@@ -23,4 +23,38 @@ class ReplyMessage(BaseMessage):
     payload: MessagePayload
 
 
-AssistantIncomingMessage = NewMessage | PingMessage
+class StreamingMessage(BaseMessage):
+    """
+    Streaming message of assistant.
+    """
+
+    action: Literal["streaming"] = "streaming"
+    payload: MessagePayload
+
+
+class StreamingReplyMessage(BaseMessage):
+    """
+    Streaming reply message of assistant.
+    """
+
+    class Payload(BaseModel):
+        id: str
+        content: str
+
+    action: Literal["streaming_reply"] = "streaming_reply"
+    payload: Payload
+
+
+class StreamingReplyCompleteMessage(BaseMessage):
+    """
+    Streaming reply message of assistant.
+    """
+
+    class Payload(BaseModel):
+        id: str
+
+    action: Literal["streaming_reply_complete"] = "streaming_reply_complete"
+    payload: Payload
+
+
+AssistantIncomingMessage = NewMessage | PingMessage | StreamingMessage

@@ -182,6 +182,13 @@ Chanx extends the standard Channels WebsocketCommunicator with additional featur
     # NOTE: Also requires SEND_COMPLETION=True
     messages = await communicator.receive_all_json(wait_group=True)
 
+    # Receive messages until a specific action
+    # Useful for streaming responses or custom completion signals
+    messages = await communicator.receive_until_action("streaming_complete")
+
+    # Include the stop action in results
+    messages = await communicator.receive_until_action("custom_end", inclusive=True)
+
     # Verify connection closed properly
     await communicator.assert_closed()
 
@@ -238,6 +245,23 @@ Here's a complete example of testing message exchange with modern Python asserti
             response = responses[0]
             assert response["action"] == "chat_response"
             assert response["payload"]["content"] == f"Echo: {message_content}"
+
+        async def test_multi_step_process(self) -> None:
+            """Test a multi-step process with custom completion signal"""
+            await self.auth_communicator.connect()
+            await self.auth_communicator.assert_authenticated_status_ok()
+
+            # Start a complex process
+            await self.auth_communicator.send_message(
+                ComplexProcessMessage(payload={"steps": 5})
+            )
+
+            # Collect messages until the process completes
+            messages = await self.auth_communicator.receive_until_action("process_finished")
+
+            # Verify all steps were completed
+            step_messages = [msg for msg in messages if msg["action"] == "step_completed"]
+            assert len(step_messages) == 5
 
 Testing Group Messaging
 -----------------------
@@ -396,6 +420,28 @@ Here's a complete example of a test for a chat application with custom test case
             db_messages = await ChatMessage.objects.acount()
             assert db_messages == 1
 
+Comparison of Message Collection Methods
+----------------------------------------
+Choose the right method for your testing needs:
+
+.. code-block:: python
+
+    # Standard completion-based collection
+    # Use for: Simple request-response patterns
+    messages = await communicator.receive_all_json()
+
+    # Group message completion-based collection
+    # Use for: Group broadcasts and pub/sub patterns
+    messages = await communicator.receive_all_json(wait_group=True)
+
+    # Custom action-based collection
+    # Use for: Streaming, multi-step processes, custom protocols
+    messages = await communicator.receive_until_action("my_completion_action")
+
+    # Include completion message in results
+    # Use for: Debugging, testing completion message format
+    all_messages = await communicator.receive_until_action("done", inclusive=True)
+
 Best Practices
 --------------
 1. **Subclass WebsocketTestCase**: Create a custom test base class for your app
@@ -405,11 +451,12 @@ Best Practices
 5. **Test both success and failure**: Verify both positive and negative cases
 6. **Test group broadcasts**: Create multiple communicators to test group messaging
 7. **Use wait_group=True**: When testing group messages, use the wait_group parameter
-8. **Mock external services**: Use AsyncMock for external dependencies
-9. **Test database persistence**: Verify messages are properly stored/retrieved
-10. **Test lifecycle events**: Check connections, authentication, and disconnections
-11. **Use async test methods**: Write all test methods as async coroutines
-12. **Disable verbose logging**: Set logging flags to False in test settings to reduce output
+8. **Choose the right collection method**: Use `receive_until_action` for streaming or custom protocols
+9. **Mock external services**: Use AsyncMock for external dependencies
+10. **Test database persistence**: Verify messages are properly stored/retrieved
+11. **Test lifecycle events**: Check connections, authentication, and disconnections
+12. **Use async test methods**: Write all test methods as async coroutines
+13. **Disable verbose logging**: Set logging flags to False in test settings to reduce output
 
 Next Steps
 ----------
@@ -417,3 +464,4 @@ Next Steps
 - :doc:`messages` - Understand message validation
 - :doc:`playground` - Try the interactive WebSocket playground
 - :doc:`../examples/chat` - See complete test examples in the chat application
+- :doc:`../reference/testing` - API reference for testing utilities and methods

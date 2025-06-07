@@ -40,18 +40,29 @@ class WebsocketCommunicator(BaseWebsocketCommunicator):
     Chanx extended WebsocketCommunicator for testing WebSocket consumers.
 
     Provides enhanced testing capabilities for WebSocket applications including:
+
     - Structured message sending and receiving
+
     - Authentication handling and verification
+
     - Automatic message collection until completion signals
+
     - Group message broadcast testing
+
     - Connection state tracking
+
     - Message validation and error handling
 
     Typical usage patterns:
+
     - Connection testing: connect(), assert_authenticated_status_ok()
+
     - Message exchange: send_message(), receive_all_json()
+
     - Authentication flows: wait_for_auth(), assert_authenticated_status_ok()
+
     - Error handling: send invalid messages and check error responses
+
     - Group messaging: create multiple communicators and test broadcasts
 
     The communicator automatically handles message serialization/deserialization
@@ -96,19 +107,41 @@ class WebsocketCommunicator(BaseWebsocketCommunicator):
         Returns:
             List of received JSON messages
         """
+        stop_action = GROUP_ACTION_COMPLETE if wait_group else ACTION_COMPLETE
+        return await self.receive_until_action(stop_action, timeout=timeout)
+
+    async def receive_until_action(
+        self, stop_action: str, timeout: float = 5, *, inclusive: bool = False
+    ) -> list[dict[str, Any]]:
+        """
+        Receives and collects JSON messages until a specific action is received.
+
+        Automatically filters out completion messages (ACTION_COMPLETE and GROUP_ACTION_COMPLETE).
+
+        Args:
+            stop_action: The action type to stop collecting at
+            timeout: Maximum time to wait for messages (in seconds)
+            inclusive: Whether to include the stop_action message in results
+
+        Returns:
+            List of received JSON messages (excluding completion messages)
+        """
         messages: list[dict[str, Any]] = []
+        completion_actions = {ACTION_COMPLETE, GROUP_ACTION_COMPLETE}
+        if not inclusive:
+            completion_actions.add(stop_action)
+
         async with async_timeout(timeout):
             while True:
                 message = await self.receive_json_from(timeout)
                 message_action = message.get(chanx_settings.MESSAGE_ACTION_KEY)
-                if message_action == ACTION_COMPLETE:
-                    if not wait_group:
-                        break
-                    else:
-                        continue
-                elif wait_group and message_action == GROUP_ACTION_COMPLETE:
+
+                if message_action not in completion_actions:
+                    messages.append(message)
+
+                if message_action == stop_action:
                     break
-                messages.append(message)
+
         return messages
 
     async def send_message(self, message: BaseMessage) -> None:
@@ -196,17 +229,27 @@ class WebsocketTestCase(TransactionTestCase):
     Base test case for WebSocket testing with Chanx.
 
     Provides a framework for testing WebSocket consumers with built-in support for:
+
     - Automatic WebSocket application discovery
+
     - Connection management and cleanup
+
     - Authentication testing
+
     - Message sending and receiving
+
     - Group broadcast testing
 
     To use this class:
+
     1. Subclass WebsocketTestCase
+
     2. Set the ws_path class attribute to your WebSocket endpoint
+
     3. Optionally override get_ws_headers() for authentication
+
     4. Use self.auth_communicator for the main connection
+
     5. Use create_communicator() only when testing multi-user scenarios
 
     Attributes:

@@ -1,6 +1,6 @@
 import sys
 from typing import Any
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 from uuid import uuid4
 
 from django.conf import settings
@@ -18,7 +18,15 @@ from chanx.settings import chanx_settings
 from chanx.utils.settings import override_chanx_settings
 from test_utils.testing import WebsocketTestCase
 
-from assistants.messages.assistant import MessagePayload, NewMessage, ReplyMessage
+from assistants.messages.assistant import (
+    MessagePayload,
+    NewMessage,
+    ReplyMessage,
+    StreamingMessage,
+    StreamingReplyCompleteMessage,
+    StreamingReplyMessage,
+)
+from assistants.utils import tokenize_for_streaming
 
 if sys.version_info < (3, 11):
     from asyncio.exceptions import TimeoutError
@@ -62,7 +70,7 @@ class TestChatConsumer(WebsocketTestCase):
         error_message = ErrorMessage.model_validate(error_item)
         assert error_message.payload[0]["type"] == "union_tag_invalid"
         assert error_message.payload[0]["msg"] == (
-            "Input tag 'Invalid action' found using 'action' does not match any of the expected tags: 'new_message', 'ping'"
+            "Input tag 'Invalid action' found using 'action' does not match any of the expected tags: 'new_message', 'ping', 'streaming'"
         )
 
         await self.auth_communicator.disconnect()
@@ -311,4 +319,43 @@ class TestChatConsumer(WebsocketTestCase):
             ReplyMessage(
                 payload=MessagePayload(content=f"Reply: {message_content}")
             ).model_dump()
+        ]
+
+    @patch("assistants.consumers.uuid.uuid4", return_value="uuid-mock")
+    async def test_connect_successfully_and_send_streaming_message(
+        self, _mock_uuid: Mock
+    ) -> None:
+        await self.auth_communicator.connect()
+
+        auth = await self.auth_communicator.wait_for_auth()
+        assert auth
+        assert auth.payload.status_code == status.HTTP_200_OK
+
+        # Test ping/pong
+        await self.auth_communicator.send_message(PingMessage())
+        all_messages = await self.auth_communicator.receive_all_json()
+        assert all_messages == [PongMessage().model_dump()]
+
+        # Test chat functionality
+        message_content = "Hello, this is my streaming message content"
+        await self.auth_communicator.send_message(
+            StreamingMessage(payload=MessagePayload(content=message_content))
+        )
+
+        all_messages = await self.auth_communicator.receive_until_action(
+            "streaming_reply_complete", inclusive=True
+        )
+
+        streaming_tokens = tokenize_for_streaming(message_content)
+        streaming_messages = [
+            StreamingReplyMessage(
+                payload=StreamingReplyMessage.Payload(content=token, id="uuid-mock")
+            ).model_dump()
+            for token in streaming_tokens
+        ]
+        assert all_messages == [
+            *streaming_messages,
+            StreamingReplyCompleteMessage(
+                payload=StreamingReplyCompleteMessage.Payload(id="uuid-mock"),
+            ).model_dump(),
         ]

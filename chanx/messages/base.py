@@ -8,9 +8,7 @@ uses discriminated unions to enable type-safe message handling with runtime vali
 Key components:
 - BaseMessage: Abstract base class for all message types with action discriminator
 - BaseGroupMessage: Extends base messages with group-specific metadata
-- MessageContainerMixin: Provides validation for message container classes
-- BaseIncomingMessage: Container for incoming messages from clients
-- BaseOutgoingGroupMessage: Container for outgoing group messages
+- BaseChannelEvent: Base class for typed channel layer events
 
 The message system enforces that all concrete message types must define a unique 'action'
 field using a Literal type, which serves as the discriminator for message type identification.
@@ -18,6 +16,10 @@ This enables both static type checking and runtime validation of message structu
 
 Message containers use Pydantic's discriminated union pattern to automatically deserialize
 JSON messages into the correct message type based on the 'action' field.
+
+Channel events provide a separate communication channel through the Django Channels layer,
+allowing consumers to send typed messages to each other outside of the WebSocket connection.
+Each event type must define a unique 'handler' field.
 """
 
 import abc

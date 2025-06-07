@@ -21,7 +21,6 @@ Generic Type System:
 The consumer uses four generic type parameters for type safety:
 - IC (Incoming): Union of BaseMessage subclasses for incoming messages
 - Event (optional): Union of BaseChannelEvent subclasses for channel events
-- OG (optional): BaseGroupMessage subclass for outgoing group messages
 - M (optional): Model subclass for object-level permissions
 
 Developers should subclass AsyncJsonWebsocketConsumer with appropriate generic parameters
@@ -71,7 +70,6 @@ from chanx.constants import MISSING_PYHUMPS_ERROR
 from chanx.generic.authenticator import ChanxWebsocketAuthenticator, QuerysetLike
 from chanx.messages.base import (
     BaseChannelEvent,
-    BaseGroupMessage,
     BaseMessage,
 )
 from chanx.messages.outgoing import (
@@ -93,9 +91,6 @@ except ImportError:  # pragma: no cover
 
 
 IC = TypeVar("IC", bound=BaseMessage)  # Incoming messages
-OG = TypeVar(
-    "OG", bound=BaseGroupMessage | None, default=None
-)  # Outgoing group messages
 M = TypeVar("M", bound=Model | None, default=None)  # Object model
 Event = TypeVar("Event", bound=BaseChannelEvent | None, default=None)  # Channel Events
 
@@ -112,7 +107,7 @@ class EventPayload(TypedDict):
 
 
 class AsyncJsonWebsocketConsumer(
-    Generic[IC, Event, OG, M], BaseAsyncJsonWebsocketConsumer, ABC
+    Generic[IC, Event, M], BaseAsyncJsonWebsocketConsumer, ABC
 ):
     """
      Base class for asynchronous JSON WebSocket consumers with authentication and permissions.
@@ -128,15 +123,9 @@ class AsyncJsonWebsocketConsumer(
     or asend_channel_event(). Events are automatically validated against the Event
     type before being passed to your handler method.
 
-    For group messaging functionality, subclasses should also define the outgoing group
-    message type using the OG generic parameter to enable proper validation and handling
-    of group message broadcasts.
-
-
     Generic Parameters:
         IC: Incoming message type (required) - Union of BaseMessage subclasses
         Event: Channel event type (optional) - Union of BaseChannelEvent subclasses or None
-        OG: Outgoing group message type (optional) - BaseGroupMessage subclass or None
         M: Model type for object-level permissions (optional) - Model subclass or None
 
     Attributes:
@@ -176,7 +165,6 @@ class AsyncJsonWebsocketConsumer(
     # Message schemas
     _INCOMING_MESSAGE_SCHEMA: IC
     _EVENT_SCHEMA: Event
-    _OUTGOING_GROUP_MESSAGE_SCHEMA: OG
 
     # Object instance
     obj: M
@@ -185,7 +173,7 @@ class AsyncJsonWebsocketConsumer(
         """
         Validates and extracts generic type parameters during class definition.
 
-        This method automatically extracts the generic type parameters (IC, Event, OG, M)
+        This method automatically extracts the generic type parameters (IC, Event, M)
         from the class definition and stores them for runtime use. It ensures that
         at least the incoming message type (IC) is specified.
 
@@ -226,19 +214,16 @@ class AsyncJsonWebsocketConsumer(
                     (
                         incoming_message_schema,
                         event_schema,
-                        outgoing_group_message_schema,
                         _model,
                     ) = type_var_vals
                 else:
                     (
                         incoming_message_schema,
                         event_schema,
-                        outgoing_group_message_schema,
                         _model,
                     ) = get_args(base)
                 cls._INCOMING_MESSAGE_SCHEMA = incoming_message_schema
                 cls._EVENT_SCHEMA = event_schema
-                cls._OUTGOING_GROUP_MESSAGE_SCHEMA = outgoing_group_message_schema
                 break
 
     def __init__(self, *args: Any, **kwargs: Any) -> None:
@@ -307,13 +292,6 @@ class AsyncJsonWebsocketConsumer(
             Annotated[
                 self._EVENT_SCHEMA,
                 Field(discriminator="handler"),
-            ]
-        )
-
-        self.outgoing_group_message_adapter: TypeAdapter[OG] = TypeAdapter(
-            Annotated[
-                self._OUTGOING_GROUP_MESSAGE_SCHEMA,
-                Field(discriminator=chanx_settings.MESSAGE_ACTION_KEY),
             ]
         )
 
@@ -531,7 +509,6 @@ class AsyncJsonWebsocketConsumer(
         groups: list[str] | None = None,
         *,
         exclude_current: bool = True,
-        kind: Literal["json", "message"] = "json",
     ) -> None:
         """
         Send content to one or more channel groups.
@@ -544,12 +521,6 @@ class AsyncJsonWebsocketConsumer(
             groups: Group names to send to (defaults to self.groups)
             exclude_current: Whether to exclude the sending consumer from receiving
                             the broadcast (prevents echo effects)
-            kind: Type of message to send:
-
-                - "json": Send as raw JSON directly to clients (default)
-
-                - "message": Process through OUTGOING_GROUP_MESSAGE_SCHEMA validation (requires consumer to define this schema)
-
         """
         if groups is None:
             groups = self.groups or []
@@ -561,7 +532,6 @@ class AsyncJsonWebsocketConsumer(
                 {
                     "type": "send_group_member",
                     "content": content,
-                    "kind": kind,
                     "exclude_current": exclude_current,
                     "from_channel": self.channel_name,
                     "from_user_pk": user_pk,
@@ -573,7 +543,6 @@ class AsyncJsonWebsocketConsumer(
         message: BaseMessage,
         groups: list[str] | None = None,
         *,
-        kind: Literal["json", "message"] = "message",
         exclude_current: bool = True,
     ) -> None:
         """
@@ -583,26 +552,16 @@ class AsyncJsonWebsocketConsumer(
         This is useful for implementing pub/sub patterns where messages
         need to be distributed to multiple connected clients.
 
-        Important:
-            When using kind="message" (the default), your consumer class must define
-            the OG generic parameter (outgoing group message type) to properly validate
-            and handle the message. If not defined, use kind="json" instead.
-
         Args:
             message: Message object to send to the groups
             groups: Group names to send to (defaults to self.groups)
-            kind: Format to send the message as:
 
-                  - "message": Validated via OG generic parameter (default)
-
-                  - "json": Sent as raw JSON without validation
             exclude_current: Whether to exclude the sending consumer from receiving
                             the broadcast (prevents echo effects)
         """
         await self.send_to_groups(
-            message.model_dump(),
+            message.model_dump(mode="json"),
             groups,
-            kind=kind,
             exclude_current=exclude_current,
         )
 
@@ -621,9 +580,8 @@ class AsyncJsonWebsocketConsumer(
         - is_current: True if the message originated from this channel
 
         If the message is from the current channel and exclude_current is True, the message
-        is not relayed to avoid echo effects. For message-type events, the content is wrapped
-        in the OUTGOING_GROUP_MESSAGE_SCHEMA, while JSON-type events are sent directly.
-        If configured, a GroupCompleteMessage is sent after successful processing.
+        is not relayed to avoid echo effects. If configured, a GroupCompleteMessage is sent
+        after successful processing.
 
         Args:
             event: Group member event data containing the content, kind, source channel,
@@ -631,7 +589,6 @@ class AsyncJsonWebsocketConsumer(
         """
         content = event["content"]
         exclude_current = event["exclude_current"]
-        kind = event["kind"]
         from_channel = event["from_channel"]
         from_user_pk = event["from_user_pk"]
 
@@ -645,12 +602,7 @@ class AsyncJsonWebsocketConsumer(
             {"is_mine": is_mine, "is_current": self.channel_name == from_channel}
         )
 
-        if kind == "message":
-            message = self.outgoing_group_message_adapter.validate_python(content)
-            assert message is not None
-            await self.send_message(message)
-        else:
-            await self.send_json(content)
+        await self.send_json(content)
 
         if self.send_completion:
             await self.send_message(GroupCompleteMessage())
@@ -682,7 +634,7 @@ class AsyncJsonWebsocketConsumer(
             group_name,
             {
                 "type": "handle_channel_event",
-                "event_data": event.model_dump(),
+                "event_data": event.model_dump(mode="json"),
             },
         )
 

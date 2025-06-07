@@ -8,7 +8,6 @@ import pytest
 
 # Import the classes we're testing
 from chanx.messages.base import (
-    BaseGroupMessage,
     BaseMessage,
 )
 
@@ -80,23 +79,3 @@ class TestBaseMessage(SimpleTestCase):
         assert child.action == "child_action"
         assert child.parent_field == "value"
         assert child.child_field == 42
-
-
-class Message1(BaseMessage):
-    action: Literal["action1"]
-    field1: str
-
-
-class Message2(BaseMessage):
-    action: Literal["action2"]
-    field2: int
-
-
-class GroupMessage1(BaseGroupMessage):
-    action: Literal["group_action1"]
-    group_field1: str
-
-
-class GroupMessage2(BaseGroupMessage):
-    action: Literal["group_action2"]
-    group_field2: int

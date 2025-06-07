@@ -8,7 +8,6 @@ from chanx.messages.outgoing import PongMessage
 
 from discussion.messages.discussion import (
     DiscussionEvent,
-    DiscussionGroupMessage,
     DiscussionIncomingMessage,
     DiscussionMemberMessage,
     DiscussionMessagePayload,
@@ -18,9 +17,7 @@ from discussion.messages.discussion import (
 
 
 class DiscussionConsumer(
-    AsyncJsonWebsocketConsumer[
-        DiscussionIncomingMessage, DiscussionEvent, DiscussionGroupMessage
-    ]
+    AsyncJsonWebsocketConsumer[DiscussionIncomingMessage, DiscussionEvent]
 ):
     """Websocket to chat in discussion, with anonymous users."""
 

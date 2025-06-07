@@ -7,7 +7,7 @@ from channels.routing import URLRouter
 from asgiref.timeout import timeout
 from chanx.generic.websocket import AsyncJsonWebsocketConsumer
 from chanx.messages.base import BaseChannelEvent, BaseMessage
-from chanx.messages.incoming import IncomingMessage, PingMessage
+from chanx.messages.incoming import PingMessage
 from chanx.messages.outgoing import PongMessage
 from chanx.routing import path
 from chanx.utils.settings import override_chanx_settings
@@ -45,12 +45,12 @@ class ReplyMessage(BaseMessage):
     payload: str
 
 
-class MyEventsConsumer(AsyncJsonWebsocketConsumer[IncomingMessage, MyEvent]):
+class MyEventsConsumer(AsyncJsonWebsocketConsumer[PingMessage, MyEvent]):
     permission_classes = []
     authentication_classes = []
     groups = ["events"]
 
-    async def receive_message(self, message: IncomingMessage, **kwargs: Any) -> None:
+    async def receive_message(self, message: PingMessage, **kwargs: Any) -> None:
         match message:
             case PingMessage():
                 await self.send_message(PongMessage())

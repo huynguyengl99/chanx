@@ -32,9 +32,6 @@ class DiscussionMemberMessage(BaseGroupMessage):
     payload: DiscussionMessagePayload
 
 
-DiscussionGroupMessage = DiscussionMemberMessage
-
-
 class NotifyEvent(BaseChannelEvent):
     class Payload(BaseModel):
         content: str

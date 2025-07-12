@@ -9,7 +9,6 @@ build = [
 ]
 dev = [
   "Faker>=37.1.0,<38",
-  "channels-stubs>=0.1.6",
   "commitizen>=4.5.0,<5",
   "coveralls>=4.0.1,<5",
   "daphne>=4.1.2,<5",
@@ -32,7 +31,8 @@ dev = [
   "pytest-cov>=6.1.1,<7",
   "pytest-django>=4.11.1,<5",
   "pytest-mock>=3.14.0,<4",
-  "pytest-xdist>=3.6.1,<4"
+  "pytest-xdist>=3.6.1,<4",
+  "types-channels>=4.2.0.20250712"
 ]
 docs = [
   "Sphinx>=7.0.0,<8",

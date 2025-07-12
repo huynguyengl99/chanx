@@ -314,20 +314,6 @@ wheels = [
 ]
 
 [[package]]
-name = "channels-stubs"
-version = "0.1.6"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "channels" },
-    { name = "django" },
-    { name = "django-stubs" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/3d/03/69b573b312c82e57952cd6b56a6f8a1c80c68f9eb86000168acfa1414a2e/channels_stubs-0.1.6.tar.gz", hash = "sha256:991d47df7cf0de0574fcfa0a614c68064f97b2833902f029a783bd23c01c7d0d", size = 8970 }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/7e/87/9f7950266d5d4c59d84c7c9ceb4b7482ebb720df2d6b06cb91ec143d2343/channels_stubs-0.1.6-py3-none-any.whl", hash = "sha256:f55d2306d4887e4ba82b27b8755a97ec2e382052008ddaf3abd409c4a40a6001", size = 16299 },
-]
-
-[[package]]
 name = "chanx"
 version = "0.13.0"
 source = { editable = "." }
@@ -354,7 +340,6 @@ build = [
     { name = "twine" },
 ]
 dev = [
-    { name = "channels-stubs" },
     { name = "commitizen" },
     { name = "coveralls" },
     { name = "daphne" },
@@ -380,6 +365,7 @@ dev = [
     { name = "pytest-django" },
     { name = "pytest-mock" },
     { name = "pytest-xdist" },
+    { name = "types-channels" },
 ]
 docs = [
     { name = "myst-parser" },
@@ -424,7 +410,6 @@ build = [
     { name = "twine", specifier = ">=6.1.0" },
 ]
 dev = [
-    { name = "channels-stubs", specifier = ">=0.1.6" },
     { name = "commitizen", specifier = ">=4.5.0,<5" },
     { name = "coveralls", specifier = ">=4.0.1,<5" },
     { name = "daphne", specifier = ">=4.1.2,<5" },
@@ -449,6 +434,7 @@ dev = [
     { name = "pytest-django", specifier = ">=4.11.1,<5" },
     { name = "pytest-mock", specifier = ">=3.14.0,<4" },
     { name = "pytest-xdist", specifier = ">=3.6.1,<4" },
+    { name = "types-channels", specifier = ">=4.2.0.20250712" },
 ]
 docs = [
     { name = "myst-parser", specifier = ">=4.0.1" },
@@ -2854,6 +2840,19 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/51/91/bc9fd5aa84703f874dea27313b11fde505d343f3ef3ad702bddbe20bfd6e/txaio-23.1.1.tar.gz", hash = "sha256:f9a9216e976e5e3246dfd112ad7ad55ca915606b60b84a757ac769bd404ff704", size = 53704 }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/7d/6c/a53cc9a97c2da76d9cd83c03f377468599a28f2d4ad9fc71c3b99640e71e/txaio-23.1.1-py2.py3-none-any.whl", hash = "sha256:aaea42f8aad50e0ecfb976130ada140797e9dcb85fad2cf72b0f37f8cefcb490", size = 30512 },
+]
+
+[[package]]
+name = "types-channels"
+version = "4.2.0.20250712"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "asgiref" },
+    { name = "django-stubs" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/ac/50/757070db9045dafd13baf1a075255658a1b6267a2566663da939c03e7d12/types_channels-4.2.0.20250712.tar.gz", hash = "sha256:481343595b67986cc551c26c7f8087aa1c5cfec90d788025d6a8429488c27625", size = 15328 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/f5/96/102425371d62423c189d22cd3c71d7eab1a703f4396188e27810e28894c4/types_channels-4.2.0.20250712-py3-none-any.whl", hash = "sha256:5ccdf731e82da67b78acd8a39c51e76341992b76511eefb84f9c3226915021b4", size = 21146 },
 ]
 
 [[package]]

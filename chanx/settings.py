@@ -55,7 +55,7 @@ class MySetting:
     user_settings: dict[str, Any] = dataclasses.field(default_factory=dict[str, Any])
 
 
-IMPORT_STRINGS = ("INCOMING_MESSAGE_SCHEMA",)
+IMPORT_STRINGS = ()
 
 
 def create_api_settings_from_model(

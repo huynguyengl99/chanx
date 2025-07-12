@@ -10,6 +10,7 @@ testing components.
 """
 
 import asyncio
+from asyncio import CancelledError
 from types import ModuleType
 from typing import Any, cast
 
@@ -326,7 +327,7 @@ class WebsocketTestCase(TransactionTestCase):
         for communicator in self._communicators:
             try:
                 async_to_sync(communicator.disconnect)()
-            except Exception:  # noqa
+            except (Exception, CancelledError):  # noqa
                 pass
         self._communicators = []
 

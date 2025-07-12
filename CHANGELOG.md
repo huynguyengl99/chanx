@@ -1,3 +1,9 @@
+## v0.13.1 (2025-07-12)
+
+### Fix
+
+- **deps**: replace channels-stubs with types-channels
+
 ## v0.13.0 (2025-06-07)
 
 ### Feat

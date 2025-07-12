@@ -1,3 +1,9 @@
+## v0.13.2 (2025-07-12)
+
+### Fix
+
+- **testing**: ignore CancelledError for WebsocketTestCase tearDown
+
 ## v0.13.1 (2025-07-12)
 
 ### Fix

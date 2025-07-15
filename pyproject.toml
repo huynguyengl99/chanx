@@ -83,9 +83,9 @@ dependencies = [
   "djangorestframework>=3,<4",
   "polyfactory>=2.20.0",
   "pydantic>=2,<3",
-  "redis[hiredis]>=5.2.1,<6",
-  "structlog>=23.1.0",
-  "typing-extensions>=4.13.2"
+  "redis[hiredis]",
+  "structlog",
+  "typing-extensions"
 ]
 description = "The missing toolkit for Django Channels — auth, logging, consumers, and more."
 license = {file = "LICENSE"}

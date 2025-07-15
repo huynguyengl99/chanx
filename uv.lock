@@ -398,9 +398,9 @@ requires-dist = [
     { name = "polyfactory", specifier = ">=2.20.0" },
     { name = "pydantic", specifier = ">=2,<3" },
     { name = "pyhumps", marker = "extra == 'camel-case'", specifier = ">=3.8.0" },
-    { name = "redis", extras = ["hiredis"], specifier = ">=5.2.1,<6" },
-    { name = "structlog", specifier = ">=23.1.0" },
-    { name = "typing-extensions", specifier = ">=4.13.2" },
+    { name = "redis", extras = ["hiredis"] },
+    { name = "structlog" },
+    { name = "typing-extensions" },
 ]
 provides-extras = ["camel-case"]
 

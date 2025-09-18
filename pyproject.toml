@@ -32,7 +32,8 @@ dev = [
   "pytest-django>=4.11.1,<5",
   "pytest-mock>=3.14.0,<4",
   "pytest-xdist>=3.6.1,<4",
-  "types-channels>=4.2.0.20250712"
+  "types-channels>=4.2.0.20250712",
+  "uvicorn[standard]>=0.35.0"
 ]
 docs = [
   "Sphinx>=7.0.0,<8",

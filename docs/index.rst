@@ -12,38 +12,36 @@ Contents
    introduction
    installation
    configuration
-   quick-start
+   quick-start-django
+   quick-start-fastapi
 
 .. toctree::
    :maxdepth: 2
    :caption: User Guide
 
-   user-guide/index
-   user-guide/authentication
-   user-guide/consumers
-   user-guide/routing
-   user-guide/messages
+   user-guide/prerequisites
+   user-guide/consumers-decorators
+   user-guide/asyncapi
    user-guide/testing
-   user-guide/playground
+   user-guide/framework-integration
 
 .. toctree::
    :maxdepth: 1
    :caption: Examples
 
-   examples/index
-   examples/complete
-   examples/basic
-   examples/chat
+   examples/django
+   examples/fastapi
 
 .. toctree::
    :maxdepth: 2
    :caption: API Reference
 
-   reference/generic
+   reference/core
    reference/messages
    reference/routing
+   reference/asyncapi
+   reference/extensions
    reference/utils
-   reference/settings
    reference/testing
 
 .. toctree::

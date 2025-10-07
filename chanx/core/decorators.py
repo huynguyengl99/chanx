@@ -222,15 +222,6 @@ def ws_handler(
         description: AsyncAPI description for the operation.
         summary: AsyncAPI summary for the operation.
         tags: AsyncAPI tags for the operation.
-
-    Example:
-        @ws_handler
-        async def handle_ping(self, message: PingMessage) -> PongMessage:
-            return PongMessage()
-
-        @ws_handler(action="custom_action")
-        async def handle_custom(self, message: dict) -> dict:
-            return {}
     """
     if func is None:
         return lambda f: _base_handler(
@@ -305,12 +296,6 @@ def event_handler(
         description: AsyncAPI description for the operation.
         summary: AsyncAPI summary for the operation.
         tags: AsyncAPI tags for the operation.
-
-    Example:
-        @event_handler
-        async def user_joined(self, event: UserJoinedEvent) -> None:
-            # Handle user joined event
-            pass
     """
     if func is None:
         return lambda f: _base_handler(
@@ -354,12 +339,6 @@ def channel(
         name: Custom channel name (defaults to auto-generated from class name)
         description: Channel description (overrides docstring)
         tags: List of tags for the channel
-
-    Example:
-        @channel(name="assistants", description="AI Assistant API", tags=["ai", "chat"])
-        class AssistantConsumer(AsyncJsonWebsocketConsumer):
-            '''Default description from docstring'''
-            pass
     """
 
     def decorator(cls: _T) -> _T:

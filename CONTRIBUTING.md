@@ -9,7 +9,7 @@ Before starting development, ensure you have the following installed:
 
 - [Docker](https://docs.docker.com/get-docker/) and Docker Compose
 - [uv](https://docs.astral.sh/uv/getting-started/installation/) for Python package management
-- Python 3.10+ (project supports 3.10, 3.11, 3.12, and 3.13)
+- Python 3.11+ (project supports 3.11, 3.12, and 3.13)
 
 ## Install the library for development
 
@@ -24,7 +24,7 @@ source .venv/bin/activate
 
 Then use uv to install all dev packages:
 ```bash
-uv sync
+uv sync --all-extras
 ```
 
 ### Using tox for complete environment testing
@@ -40,7 +40,7 @@ uv tool install tox
 tox
 
 # Run tests for a specific environment
-tox -e py310-django5
+tox -e py311
 
 # Run only the linting checks
 tox -e lint
@@ -51,26 +51,37 @@ tox -e coverage
 
 ## Understanding the project structure
 
-The project uses a `sandbox` directory which serves two main purposes:
+The project has several key directories for development and testing:
+
+### Sandbox Directories
+- **`sandbox_django`** - Django integration sandbox for development and testing
+- **`sandbox_fastapi`** - FastAPI integration sandbox for development and testing
+
+These serve two main purposes:
 
 1. **Testing Environment**: Write and run tests for the package
    - Contains test applications and configurations
    - Used with pytest to validate package functionality
 
-2. **Development Playground**: Run as a Django application to test features
+2. **Development Playground**: Run as Django/FastAPI applications to test features
    - Run Django commands like `makemigrations` and `migrate`
    - Interact with API endpoints for manual testing
    - Test UI components and integrations
+
+### Test Directories
+- **`tests/core`** - Core functionality tests
+- **`tests/ext/channels`** - Django Channels extension tests
+- **`tests/ext/fast_channels`** - FastAPI and other framework extension tests
 
 ## Prepare the environment
 
 Before working with the sandbox or running tests, ensure:
 - Docker is running
-- Run `docker compose up` to create necessary databases/services
+- Run `docker compose up -d` to create necessary databases/services (Redis and PostgreSQL) in detached mode
 
-## Working with the sandbox project
+## Working with the sandbox projects
 
-### Setting up and running the sandbox
+### Django Sandbox Setup
 
 ```bash
 # Apply database migrations
@@ -83,17 +94,32 @@ python sandbox_django/manage.py createsuperuser
 python sandbox_django/manage.py runserver
 ```
 
-Once the server is running, you can:
-- Access the admin interface at http://127.0.0.1:8000/admin/
-- Test API endpoints
-- Verify your package functionality in a real Django environment
+Once the Django server is running, you can access:
+- **Admin interface**: http://localhost:8000/admin/
+- **Login/Registration**: http://localhost:8000/login
+- **Chat (Assistants/Discussions)**: http://localhost:8000/chat (requires authentication)
+- Test API endpoints and verify package functionality
 
-### Development commands
+#### Django Development Commands
 
 ```bash
 # Create migrations for your changes
 python sandbox_django/manage.py makemigrations
 ```
+
+### FastAPI Sandbox Setup
+
+```bash
+# Start both FastAPI app and ARQ worker
+python sandbox_fastapi/start_dev.py
+```
+
+This development script will start:
+1. ARQ worker in the background for task processing
+2. FastAPI application with live reload on port 8080
+
+Once running, you can access:
+- **FastAPI application**: http://localhost:8080
 
 ## Code quality tools
 
@@ -104,7 +130,7 @@ Chanx uses several tools to ensure code quality. You should run these tools befo
 We use pre-commit hooks to automatically check and format your code on commit. Install them with:
 
 ```bash
-pip install pre-commit
+uv tool install pre-commit
 pre-commit install
 ```
 
@@ -134,7 +160,13 @@ We use multiple type checking tools for maximum safety:
 bash scripts/mypy.sh
 
 # Run mypy on the sandbox_django
-bash scripts/mypy.sh --sandbox_django
+bash scripts/mypy.sh --django
+
+# Run mypy on the sandbox_fastapi
+bash scripts/mypy.sh --fastapi
+
+# Run mypy on the tests
+bash scripts/mypy.sh --tests
 
 # Run pyright
 pyright
@@ -159,15 +191,22 @@ The project requires at least 80% docstring coverage as configured in the projec
 
 ```bash
 # Run all tests
-pytest sandbox_django
+bash scripts/test_all.sh
 
 # Run tests with coverage report
-pytest --cov-report term-missing --cov=chanx sandbox_django
+bash scripts/test_all.sh --cov
 ```
+
+The test script runs tests for:
+- `sandbox_django` - Django integration tests
+- `sandbox_fastapi` - FastAPI integration tests
+- `tests/ext/channels` - Django Channels extension tests
+- `tests/ext/fast_channels` - FastAPI and other framework extension tests
+- `tests/core` - Core functionality tests
 
 ### Writing tests
 
-When adding new features, please include appropriate tests in the `sandbox` directory. Tests should:
+When adding new features, please include appropriate tests in the `tests/` or relevant sandbox directories. Tests should:
 
 - Verify the expected behavior of your feature
 - Include both success and failure cases
@@ -180,14 +219,16 @@ Before creating a pull request, please ensure your code meets the project's stan
 ### 1. Run the test suite
 
 ```bash
-pytest --cov-report term-missing --cov=chanx sandbox_django
+bash scripts/test_all.sh --cov
 ```
 
 ### 2. Run type checkers
 
 ```bash
 bash scripts/mypy.sh
-bash scripts/mypy.sh --sandbox_django
+bash scripts/mypy.sh --django
+bash scripts/mypy.sh --fastapi
+bash scripts/mypy.sh --tests
 pyright
 ```
 
@@ -215,6 +256,10 @@ For committing code, use the [Commitizen](https://commitizen-tools.github.io/com
 commit best practices:
 
 ```bash
+# Install commitizen if not already installed
+uv tool install commitizen
+
+# Create a conventional commit
 cz commit
 ```
 

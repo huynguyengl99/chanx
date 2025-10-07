@@ -22,13 +22,10 @@ dev = [
 ]
 dev-django = [
   "Faker>=37.1.0,<38",
-  "celery>=5.5.3",
   "daphne>=4.1.2,<5",
-  "django-cleanup>=9.0.0,<10",
   "django-cors-headers>=4.9.0",
   "django-debug-toolbar>=5.1.0,<6",
   "django-extensions>=3.2.3,<4",
-  "django-filter>=25.1",
   "django-structlog>=9.1.1",
   "django-stubs[compatible-mypy]>=5.2",
   "djangorestframework-camel-case>=1.4.2",

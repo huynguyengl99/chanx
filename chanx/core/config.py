@@ -26,7 +26,7 @@ class Config:
     """
 
     send_completion: bool = False
-    send_message_immediately: bool = False
+    send_message_immediately: bool = True
     log_websocket_message: bool = False
     log_ignored_actions: Collection[str] = {}
     camelize: bool = False

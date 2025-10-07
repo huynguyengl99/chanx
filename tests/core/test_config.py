@@ -16,7 +16,7 @@ class TestConfig:
 
         # Note: send_completion may be True if Django settings are loaded
         assert config.send_completion in [True, False]
-        assert config.send_message_immediately is False
+        assert config.send_message_immediately is True
         assert config.log_websocket_message is False
         assert config.log_ignored_actions == {}
         assert config.camelize is False

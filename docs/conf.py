@@ -14,7 +14,7 @@ import django
 
 sys.path.append(os.path.abspath("."))
 sys.path.append(os.path.abspath(".."))
-sys.path.append(os.path.abspath("../sandbox"))
+sys.path.append(os.path.abspath("../sandbox_django"))
 
 os.environ["DJANGO_SETTINGS_MODULE"] = "config.settings.dev"
 

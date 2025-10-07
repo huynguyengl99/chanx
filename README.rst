@@ -25,126 +25,196 @@ CHANX (CHANnels-eXtension)
    :target: https://github.com/huynguyengl99/chanx
    :alt: Interrogate Badge
 
-The missing toolkit for Django Channels — authentication, logging, structured messaging, and more.
+The missing toolkit for WebSocket development — supporting Django Channels, FastAPI, and any ASGI-compatible framework with decorator-based handlers, automatic AsyncAPI documentation generation, authentication, logging, and structured messaging.
 
 Installation
 ------------
 
+**Basic Installation (Core Only)**
+
 .. code-block:: bash
 
     pip install chanx
+
+**For Django Channels Projects**
+
+.. code-block:: bash
+
+    pip install "chanx[channels]"
+
+**For FastAPI and Other ASGI Frameworks**
+
+.. code-block:: bash
+
+    pip install "chanx[fast_channels]"
 
 For complete documentation, visit `chanx docs <https://chanx.readthedocs.io/>`_.
 
 Introduction
 ------------
 
-Django Channels provides excellent WebSocket support for Django applications, but leaves gaps in authentication,
-structured messaging, and developer tooling. Chanx fills these gaps with a comprehensive toolkit that makes
-building WebSocket applications simpler and more maintainable.
+Building real-time WebSocket applications shouldn't require reinventing the wheel for each framework. Chanx brings
+consistency, type safety, and powerful tooling to WebSocket development across Django Channels, FastAPI, and any
+ASGI-compatible framework.
 
-Key Features
-~~~~~~~~~~~~
+With Chanx, you get decorator-based message handlers that automatically generate type-safe routing, Pydantic validation,
+and AsyncAPI 3.0 documentation. Whether you're building a chat system, live notifications, or real-time collaboration
+features, Chanx provides the missing pieces that make WebSocket development as straightforward as building REST APIs.
 
-- **REST Framework Integration**: Use DRF authentication and permission classes with WebSockets
-- **Structured Messaging**: Type-safe message handling with Pydantic validation and generic type parameters
-- **WebSocket Playground**: Interactive UI for testing WebSocket endpoints
-- **Group Management**: Simplified pub/sub messaging with automatic group handling
-- **Typed Channel Events**: Type-safe channel layer events
-- **Channels-friendly Routing**: Django-like ``path``, ``re_path``, and ``include`` functions designed specifically for WebSocket routing
-- **Comprehensive Logging**: Structured logging for WebSocket connections and messages
-- **Error Handling**: Robust error reporting and client feedback
-- **Testing Utilities**: Specialized tools for testing WebSocket consumers
-- **Multi-user Testing Support**: Test group broadcasting and concurrent connections
-- **Object-level Permissions**: Support for DRF object-level permission checks
-- **Full Type Hints**: Complete mypy and pyright support for better IDE integration and type safety
+Quick Look
+----------
 
-Core Components
-~~~~~~~~~~~~~~~
-
-- **AsyncJsonWebsocketConsumer**: Base consumer with authentication, structured messaging, and typed events
-- **ChanxWebsocketAuthenticator**: Bridges WebSockets with DRF authentication
-- **Message System**: Type-safe message classes with automatic validation and generic type parameters
-- **Channel Event System**: Type-safe channel layer events
-- **WebSocket Routing**: Django-style routing functions (``path``, ``re_path``, ``include``) optimized for Channels
-- **WebSocketTestCase**: Test utilities for WebSocket consumers
-- **Generic Type Safety**: Compile-time type checking with generic parameters for messages, events, and models
-
-Using Generic Type Parameters
------------------------------
-AsyncJsonWebsocketConsumer uses three generic type parameters for improved type safety:
+See how Chanx works with decorator-based handlers. Define your WebSocket consumer with ``@ws_handler`` for client messages and ``@event_handler`` for server-side events:
 
 .. code-block:: python
 
-    class AsyncJsonWebsocketConsumer[IC, Event, M]:
-        """
-        Typed WebSocket consumer with three generic parameters:
+    from typing import Literal
+    from pydantic import BaseModel
+    from chanx.core.decorators import ws_handler, event_handler, channel
+    from chanx.core.websocket import AsyncJsonWebsocketConsumer
+    from chanx.messages.incoming import PingMessage
+    from chanx.messages.outgoing import PongMessage
+    from chanx.messages.base import BaseMessage
 
-        IC: Incoming message type (required) - Union of BaseMessage subclasses
-        Event: Channel event type (optional) - Union of BaseChannelEvent subclasses or None
-        M: Model type (optional) - Django model for object-level permissions
-        """
+    # Define your message types
+    class ChatPayload(BaseModel):
+        message: str
 
-You can use these parameters in different combinations:
+    class ChatMessage(BaseMessage):
+        action: Literal["chat"] = "chat"
+        payload: ChatPayload
+
+    class ChatNotificationMessage(BaseMessage):
+        action: Literal["chat_notification"] = "chat_notification"
+        payload: ChatPayload
+
+    class NotificationPayload(BaseModel):
+        alert: str
+
+    class NotificationEvent(BaseMessage):
+        action: Literal["notification_event"] = "notification_event"
+        payload: NotificationPayload
+
+    class NotificationMessage(BaseMessage):
+        action: Literal["notification"] = "notification"
+        payload: NotificationPayload
+
+    @channel(name="chat", description="Real-time chat API")
+    class ChatConsumer(AsyncJsonWebsocketConsumer):
+        @ws_handler(summary="Handle ping requests")
+        async def handle_ping(self, message: PingMessage) -> PongMessage:
+            return PongMessage()
+
+        @ws_handler(
+            summary="Handle chat messages",
+            output_type=ChatNotificationMessage,
+        )
+        async def handle_chat(self, message: ChatMessage) -> None:
+            # Broadcast to all clients in group
+            await self.broadcast_message(
+                ChatNotificationMessage(
+                    payload=ChatPayload(message=f"User: {message.payload.message}")
+                )
+            )
+
+        @event_handler(output_type=NotificationMessage)
+        async def handle_notification(self, event: NotificationEvent) -> NotificationMessage:
+            """Handle notifications from background workers."""
+            return NotificationMessage(payload=event.payload)
+
+**Client Usage:**
+
+.. code-block:: javascript
+
+    // Send a ping - client receives immediate response
+    websocket.send(JSON.stringify({"action": "ping"}))
+    // Receives: {"action": "pong", "payload": null}
+
+    // Send a chat message - all clients in group receive broadcast
+    websocket.send(JSON.stringify({
+        "action": "chat",
+        "payload": {"message": "Hello everyone!"}
+    }))
+    // All clients receive: {"action": "chat_notification", "payload": {"message": "User: Hello everyone!"}}
+
+**Send events from anywhere in your application:**
 
 .. code-block:: python
 
-    # Minimal usage - just specify incoming message type
-    class SimpleConsumer(AsyncJsonWebsocketConsumer[PingMessage]):
-        async def receive_message(self, message: PingMessage, **kwargs: Any) -> None:
-            # message is properly typed as PingMessage
-            ...
+    # From Django views, Celery tasks, management scripts, etc.
+    ChatConsumer.broadcast_event_sync(
+        NotificationEvent(payload={"alert": "Server maintenance starting"}),
+        groups=["chat_room"]
+    )
+    # All WebSocket clients receive: {"action": "notification", "payload": {"alert": "..."}}
 
-    # With incoming messages and events
-    class EventConsumer(AsyncJsonWebsocketConsumer[ChatMessage, ChatEvent]):
-        async def receive_message(self, message: ChatMessage, **kwargs: Any) -> None:
-            # Handle incoming messages
-            ...
+The framework automatically discovers your handlers, validates messages with Pydantic, and generates AsyncAPI documentation.
 
-        async def receive_event(self, event: ChatEvent) -> None:
-            # Handle typed events using pattern matching
-            match event:
-                case NotifyEvent():
-                    # Process the notification event
-                    await self.send_message(ResponseMessage(payload=event.payload))
-                case _:
-                    pass
+Key Features & Components
+~~~~~~~~~~~~~~~~~~~~~~~~~
 
-    # With group messaging
-    class GroupConsumer(AsyncJsonWebsocketConsumer[ChatMessage]):
-        async def receive_message(self, message: ChatMessage, **kwargs: Any) -> None:
-            # Send typed group messages using broadcast_message
-            group_msg = MemberMessage(payload={"content": "Hello group!"})
-            await self.broadcast_message(group_msg)
+- **Multi-Framework Support**: Works with Django Channels, FastAPI, and any ASGI-compatible framework via ``chanx.ext.channels`` and ``chanx.ext.fast_channels``
+- **Decorator-Based Architecture**: Use ``@ws_handler``, ``@event_handler``, and ``@channel`` decorators with automatic message routing and validation
+- **AsyncAPI Documentation**: Generate AsyncAPI 3.0 specifications automatically from decorated handlers and message types
+- **Type-Safe Messaging**: Pydantic-based validation with automatic discriminated unions and full mypy/pyright support
+- **Authentication System**: DRF integration for Django, flexible authenticator base classes for other frameworks
+- **Channel Layer Integration**: Type-safe pub/sub messaging, group broadcasting, and event handling across your application
+- **Comprehensive Testing**: Framework-specific test utilities for WebSocket consumers and group messaging
+- **Production Features**: Structured logging, error handling, and battle-tested patterns for scalable applications
 
-    # Complete example with all generic parameters
-    class ChatConsumer(AsyncJsonWebsocketConsumer[ChatMessage, ChatEvent, Room]):
-        # Room is used for object-level permissions
-        queryset = Room.objects.all()
 
-        async def build_groups(self) -> list[str]:
-            # self.obj is typed as Room
-            return [f"room_{self.obj.id}"]
+Type Parameters and AsyncAPI Generation
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Making Parameters Optional
-~~~~~~~~~~~~~~~~~~~~~~~~~~
-For parameters you don't need, use None:
+The framework automatically generates AsyncAPI 3.0 specifications from your decorated handlers. You can specify
+event types for type safety:
 
 .. code-block:: python
 
-    # No events, with model
-    class ModelConsumer(AsyncJsonWebsocketConsumer[ChatMessage, None, Room]):
-        ...
+    @channel(name="chat", description="Real-time chat system", tags=["chat"])
+    class ChatConsumer(AsyncJsonWebsocketConsumer[NotificationEvent]):
+        @ws_handler(
+            summary="Handle chat messages",
+            description="Process chat messages and broadcast to room",
+            output_type=ChatNotificationMessage,
+        )
+        async def handle_chat(self, message: ChatMessage) -> None:
+            await self.broadcast_message(
+                ChatNotificationMessage(
+                    payload=ChatPayload(message=f"💬 {message.payload.message}")
+                ),
+            )
 
-    # With events, no model
-    class EventOnlyConsumer(AsyncJsonWebsocketConsumer[ChatMessage, ChatEvent]):
-        ...
+        @event_handler
+        async def handle_notification(self, event: NotificationEvent) -> NotificationMessage:
+            return NotificationMessage(payload=event.payload)
+
+Sending Events and Broadcasting
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Send events to specific consumers or broadcast to groups:
+
+.. code-block:: python
+
+    # Send event to specific channel
+    await MyConsumer.send_event(
+        NotificationEvent(payload="Hello!"),
+        channel_name="specific.channel.name"
+    )
+
+    # Broadcast event to group
+    await MyConsumer.broadcast_event(
+        SystemNotify(payload="Server maintenance in 5 minutes"),
+        groups=["admin_users"]
+    )
 
 Configuration
 -------------
 
-Chanx can be configured through the ``CHANX`` dictionary in your Django settings. Below is a complete list
-of available settings with their default values and descriptions:
+Django Configuration
+~~~~~~~~~~~~~~~~~~~~~
+
+For Django projects, configure Chanx through the ``CHANX`` dictionary in your Django settings:
 
 .. code-block:: python
 
@@ -159,91 +229,46 @@ of available settings with their default values and descriptions:
 
         # Messaging behavior
         'SEND_MESSAGE_IMMEDIATELY': True,  # Whether to yield control after sending messages
-        'SEND_AUTHENTICATION_MESSAGE': True,  # Whether to send auth status after connection
-
-        # Logging configuration
-        'LOG_RECEIVED_MESSAGE': True,  # Whether to log received messages
-        'LOG_SENT_MESSAGE': True,  # Whether to log sent messages
+        'LOG_WEBSOCKET_MESSAGE': True,  # Whether to log WebSocket messages
         'LOG_IGNORED_ACTIONS': [],  # Message actions that should not be logged
-
-        # Playground configuration
-        'WEBSOCKET_BASE_URL': 'ws://localhost:8000'  # Default WebSocket URL for discovery
     }
 
-WebSocket Routing
------------------
+Other Frameworks Configuration
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Chanx provides Django-style routing functions specifically designed for WebSocket applications. These functions work similarly to Django's URL routing but are optimized for Channels and ASGI applications.
-
-**Key principles:**
-
-- Use ``chanx.routing`` for WebSocket routes in your ``routing.py`` files
-- Use ``django.urls`` for HTTP routes in your ``urls.py`` files
-- Maintain clear separation between HTTP and WebSocket routing
-
-**Available functions:**
-
-- ``path()``: Create URL patterns with path converters (e.g., ``'<int:id>/'``)
-- ``re_path()``: Create URL patterns with regular expressions
-- ``include()``: Include routing patterns from other modules
-
-**Example routing setup:**
+For FastAPI and other ASGI frameworks, configure Chanx by subclassing ``AsyncJsonWebsocketConsumer`` and setting class attributes:
 
 .. code-block:: python
 
-    # app/routing.py
-    from chanx.ext.channels.routing import path, re_path
-    from . import consumers
+    from chanx.core.websocket import AsyncJsonWebsocketConsumer
 
-    router = URLRouter([
-        path("", consumers.MyConsumer.as_asgi()),
-        path("room/<str:room_name>/", consumers.RoomConsumer.as_asgi()),
-        re_path(r"^admin/(?P<id>\d+)/$", consumers.AdminConsumer.as_asgi()),
-    ])
+    class BaseConsumer(AsyncJsonWebsocketConsumer):
+        # Message configuration
+        camelize = False  # Whether to camelize/decamelize messages
+        send_completion = False  # Whether to send completion messages
+        send_message_immediately = True  # Whether to yield control after sending
+        log_websocket_message = True  # Whether to log WebSocket messages
+        log_ignored_actions = []  # Message actions to ignore in logs
 
-    # project/routing.py
-    from chanx.ext.channels.routing import include, path
-    from channels.routing import URLRouter
+        # Channel layer configuration
+        channel_layer_alias = "default"  # Channel layer alias to use
 
-    router = URLRouter([
-        path("ws/", URLRouter([
-            path("app/", include("app.routing")),
-            path("chat/", include("chat.routing")),
-        ])),
-    ])
-
-WebSocket Playground
---------------------
-
-Add the playground to your URLs and explore your WebSocket endpoints interactively:
+You can also configure per-consumer by setting attributes directly:
 
 .. code-block:: python
 
-    urlpatterns = [
-        path('playground/', include('chanx.playground.urls')),
-    ]
+    @channel(name="chat")
+    class ChatConsumer(BaseConsumer):
+        send_completion = True  # Override base setting
+        log_ignored_actions = ["ping", "pong"]  # Don't log ping/pong messages
 
-Visit ``/playground/websocket/`` to test your endpoints without writing JavaScript.
-
-Complete Example Project
-------------------------
-
-For a full production-ready implementation with advanced patterns and deployment configurations, check out the complete example project:
-
-**GitHub Repository**: `chanx-example <https://github.com/huynguyengl99/chanx-example>`_
-
-This repository demonstrates:
-
-- Production deployment configurations
-- Advanced authentication patterns
-- Group messaging and channel events
-- Comprehensive testing strategies
-- Real-world usage patterns
 
 Learn More
 ----------
 
-* `Quick Start Guide <https://chanx.readthedocs.io/en/latest/quick-start.html>`_ - Step-by-step setup instructions
-* `User Guide <https://chanx.readthedocs.io/en/latest/user-guide/index.html>`_ - Comprehensive feature documentation
-* `API Reference <https://chanx.readthedocs.io/en/latest/reference/index.html>`_ - Detailed API documentation
-* `Examples <https://chanx.readthedocs.io/en/latest/examples/index.html>`_ - Real-world usage examples
+* `Django Quick Start <https://chanx.readthedocs.io/en/latest/quick-start-django.html>`_ - Django setup instructions
+* `FastAPI Quick Start <https://chanx.readthedocs.io/en/latest/quick-start-fastapi.html>`_ - FastAPI setup instructions
+* `User Guide <https://chanx.readthedocs.io/en/latest/user-guide/prerequisites.html>`_ - Comprehensive feature documentation
+* `API Reference <https://chanx.readthedocs.io/en/latest/reference/core.html>`_ - Detailed API documentation
+* `Django Examples <https://chanx.readthedocs.io/en/latest/examples/django.html>`_ - Django implementation examples
+* `FastAPI Examples <https://chanx.readthedocs.io/en/latest/examples/fastapi.html>`_ - FastAPI implementation examples

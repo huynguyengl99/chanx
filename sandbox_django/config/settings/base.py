@@ -88,9 +88,7 @@ THIRD_PARTY_APPS = [
 
 LOCAL_APPS = ["accounts", "assistants", "chat", "core", "discussion"]
 
-EXTRA_APP = ["django_cleanup.apps.CleanupConfig"]
-
-INSTALLED_APPS = PRIORITY_APPS + DJANGO_APPS + THIRD_PARTY_APPS + LOCAL_APPS + EXTRA_APP
+INSTALLED_APPS = PRIORITY_APPS + DJANGO_APPS + THIRD_PARTY_APPS + LOCAL_APPS
 
 # =========================================================================
 # MIDDLEWARE CONFIGURATION
@@ -230,7 +228,6 @@ REST_FRAMEWORK = {
     "DEFAULT_RENDERER_CLASSES": [
         "djangorestframework_camel_case.render.CamelCaseJSONRenderer",
     ],
-    "DEFAULT_FILTER_BACKENDS": ("django_filters.rest_framework.DjangoFilterBackend",),
     "DEFAULT_AUTHENTICATION_CLASSES": (
         "auth_kit.authentication.JWTCookieAuthentication",
     ),
@@ -452,14 +449,6 @@ CHANX = {
     "ASYNCAPI_TITLE": "CHANX AsyncAPI Documentation",
     "ASYNCAPI_DESCRIPTION": "Websocket schema of Chanx",
 }
-# =========================================================================
-# CELERY CONFIGURATION
-# =========================================================================
-
-CELERY_BROKER_URL = env.str("CELERY_BROKER_URL", REDIS_URL)
-CELERY_RESULT_BACKEND = env.str("CELERY_RESULT_BACKEND", CELERY_BROKER_URL)
-CELERY_TASK_DEFAULT_QUEUE = "chanx_example_app_worker"
-DJANGO_STRUCTLOG_CELERY_ENABLED = True
 
 # =========================================================================
 # AI CONFIGURATION

@@ -127,7 +127,7 @@ class DjangoRouteDiscovery(RouteDiscovery):
                     f"Error parsing route: {base_url}/{prefix}. Error: {str(e)}"
                 )
 
-    def get_base_url(self, request: HttpRequest | None = None) -> str:
+    def get_base_url(self, request: HttpRequest) -> str:
         """
         Determine the WebSocket base URL based on Django request.
 
@@ -137,7 +137,7 @@ class DjangoRouteDiscovery(RouteDiscovery):
         Returns:
             The WebSocket base URL (ws:// or wss:// followed by domain).
         """
-        if request is None:
+        if chanx_settings.WEBSOCKET_BASE_URL is not None:
             return chanx_settings.WEBSOCKET_BASE_URL
 
         # Get the current domain from the request
@@ -151,7 +151,7 @@ class DjangoRouteDiscovery(RouteDiscovery):
 
 
 # Convenience function for backward compatibility
-def get_websocket_routes(request: HttpRequest | None = None) -> list[RouteInfo]:
+def get_websocket_routes(request: HttpRequest) -> list[RouteInfo]:
     """
     Discover all WebSocket routes from the Django Channels application.
 

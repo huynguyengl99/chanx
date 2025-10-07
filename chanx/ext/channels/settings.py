@@ -31,11 +31,15 @@ class MySetting:
         SEND_MESSAGE_IMMEDIATELY: Whether to yield control after sending messages (default: True)
         SEND_AUTHENTICATION_MESSAGE: Whether to send auth status after connection (default: True)
         CAMELIZE: Whether to convert keys to camelCase in messages (default: False)
-        LOG_RECEIVED_MESSAGE: Whether to log received messages (default: True)
-        LOG_SENT_MESSAGE: Whether to log sent messages (default: True)
+        LOG_WEBSOCKET_MESSAGE: Whether to log websocket messages (default: True)
         LOG_IGNORED_ACTIONS: Message actions that should not be logged (default: empty list)
-        WEBSOCKET_BASE_URL: Default WebSocket URL for discovery (default: "ws://localhost:8000")
-        user_settings: Internal field used by APISettings
+        WEBSOCKET_BASE_URL: WebSocket URL for overriding (default: None)
+        ASYNCAPI_TITLE: Title for generated AsyncAPI documentation (default: "AsyncAPI Documentation")
+        ASYNCAPI_DESCRIPTION: Description for generated AsyncAPI documentation (default: "")
+        ASYNCAPI_VERSION: Version for generated AsyncAPI documentation (default: "1.0.0")
+        ASYNCAPI_SERVER_URL: Server URL for AsyncAPI documentation (default: None)
+        ASYNCAPI_SERVER_PROTOCOL: Server protocol for AsyncAPI documentation (default: None)
+        user_settings: Internal field used by APISettings (default: empty dict)
     """
 
     MESSAGE_ACTION_KEY: str = "action"
@@ -47,7 +51,7 @@ class MySetting:
     LOG_WEBSOCKET_MESSAGE: bool = True
     LOG_IGNORED_ACTIONS: Iterable[str] = dataclasses.field(default_factory=list[str])
 
-    WEBSOCKET_BASE_URL: str = "ws://localhost:8000"
+    WEBSOCKET_BASE_URL: str | None = None
 
     # AsyncAPI documentation settings
     ASYNCAPI_TITLE: str = "AsyncAPI Documentation"

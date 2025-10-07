@@ -117,7 +117,7 @@ class MessageRegistry:
         orig = get_origin(message_type)
         if orig in UNION_TYPES:
             for sub in get_args(message_type):
-                if issubclass(sub, BaseMessage):
+                if isinstance(sub, type) and issubclass(sub, BaseMessage):
                     self.build_message(sub, consumer_name)
         else:
             self.build_message(message_type, consumer_name)
@@ -140,7 +140,7 @@ class MessageRegistry:
         has_base = False
         if orig in UNION_TYPES:
             for sub in get_args(model_type):
-                if issubclass(sub, BaseModel):
+                if isinstance(sub, type) and issubclass(sub, BaseModel):
                     has_base = True
                     self.build_message_schema(sub, consumer_name)
         return has_base
@@ -184,7 +184,7 @@ class MessageRegistry:
         union_map: dict[str, dict[int, type[BaseModel]]] = {}
 
         for f_name, f_type in model_type_fields.items():
-            if issubclass(f_type, BaseModel):
+            if isinstance(f_type, type) and issubclass(f_type, BaseModel):
                 self.build_message_schema(f_type, consumer_name)
                 ref_fields.add(f_name)
                 continue
@@ -196,7 +196,7 @@ class MessageRegistry:
         return ref_fields, union_map
 
     def _process_union_field(
-        self, f_type: UnionType, consumer_name: str
+        self, f_type: Any, consumer_name: str
     ) -> dict[int, type[BaseModel]] | None:
         """
         Process a Union field type.
@@ -214,7 +214,7 @@ class MessageRegistry:
             mapping: dict[int, type[BaseModel]] = {}
             has_model = False
             for idx, item in enumerate(get_args(f_type)):
-                if issubclass(item, BaseModel):
+                if isinstance(item, type) and issubclass(item, BaseModel):
                     self.build_message_schema(item, consumer_name)
                     has_model = True
                     mapping[idx] = item

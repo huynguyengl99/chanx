@@ -2,44 +2,64 @@ Installation
 ============
 Requirements
 ------------
-Chanx has the following dependencies:
+Chanx has the following core dependencies:
 
-* Python 3.10+
-* Django 5.0+
-* Django Channels 4.0+
-* Django REST Framework 3+
+* Python 3.11+
 * Pydantic 2.0+
-* Structlog 23.1+
+* Structlog
+* PyHumps (for camelCase conversion)
+* Typing Extensions
+
+Framework-specific dependencies are installed automatically based on which extra you choose.
 
 Installing Chanx
 ----------------
-You can install Chanx from PyPI:
+**Basic Installation (Core Only)**
 
 .. code-block:: bash
 
     pip install chanx
 
-For installations with additional features:
+**For Django Channels Projects**
 
 .. code-block:: bash
 
-    # Install with camelCase conversion support
-    pip install chanx[camel-case]
+    pip install "chanx[channels]"
 
-Or install from source:
+This installs:
+
+- Django 5.0+
+- Django Channels 4.0+
+- Django REST Framework 3.0+
+- Channels Redis 4.0+
+
+**For FastAPI and Other ASGI Frameworks**
+
+.. code-block:: bash
+
+    pip install "chanx[fast_channels]"
+
+This installs:
+
+- FastAPI 0.117+
+- fast-channels 1.0+
+
+**Install from Source**
 
 .. code-block:: bash
 
     git clone https://github.com/huynguyengl99/chanx.git
     cd chanx
-    pip install -e .
+    pip install -e ".[channels]"  # For Django
+    # or
+    pip install -e ".[fast_channels]"  # For FastAPI
 
-    # Or with extras
-    pip install -e ".[camel-case]"
+Framework Setup
+---------------
 
-Basic Setup
------------
-1. Add necessary apps to your ``INSTALLED_APPS`` in Django settings:
+**Django Channels Setup**
+
+1. Add necessary apps to your ``INSTALLED_APPS``:
 
 .. code-block:: python
 
@@ -47,74 +67,75 @@ Basic Setup
         # ...
         'rest_framework',
         'channels',
-        'chanx.playground',  # Only needed for the WebSocket playground
+        'chanx.ext.channels',
         # ...
     ]
 
-.. note::
-  The ``chanx.playground`` app provides an interactive WebSocket testing interface.
-  It's highly recommended for development as it allows you to explore and test
-  your WebSocket endpoints without writing client-side code.
-
-2. Set up the WebSocket playground URLs:
-
-.. code-block:: python
-
-    # urls.py
-    from django.urls import path, include
-
-    urlpatterns = [
-        # ...
-        path('playground/', include('chanx.playground.urls')),
-        # ...
-    ]
-
-Optional Features
------------------
-Chanx offers additional features through optional dependencies:
-
-**camelCase Conversion**
-
-If you want to automatically convert message keys between snake_case (Python) and camelCase (JavaScript),
-you need to install the pyhumps package:
-
-.. code-block:: bash
-
-    pip install chanx[camel-case]
-
-Then enable the feature in your settings:
+2. Configure Chanx in your Django settings:
 
 .. code-block:: python
 
     # settings.py
     CHANX = {
-        'CAMELIZE': True,
-        # Other settings...
+        'CAMELIZE': False,  # Set to True for camelCase conversion
+        'SEND_COMPLETION': False,  # Set to True for testing
+        'LOG_WEBSOCKET_MESSAGE': True,
+        # ...
     }
 
-This will automatically convert snake_case fields to camelCase when sending to clients
-and convert camelCase back to snake_case when receiving from clients.
+**FastAPI Setup**
 
-Verifying Installation
-----------------------
-To verify that Chanx is correctly installed:
+1. Create a base consumer class:
 
-1. Start your Django development server:
+.. code-block:: python
 
-.. code-block:: bash
+    # base_consumer.py
+    from chanx.core.websocket import AsyncJsonWebsocketConsumer
 
-    python manage.py runserver
+    class BaseConsumer(AsyncJsonWebsocketConsumer):
+        # Configure per your needs
+        send_completion = False
+        log_websocket_message = True
+        channel_layer_alias = "default"
 
-2. Navigate to the playground:
+2. Import and use in your consumers:
 
-   http://localhost:8000/playground/websocket/
+.. code-block:: python
 
-   You should see the WebSocket playground interface.
+    from chanx.core.decorators import ws_handler, channel
+    from .base_consumer import BaseConsumer
+
+    @channel(name="chat")
+    class ChatConsumer(BaseConsumer):
+        @ws_handler
+        async def handle_ping(self, message: PingMessage) -> PongMessage:
+            return PongMessage()
+
+Configuration Options
+---------------------
+**camelCase Conversion**
+
+Chanx includes automatic camelCase conversion. Enable it in your configuration:
+
+.. code-block:: python
+
+    # Django settings.py
+    CHANX = {
+        'CAMELIZE': True,
+        # ...
+    }
+
+    # Or for other frameworks, in your base consumer
+    class BaseConsumer(AsyncJsonWebsocketConsumer):
+        camelize = True
+
 
 Next Steps
 ----------
 Now that you have Chanx installed, proceed to:
 
-* :doc:`configuration` - Configure Chanx settings
-* :doc:`quick-start` - Create your first WebSocket consumer
-* :doc:`user-guide/index` - Explore the user guide for detailed information
+* :doc:`quick-start-django` - Create your first Django WebSocket consumer
+* :doc:`quick-start-fastapi` - Create your first FastAPI WebSocket consumer
+* :doc:`user-guide/prerequisites` - Start with the user guide prerequisites
+* :doc:`examples/django` - See Django implementation examples
+* :doc:`examples/fastapi` - See FastAPI implementation examples

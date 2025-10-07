@@ -11,9 +11,6 @@ Base Messages
 
 .. autoclass:: chanx.messages.base.BaseMessage
 
-.. autoclass:: chanx.messages.base.BaseGroupMessage
-
-.. autoclass:: chanx.messages.base.BaseChannelEvent
 
 Incoming Messages
 -----------------
@@ -37,3 +34,5 @@ Outgoing Messages
 .. autoclass:: chanx.messages.outgoing.CompleteMessage
 
 .. autoclass:: chanx.messages.outgoing.GroupCompleteMessage
+
+.. autoclass:: chanx.messages.outgoing.EventCompleteMessage

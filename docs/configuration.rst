@@ -1,168 +1,199 @@
 Configuration
 =============
 
-Chanx Settings
---------------
-Chanx can be configured through the ``CHANX`` dictionary in your Django settings. Below is a complete list of available
-settings with their default values:
+General Configuration (All Frameworks)
+---------------------------------------
+
+Chanx can be configured by creating a base consumer class and setting class attributes. This approach works across all frameworks (Django, FastAPI, and other ASGI frameworks).
+
+**Creating a Base Consumer**
+
+.. code-block:: python
+
+    from chanx.core.websocket import AsyncJsonWebsocketConsumer
+
+    class BaseConsumer(AsyncJsonWebsocketConsumer):
+        # Message behavior
+        send_completion = False  # Whether to send completion message after processing
+        send_message_immediately = True  # Whether to yield control after sending messages
+        log_websocket_message = True  # Whether to log websocket messages
+        log_ignored_actions = []  # Message actions to ignore in logs
+
+        # Message formatting
+        camelize = False  # Whether to convert between camelCase and snake_case
+        discriminator_field = "action"  # Field used for message type discrimination
+
+        # Channel layer configuration (required for non-Django frameworks)
+        channel_layer_alias = "default"  # Channel layer alias to use
+
+        # Authentication (optional)
+        # authenticator_class = MyAuthenticator  # Set authenticator class
+        # authenticator: MyAuthenticator  # Type hint for authenticator
+
+**Using Your Base Consumer**
+
+.. code-block:: python
+
+    from chanx.core.decorators import ws_handler, channel
+    from .base_consumer import BaseConsumer
+
+    @channel(name="chat")
+    class ChatConsumer(BaseConsumer):
+        # Override settings for this specific consumer if needed
+        send_completion = True
+        log_ignored_actions = ["ping", "pong"]
+
+        @ws_handler
+        async def handle_chat(self, message: ChatMessage) -> None:
+            await self.broadcast_message(...)
+
+**Authentication Configuration**
+
+.. code-block:: python
+
+    from chanx.ext.channels.authenticator import DjangoAuthenticator
+    from rest_framework.permissions import IsAuthenticated
+
+    class MyAuthenticator(DjangoAuthenticator):
+        permission_classes = [IsAuthenticated]
+        queryset = MyModel.objects.all()
+        obj: MyModel  # Type hint for the authenticated object
+
+    class MyConsumer(BaseConsumer):
+        authenticator_class = MyAuthenticator
+        authenticator: MyAuthenticator  # Type hint for better IDE support
+
+Configurable Attributes Reference
+----------------------------------
+
+**Message Behavior**
+
+- **send_completion** (bool): Whether to send completion message after processing (default: False)
+- **send_message_immediately** (bool | None): Whether to yield control after sending messages (default: True)
+- **log_websocket_message** (bool | None): Whether to log websocket messages (default: True)
+- **log_ignored_actions** (Collection[str]): Message actions to ignore in logs (default: [])
+
+**Message Formatting**
+
+- **camelize** (ClassVar[bool]): Whether to convert between camelCase and snake_case (default: False)
+- **discriminator_field** (ClassVar[str]): Field used for message type discrimination (default: "action")
+
+**Channel Layer**
+
+- **channel_layer_alias** (ClassVar[str]): Channel layer alias to use. **Required for non-Django frameworks**. For Django, you can skip this and it will use default, or specify to use the right channel layer.
+
+**Authentication**
+
+- **authenticator_class** (type[BaseAuthenticator] | None): Authenticator class to instantiate (default: None)
+- **authenticator** (BaseAuthenticator | None): Type hint for the active authenticator instance
+
+Django-Specific Configuration
+------------------------------
+
+For Django projects, you can use the ``CHANX`` settings dictionary in addition to or instead of creating a base consumer class. **Note: CHANX settings apply to Django only.**
 
 .. code-block:: python
 
     # settings.py
     CHANX = {
         # Message configuration
-        'MESSAGE_ACTION_KEY': 'action',  # Key name for action field in messages
-        'CAMELIZE': False,  # Whether to camelize/decamelize messages for JavaScript clients
+        'MESSAGE_ACTION_KEY': 'action',  # Field used for message type discrimination
+        'CAMELIZE': False,  # Whether to convert between camelCase and snake_case
 
         # Completion messages
         'SEND_COMPLETION': False,  # Whether to send completion message after processing
 
         # Messaging behavior
-        'SEND_MESSAGE_IMMEDIATELY': True,  # Whether to yield control after sending messages (send message immediately)
-        'SEND_AUTHENTICATION_MESSAGE': True,  # Whether to send auth status after connection
-
-        # Logging configuration
-        'LOG_RECEIVED_MESSAGE': True,  # Whether to log received messages
-        'LOG_SENT_MESSAGE': True,  # Whether to log sent messages
+        'SEND_MESSAGE_IMMEDIATELY': True,  # Whether to yield control after sending messages
+        'LOG_WEBSOCKET_MESSAGE': True,  # Whether to log websocket messages
         'LOG_IGNORED_ACTIONS': [],  # Message actions to ignore in logs
 
-        # Playground configuration
-        'WEBSOCKET_BASE_URL': 'ws://localhost:8000'  # Default WebSocket URL for playground
+        # AsyncAPI documentation settings
+        'ASYNCAPI_TITLE': 'AsyncAPI Documentation',
+        'ASYNCAPI_DESCRIPTION': '',
+        'ASYNCAPI_VERSION': '1.0.0',
+        'ASYNCAPI_SERVER_URL': None,
+        'ASYNCAPI_SERVER_PROTOCOL': None,
     }
 
-Settings Reference
-------------------
+**Using Django Settings**
 
-Message Configuration
-~~~~~~~~~~~~~~~~~~~~~
-
-- **MESSAGE_ACTION_KEY** (default: "action"): Key name for the action field in messages, used for discriminated unions.
-- **CAMELIZE** (default: False): Whether to convert between camelCase (for JavaScript clients) and snake_case (for Python).
-
-Completion Messages
-~~~~~~~~~~~~~~~~~~~
-
-- **SEND_COMPLETION** (default: False): Whether to send a completion message after processing a client message.
-
-Messaging Behavior
-~~~~~~~~~~~~~~~~~~
-
-- **SEND_MESSAGE_IMMEDIATELY** (default: True): Whether to yield control after sending messages (send message immediately).
-- **SEND_AUTHENTICATION_MESSAGE** (default: True): Whether to send authentication status after connection.
-
-Logging Configuration
-~~~~~~~~~~~~~~~~~~~~~
-
-- **LOG_RECEIVED_MESSAGE** (default: True): Whether to log received messages.
-- **LOG_SENT_MESSAGE** (default: True): Whether to log sent messages.
-- **LOG_IGNORED_ACTIONS** (default: []): Message actions that should not be logged.
-
-Playground Configuration
-~~~~~~~~~~~~~~~~~~~~~~~~
-
-- **WEBSOCKET_BASE_URL** (default: "ws://localhost:8000"): Default WebSocket URL for playground.
-
-Environment-Specific Settings
------------------------------
-
-Development
-~~~~~~~~~~~
-
-For development, you might want to use these settings:
+You can use CHANX settings for some attributes instead of creating a base consumer:
 
 .. code-block:: python
 
-    # settings/dev.py
+    from chanx.core.websocket import AsyncJsonWebsocketConsumer
+
+    class MyConsumer(AsyncJsonWebsocketConsumer):
+        # These will use CHANX settings automatically
+        # send_completion, camelize, etc. read from settings
+
+        # You can still override specific settings
+        log_ignored_actions = ["ping", "pong"]
+
+        # Django automatically sets channel_layer_alias
+        # authenticator_class = MyAuthenticator  # Set if needed
+
+Environment-Specific Configuration Examples
+--------------------------------------------
+
+**Testing Configuration**
+
+For testing, it's recommended to enable completion messages:
+
+.. code-block:: python
+
+    # Django settings/test.py
+    CHANX = {
+        'SEND_COMPLETION': True,  # Important for receive_all_messages() to work
+        'LOG_WEBSOCKET_MESSAGE': False,  # Reduce noise in tests
+        'LOG_IGNORED_ACTIONS': [],
+    }
+
+    # Or for other frameworks, in base consumer
+    class BaseConsumer(AsyncJsonWebsocketConsumer):
+        send_completion = True  # Enable for testing
+        log_websocket_message = False  # Reduce test noise
+
+**Production Configuration**
+
+For production, consider performance and logging:
+
+.. code-block:: python
+
+    # Django settings/prod.py
     CHANX = {
         'SEND_COMPLETION': False,
-        'LOG_RECEIVED_MESSAGE': True,
-        'LOG_SENT_MESSAGE': True,
-        'WEBSOCKET_BASE_URL': 'ws://localhost:8000',
-    }
-
-    CHANNEL_LAYERS = {
-        "default": {
-            "BACKEND": "channels_redis.core.RedisChannelLayer",
-            "CONFIG": {
-                "hosts": [os.environ.get('REDIS_URL', 'redis://localhost:6379/0')],
-            },
-        },
-    }
-
-Testing
-~~~~~~~
-
-For testing, it's recommended to use these settings:
-
-.. code-block:: python
-
-    # settings/test.py
-    CHANX = {
-        'SEND_COMPLETION': True,  # Important for receive_all_json() to work
-        'SEND_AUTHENTICATION_MESSAGE': True,
-        'LOG_RECEIVED_MESSAGE': False,  # Reduce noise in tests
-        'LOG_SENT_MESSAGE': False,  # Reduce noise in tests
-    }
-
-    CHANNEL_LAYERS = {
-        "default": {
-            "BACKEND": "channels.layers.InMemoryChannelLayer"
-        }
-    }
-
-Production
-~~~~~~~~~~
-
-For production, consider these settings:
-
-.. code-block:: python
-
-    # settings/prod.py
-    CHANX = {
-        'SEND_COMPLETION': False,
-        'SEND_MESSAGE_IMMEDIATELY': True,
-        'LOG_RECEIVED_MESSAGE': True,
-        'LOG_SENT_MESSAGE': True,
+        'LOG_WEBSOCKET_MESSAGE': True,
         'LOG_IGNORED_ACTIONS': ['ping', 'pong'],  # Reduce noise from heartbeats
-        'WEBSOCKET_BASE_URL': 'wss://your-domain.com',
     }
 
-    CHANNEL_LAYERS = {
-        "default": {
-            "BACKEND": "channels_redis.core.RedisChannelLayer",
-            "CONFIG": {
-                "hosts": [os.environ.get('REDIS_URL', 'redis://localhost:6379/0')],
-            },
-        },
-    }
+    # Or for other frameworks
+    class BaseConsumer(AsyncJsonWebsocketConsumer):
+        send_completion = False
+        log_websocket_message = True
+        log_ignored_actions = ['ping', 'pong']
 
-Optional Dependencies
----------------------
-Some Chanx features require additional packages. You can install these along with Chanx using extras:
-
-.. code-block:: bash
-
-    # Install with camelCase conversion support
-    pip install chanx[camel-case]
-
-This installs the ``pyhumps`` package which is required when using the ``CAMELIZE`` setting. Without this package
-enabling the setting will raise a runtime error.
-
-Overriding Settings in Tests
-----------------------------
-Chanx provides utilities for temporarily overriding settings in tests:
+**Framework-Specific Examples**
 
 .. code-block:: python
 
-    from chanx.utils import override_chanx_settings
+    # FastAPI example
+    import os
+    from chanx.core.websocket import AsyncJsonWebsocketConsumer
 
-    # Using decorator for a test function
-    @override_chanx_settings(SEND_COMPLETION=True)
-    async def test_completion_message():
-        # SEND_COMPLETION will be True within this test
-        ...
+    class BaseConsumer(AsyncJsonWebsocketConsumer):
+        send_completion = bool(os.environ.get("SEND_COMPLETION", False))
+        channel_layer_alias = "default"  # Required for non-Django
+
+    # Django example - no channel_layer_alias needed
+    class DjangoConsumer(AsyncJsonWebsocketConsumer):
+        # Uses CHANX settings automatically
+        authenticator_class = MyDjangoAuthenticator
 
 Next Steps
 ----------
-Now that you understand Chanx's configuration options, proceed to the :doc:`quick-start` guide to set up your project
-and create your first WebSocket consumer.
+Now that you understand Chanx's configuration options, proceed to the framework-specific quick-start guides:
+
+* :doc:`quick-start-django` - Set up your Django project and create your first WebSocket consumer
+* :doc:`quick-start-fastapi` - Set up your FastAPI project and create your first WebSocket consumer

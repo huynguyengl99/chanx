@@ -1,3 +1,18 @@
+## v1.0.0 (2025-10-08)
+
+### BREAKING CHANGE
+
+- Major rewrite introducing decorator-based WebSocket handlers and automatic AsyncAPI documentation generation
+
+### Feat
+
+- reimplement chanx with decorator approach and auto-generate asyncapi docs
+
+### Fix
+
+- install all extras for readthedocs
+- update documentation and improve type safety in message registry
+
 ## v0.13.3 (2025-07-15)
 
 ### Fix

@@ -15,7 +15,7 @@ build:
       - asdf global uv latest
       - uv venv
     install:
-      - uv sync --group docs
+      - uv sync --group docs --all-extras
     build:
       html:
         - uv run sphinx-build -T -b html docs $READTHEDOCS_OUTPUT/html

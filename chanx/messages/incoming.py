@@ -12,7 +12,7 @@ from chanx.messages.base import BaseMessage
 
 
 class PingMessage(BaseMessage):
-    """Simple ping message to check connection status."""
+    """Simple ping message to check WebSocket connection status."""
 
     action: Literal["ping"] = "ping"
     payload: None = None

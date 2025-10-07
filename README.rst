@@ -113,9 +113,9 @@ You can use these parameters in different combinations:
     # With group messaging
     class GroupConsumer(AsyncJsonWebsocketConsumer[ChatMessage]):
         async def receive_message(self, message: ChatMessage, **kwargs: Any) -> None:
-            # Send typed group messages using send_group_message
+            # Send typed group messages using broadcast_message
             group_msg = MemberMessage(payload={"content": "Hello group!"})
-            await self.send_group_message(group_msg)
+            await self.broadcast_message(group_msg)
 
     # Complete example with all generic parameters
     class ChatConsumer(AsyncJsonWebsocketConsumer[ChatMessage, ChatEvent, Room]):
@@ -192,7 +192,7 @@ Chanx provides Django-style routing functions specifically designed for WebSocke
 .. code-block:: python
 
     # app/routing.py
-    from chanx.routing import path, re_path
+    from chanx.ext.channels.routing import path, re_path
     from . import consumers
 
     router = URLRouter([
@@ -202,7 +202,7 @@ Chanx provides Django-style routing functions specifically designed for WebSocke
     ])
 
     # project/routing.py
-    from chanx.routing import include, path
+    from chanx.ext.channels.routing import include, path
     from channels.routing import URLRouter
 
     router = URLRouter([

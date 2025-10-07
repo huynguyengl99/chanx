@@ -114,7 +114,7 @@ Set up routing in `echo/routing.py`:
 .. code-block:: python
 
     from channels.routing import URLRouter
-    from chanx.routing import path
+    from chanx.ext.channels.routing import path
 
     from echo.consumers import EchoConsumer
 
@@ -137,7 +137,7 @@ Configure the ASGI application in `myproject/asgi.py`:
     from django.core.asgi import get_asgi_application
     from django.conf import settings
 
-    from chanx.routing import include
+    from chanx.ext.channels.routing import include
 
     os.environ.setdefault("DJANGO_SETTINGS_MODULE", "myproject.settings")
     django_asgi_app = get_asgi_application()

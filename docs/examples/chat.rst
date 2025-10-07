@@ -142,7 +142,7 @@ Now we'll create our chat consumer with proper pattern matching:
             user = self.user
 
             # Send joined notification to the group
-            await self.send_group_message(
+            await self.broadcast_message(
                 UserJoinedPayload(
                     payload={
                         "username": user.username,
@@ -221,7 +221,7 @@ Now we'll create our chat consumer with proper pattern matching:
             chat_message = ChatMessagePayload(payload=text)
 
             # Broadcast to the group
-            await self.send_group_message(chat_message)
+            await self.broadcast_message(chat_message)
 
         async def save_message_to_db(self, user: User, room: ChatRoom, text: str) -> None:
             """Save chat message to database."""
@@ -247,7 +247,7 @@ Now we'll create our chat consumer with proper pattern matching:
                     room = self.obj
 
                     # Send user left notification
-                    await self.send_group_message(
+                    await self.broadcast_message(
                         UserLeftPayload(
                             payload={
                                 "username": user.username,
@@ -285,7 +285,7 @@ Set up the WebSocket URL routing:
 
     # myapp/routing.py
     from channels.routing import URLRouter
-    from chanx.routing import path
+    from chanx.ext.channels.routing import path
 
     # Important: Name this variable 'router' for string-based includes
     router = URLRouter([
@@ -294,7 +294,7 @@ Set up the WebSocket URL routing:
 
     # myproject/routing.py
     from channels.routing import URLRouter
-    from chanx.routing import include, path
+    from chanx.ext.channels.routing import include, path
 
     router = URLRouter([
         path('ws/chat/', include('myapp.routing')),

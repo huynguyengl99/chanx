@@ -1,0 +1,374 @@
+{% extends "discussion/base.html" %}
+
+{% block title %}Ask a Question - Discussion{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="d-flex align-items-center mb-4">
+                <a href="{% url 'discussion-home' %}" class="btn btn-outline-secondary me-3">
+                    <i class="bi bi-arrow-left"></i> Back
+                </a>
+                <h1>Ask a Question</h1>
+            </div>
+
+            {% if not request.user.is_authenticated %}
+            <div class="alert alert-info">
+                <h4 class="alert-heading">Join the Discussion!</h4>
+                <p>You need to log in to ask questions and participate in discussions.</p>
+                <hr>
+                <p class="mb-0">
+                    <a href="{% url 'rest_login' %}?next={{ request.path }}" class="alert-link btn btn-primary">
+                        <i class="bi bi-box-arrow-in-right"></i> Log In to Ask Question
+                    </a>
+                </p>
+            </div>
+
+            <!-- Show read-only form for unauthenticated users -->
+            <div class="card">
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label class="form-label">
+                            <strong>Title</strong>
+                            <small class="text-muted">- Be specific and imagine you're asking a question to another person</small>
+                        </label>
+                        <input
+                            type="text"
+                            class="form-control"
+                            placeholder="e.g., How do I implement authentication in Django Channels?"
+                            disabled
+                            value="Example: How do I implement WebSocket authentication?"
+                        >
+                        <div class="form-text">
+                            <span>0</span>/200 characters
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">
+                            <strong>Content</strong>
+                            <small class="text-muted">- Include all the information someone would need to answer your question</small>
+                        </label>
+                        <textarea
+                            class="form-control"
+                            rows="8"
+                            disabled
+                            placeholder="Provide details about your question. What have you tried? What specific problem are you facing?"
+                        >I'm trying to implement WebSocket authentication in my Django Channels application...
+
+What I've tried:
+- Basic WebSocket connection
+- Django REST Framework authentication
+
+What's not working:
+- User authentication in WebSocket consumers</textarea>
+                        <div class="form-text">
+                            Markdown formatting is supported
+                        </div>
+                    </div>
+
+                    <div class="text-center">
+                        <a href="{% url 'rest_login' %}?next={{ request.path }}" class="btn btn-primary btn-lg">
+                            <i class="bi bi-box-arrow-in-right"></i> Log In to Post Your Question
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            {% else %}
+            <!-- Authenticated user form -->
+            <div class="card">
+                <div class="card-body">
+                    <form method="post" id="newTopicForm">
+                        {% csrf_token %}
+
+                        <div class="mb-3">
+                            <label for="id_title" class="form-label">
+                                <strong>Title</strong>
+                                <small class="text-muted">- Be specific and imagine you're asking a question to another person</small>
+                            </label>
+                            <input
+                                type="text"
+                                name="title"
+                                id="id_title"
+                                class="form-control"
+                                placeholder="e.g., How do I implement authentication in Django Channels?"
+                                required
+                                maxlength="200"
+                                {% if form.title.value %}value="{{ form.title.value }}"{% endif %}
+                            >
+                            {% if form.title.errors %}
+                            <div class="invalid-feedback d-block">
+                                {{ form.title.errors.0 }}
+                            </div>
+                            {% endif %}
+                            {% if errors.title %}
+                            <div class="invalid-feedback d-block">
+                                {{ errors.title.0 }}
+                            </div>
+                            {% endif %}
+                            <div class="form-text">
+                                <span id="titleCounter">0</span>/200 characters
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="id_content" class="form-label">
+                                <strong>Content</strong>
+                                <small class="text-muted">- Include all the information someone would need to answer your question</small>
+                            </label>
+                            <textarea
+                                name="content"
+                                id="id_content"
+                                class="form-control"
+                                rows="8"
+                                placeholder="Provide details about your question. What have you tried? What specific problem are you facing?"
+                                required
+                            >{% if form.content.value %}{{ form.content.value }}{% endif %}</textarea>
+                            {% if form.content.errors %}
+                            <div class="invalid-feedback d-block">
+                                {{ form.content.errors.0 }}
+                            </div>
+                            {% endif %}
+                            {% if errors.content %}
+                            <div class="invalid-feedback d-block">
+                                {{ errors.content.0 }}
+                            </div>
+                            {% endif %}
+                            <div class="form-text">
+                                Markdown formatting is supported
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="previewMode">
+                                <label class="form-check-label" for="previewMode">
+                                    Preview before posting
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- Preview Section -->
+                        <div id="previewSection" class="mb-3" style="display: none;">
+                            <h5>Preview</h5>
+                            <div class="topic-card">
+                                <div class="topic-title">
+                                    <span id="previewTitle">Your title will appear here</span>
+                                </div>
+                                <div id="previewContent" class="mt-2">
+                                    Your content will appear here
+                                </div>
+                                <div class="topic-meta mt-3">
+                                    <div class="author-info">
+                                        <div class="author-avatar">
+                                            {{ request.user.email|first|upper }}
+                                        </div>
+                                        <span>asked by <strong>{{ request.user.email }}</strong></span>
+                                        <span class="text-muted">just now</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="d-flex justify-content-between">
+                            <div class="form-text">
+                                <i class="bi bi-info-circle"></i>
+                                Your question will be visible to all users
+                            </div>
+                            <div>
+                                <button type="button" class="btn btn-outline-secondary me-2" id="saveDraftBtn">
+                                    Save Draft
+                                </button>
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="bi bi-send"></i> Post Question
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Writing Tips -->
+            <div class="card mt-4">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="bi bi-lightbulb"></i> Tips for Writing a Good Question
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <ul class="list-unstyled mb-0">
+                        <li class="mb-2">
+                            <i class="bi bi-check-circle text-success"></i>
+                            <strong>Search first:</strong> Check if your question has already been asked
+                        </li>
+                        <li class="mb-2">
+                            <i class="bi bi-check-circle text-success"></i>
+                            <strong>Be specific:</strong> Include relevant details and context
+                        </li>
+                        <li class="mb-2">
+                            <i class="bi bi-check-circle text-success"></i>
+                            <strong>Show your work:</strong> Include what you've tried and what didn't work
+                        </li>
+                        <li class="mb-2">
+                            <i class="bi bi-check-circle text-success"></i>
+                            <strong>Use clear language:</strong> Write as if you're talking to a colleague
+                        </li>
+                        <li>
+                            <i class="bi bi-check-circle text-success"></i>
+                            <strong>Format code:</strong> Use markdown code blocks for better readability
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+{{ block.super }}
+{% if request.user.is_authenticated %}
+<!-- Include marked for markdown preview -->
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const titleInput = document.getElementById('id_title');
+    const contentInput = document.getElementById('id_content');
+    const titleCounter = document.getElementById('titleCounter');
+    const previewMode = document.getElementById('previewMode');
+    const previewSection = document.getElementById('previewSection');
+    const previewTitle = document.getElementById('previewTitle');
+    const previewContent = document.getElementById('previewContent');
+    const saveDraftBtn = document.getElementById('saveDraftBtn');
+    const form = document.getElementById('newTopicForm');
+
+    // Configure marked for markdown rendering
+    marked.setOptions({
+        breaks: true,
+        gfm: true
+    });
+
+    // Character counter for title
+    function updateTitleCounter() {
+        const length = titleInput.value.length;
+        titleCounter.textContent = length;
+        titleCounter.style.color = length > 180 ? '#dc3545' : '#6c757d';
+    }
+
+    // Update preview
+    function updatePreview() {
+        if (previewMode.checked) {
+            const title = titleInput.value.trim() || 'Your title will appear here';
+            const content = contentInput.value.trim() || 'Your content will appear here';
+
+            previewTitle.textContent = title;
+            previewContent.innerHTML = marked.parse(content);
+        }
+    }
+
+    // Event listeners
+    titleInput.addEventListener('input', () => {
+        updateTitleCounter();
+        updatePreview();
+    });
+
+    contentInput.addEventListener('input', updatePreview);
+
+    previewMode.addEventListener('change', function() {
+        if (this.checked) {
+            previewSection.style.display = 'block';
+            updatePreview();
+        } else {
+            previewSection.style.display = 'none';
+        }
+    });
+
+    // Save draft functionality
+    saveDraftBtn.addEventListener('click', function() {
+        const draft = {
+            title: titleInput.value,
+            content: contentInput.value,
+            timestamp: new Date().toISOString()
+        };
+
+        localStorage.setItem('discussion_draft', JSON.stringify(draft));
+        showNotification('Draft saved locally', 'success');
+    });
+
+    // Load draft on page load
+    const savedDraft = localStorage.getItem('discussion_draft');
+    if (savedDraft) {
+        try {
+            const draft = JSON.parse(savedDraft);
+            if (confirm('You have a saved draft. Would you like to load it?')) {
+                titleInput.value = draft.title || '';
+                contentInput.value = draft.content || '';
+                updateTitleCounter();
+                updatePreview();
+            }
+        } catch (e) {
+            console.error('Error loading draft:', e);
+        }
+    }
+
+    // Clear draft after successful submission
+    form.addEventListener('submit', function() {
+        localStorage.removeItem('discussion_draft');
+    });
+
+    // Auto-resize textarea
+    contentInput.addEventListener('input', function() {
+        this.style.height = 'auto';
+        this.style.height = this.scrollHeight + 'px';
+    });
+
+    // Initial setup
+    updateTitleCounter();
+    updatePreview();
+
+    // Keyboard shortcuts
+    document.addEventListener('keydown', function(e) {
+        // Ctrl/Cmd + Enter to submit
+        if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+            form.submit();
+        }
+
+        // Ctrl/Cmd + S to save draft
+        if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+            e.preventDefault();
+            saveDraftBtn.click();
+        }
+    });
+
+    // Form validation
+    form.addEventListener('submit', function(e) {
+        const title = titleInput.value.trim();
+        const content = contentInput.value.trim();
+
+        if (title.length < 10) {
+            e.preventDefault();
+            showNotification('Title must be at least 10 characters long', 'error');
+            titleInput.focus();
+            return;
+        }
+
+        if (content.length < 30) {
+            e.preventDefault();
+            showNotification('Content must be at least 30 characters long', 'error');
+            contentInput.focus();
+            return;
+        }
+
+        // Show loading state
+        const submitBtn = form.querySelector('button[type="submit"]');
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<span class="loading-spinner"></span> Posting...';
+    });
+});
+</script>
+{% endif %}
+{% endblock %}

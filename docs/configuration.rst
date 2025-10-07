@@ -154,7 +154,7 @@ Chanx provides utilities for temporarily overriding settings in tests:
 
 .. code-block:: python
 
-    from chanx.utils.settings import override_chanx_settings
+    from chanx.utils import override_chanx_settings
 
     # Using decorator for a test function
     @override_chanx_settings(SEND_COMPLETION=True)

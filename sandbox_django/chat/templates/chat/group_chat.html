@@ -1,0 +1,339 @@
+{% extends "chat/base.html" %}
+
+{% block title %}{{ group_chat.title }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid my-3">
+    <div class="row">
+        <div class="col-md-3 col-lg-2 d-none d-md-block">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">My Chats</h5>
+                </div>
+                <div class="list-group list-group-flush">
+                    {% if request.user.is_authenticated and is_member %}
+                        {% for chat in user_chats %}
+                        <a href="{% url 'chat-group-detail' chat.pk %}" class="list-group-item list-group-item-action {% if chat.id == group_chat.pk %}active{% endif %}">
+                            {{ chat.title }}
+                        </a>
+                        {% empty %}
+                        <div class="list-group-item">No chats found</div>
+                        {% endfor %}
+                    {% else %}
+                        <div class="list-group-item text-center text-muted">
+                            {% if not request.user.is_authenticated %}
+                                <small>Log in to see your chats</small>
+                            {% else %}
+                                <small>Join this chat to see your others</small>
+                            {% endif %}
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-9 col-lg-10">
+            {% if not request.user.is_authenticated %}
+            <div class="alert alert-info">
+                <h4 class="alert-heading">Welcome to {{ group_chat.title }}!</h4>
+                <p>This is a group chat in our real-time chat application built with Django Channels and Django REST Framework.</p>
+                <hr>
+                <p class="mb-0">Please <a href="{% url 'rest_login' %}?next={{ request.path }}" class="alert-link">log in</a> to join this chat and start messaging.</p>
+            </div>
+            {% elif not is_member %}
+            <div class="alert alert-warning">
+                <h4 class="alert-heading">Access Restricted</h4>
+                <p>You are not a member of "{{ group_chat.title }}".</p>
+                <hr>
+                <p class="mb-0">Contact a group administrator to be added to this chat, or <a href="{% url 'chat-home' %}" class="alert-link">return to your chats</a>.</p>
+            </div>
+            {% endif %}
+
+            <div class="card chat-container">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h4 class="mb-0">{{ group_chat.title }}</h4>
+                    <div>
+                        {% if request.user.is_authenticated and is_member %}
+                        <span class="badge bg-success me-2" id="connectionStatus">Connected</span>
+                        <a href="{% url 'group_members' group_chat.pk %}" class="btn btn-sm btn-primary">
+                            <i class="bi bi-people-fill"></i> Members
+                        </a>
+                        {% else %}
+                        <span class="badge bg-secondary me-2">Not Connected</span>
+                        {% if request.user.is_authenticated %}
+                        <a href="{% url 'group_members' group_chat.pk %}" class="btn btn-sm btn-outline-primary">
+                            <i class="bi bi-people-fill"></i> View Members
+                        </a>
+                        {% endif %}
+                        {% endif %}
+                    </div>
+                </div>
+
+                <div class="card-body p-0 d-flex flex-column" style="height: 75vh;">
+                    <div id="messages" class="flex-grow-1 p-3 overflow-auto">
+                        {% if not request.user.is_authenticated %}
+                        <div class="text-center text-muted my-5">
+                            <i class="bi bi-chat-left-text fs-1"></i>
+                            <p class="mt-3">Log in to view and participate in this chat.</p>
+                            <a href="{% url 'rest_login' %}?next={{ request.path }}" class="btn btn-primary">
+                                <i class="bi bi-box-arrow-in-right"></i> Log In
+                            </a>
+                        </div>
+                        {% elif not is_member %}
+                        <div class="text-center text-muted my-5">
+                            <i class="bi bi-lock fs-1"></i>
+                            <p class="mt-3">You need to be a member to view messages in this chat.</p>
+                            <a href="{% url 'chat-home' %}" class="btn btn-outline-primary">
+                                <i class="bi bi-arrow-left"></i> Back to Your Chats
+                            </a>
+                        </div>
+                        {% else %}
+                        <div class="text-center text-muted my-3">
+                            <div class="spinner-border spinner-border-sm" role="status">
+                                <span class="visually-hidden">Loading...</span>
+                            </div>
+                            <span class="ms-2">Loading messages...</span>
+                        </div>
+                        {% endif %}
+                    </div>
+
+                    {% if request.user.is_authenticated and is_member %}
+                    <div class="border-top p-3 bg-light">
+                        <form id="messageForm" class="d-flex">
+                            {% csrf_token %}
+                            <input type="text" id="messageInput" class="form-control me-2" placeholder="Type your message here..." required>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-send"></i>
+                            </button>
+                        </form>
+                    </div>
+                    {% else %}
+                    <div class="border-top p-3 bg-light text-center">
+                        {% if not request.user.is_authenticated %}
+                        <p class="text-muted mb-2">Please log in to send messages</p>
+                        <a href="{% url 'rest_login' %}?next={{ request.path }}" class="btn btn-primary btn-sm">
+                            <i class="bi bi-box-arrow-in-right"></i> Log In to Chat
+                        </a>
+                        {% elif not is_member %}
+                        <p class="text-muted mb-0">You must be a member to send messages</p>
+                        {% endif %}
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<template id="messageTemplate">
+    <div class="message mb-3">
+        <div class="message-header d-flex align-items-center mb-1">
+            <strong class="message-sender me-2"></strong>
+            <small class="text-muted message-time"></small>
+        </div>
+        <div class="message-content p-2 rounded"></div>
+    </div>
+</template>
+{% endblock %}
+
+{% block extra_js %}
+{{ block.super }}
+{% if request.user.is_authenticated and is_member %}
+<script>
+    // Current group chat ID
+    const groupId = {{ group_chat.pk }};
+
+    // WebSocket connection
+    let socket;
+
+    // DOM elements
+    const messagesContainer = document.getElementById('messages');
+    const messageForm = document.getElementById('messageForm');
+    const messageInput = document.getElementById('messageInput');
+    const connectionStatus = document.getElementById('connectionStatus');
+    const messageTemplate = document.getElementById('messageTemplate');
+
+    // Get CSRF token
+    const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+
+    // Initialize the chat
+    document.addEventListener('DOMContentLoaded', () => {
+        // Connect WebSocket
+        connectWebSocket();
+
+        // Load existing messages
+        loadMessages();
+
+        // Setup form submission
+        messageForm.addEventListener('submit', sendMessage);
+    });
+
+    // Connect WebSocket
+    function connectWebSocket() {
+        const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+        const wsUrl = `${protocol}//${window.location.host}/ws/chat/${groupId}/`;
+
+        socket = new WebSocket(wsUrl);
+
+        socket.onopen = () => {
+            connectionStatus.textContent = 'Connected';
+            connectionStatus.classList.replace('bg-warning', 'bg-success');
+        };
+
+        socket.onclose = () => {
+            connectionStatus.textContent = 'Disconnected';
+            connectionStatus.classList.replace('bg-success', 'bg-danger');
+
+            // Try to reconnect after 5 seconds
+            setTimeout(connectWebSocket, 5000);
+        };
+
+        socket.onmessage = (event) => {
+            const data = JSON.parse(event.data);
+
+            // Handle different types of messages
+            switch (data.action) {
+                case 'member_message':
+                    addMessageToUI(data.payload, data.payload.isMine);
+                    break;
+
+                case 'user_removed_from_group':
+                    // Store notification for the home page
+                    sessionStorage.setItem('chat_notification',
+                        data.payload.message || 'You have been removed from this group chat.');
+
+                    // Redirect to home page
+                    window.location.href = data.payload.redirect || '/chat/';
+                    break;
+
+                case 'member_added':
+                    showNotification(`New member added: ${data.payload.member?.user || 'Unknown'}`, 'info');
+                    break;
+
+                case 'member_removed':
+                    showNotification(`Member removed: ${data.payload.email || 'Unknown'}`, 'info');
+                    break;
+
+                case 'authentication':
+                    // Authentication message - could handle differently if needed
+                    break;
+            }
+        };
+    }
+
+    // Load existing messages
+    function loadMessages() {
+        fetch(`/api/chat/${groupId}/messages/`)
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Failed to load messages');
+                }
+                return response.json();
+            })
+            .then(data => {
+                // Clear loading indicator
+                messagesContainer.innerHTML = '';
+
+                // Display messages in reverse order (newest first from API)
+                const messages = data.results.reverse();
+
+                if (messages.length === 0) {
+                    const emptyState = document.createElement('div');
+                    emptyState.className = 'text-center text-muted my-5';
+                    emptyState.textContent = 'No messages yet. Start the conversation!';
+                    messagesContainer.appendChild(emptyState);
+                } else {
+                    messages.forEach(message => {
+                        const isCurrentUser = message.isMine;
+                        addMessageToUI(message, isCurrentUser);
+                    });
+
+                    // Scroll to bottom
+                    messagesContainer.scrollTop = messagesContainer.scrollHeight;
+                }
+            })
+            .catch(error => {
+                console.error('Error loading messages:', error);
+                messagesContainer.innerHTML = `
+                    <div class="alert alert-danger m-3">
+                        Failed to load messages. Please refresh the page.
+                    </div>
+                `;
+            });
+    }
+
+    // Send a new message
+    function sendMessage(event) {
+        event.preventDefault();
+
+        const content = messageInput.value.trim();
+        if (!content) return;
+
+        // Send via REST API
+        fetch(`/api/chat/${groupId}/messages/`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': csrfToken
+            },
+            body: JSON.stringify({ content })
+        })
+        .catch(error => {
+            console.error('Error sending message:', error);
+            const errorMsg = document.createElement('div');
+            errorMsg.className = 'alert alert-danger';
+            errorMsg.textContent = 'Failed to send message. Please try again.';
+            messagesContainer.appendChild(errorMsg);
+
+            // Remove after 3 seconds
+            setTimeout(() => {
+                if (errorMsg.parentNode) {
+                    errorMsg.parentNode.removeChild(errorMsg);
+                }
+            }, 3000);
+        });
+
+        // Clear input
+        messageInput.value = '';
+    }
+
+    // Add a message to the UI
+    function addMessageToUI(message, isCurrentUser) {
+        // Clone the template
+        const messageNode = messageTemplate.content.cloneNode(true);
+
+        // Set message content
+        const messageDiv = messageNode.querySelector('.message');
+        const contentDiv = messageNode.querySelector('.message-content');
+        const senderEl = messageNode.querySelector('.message-sender');
+        const timeEl = messageNode.querySelector('.message-time');
+
+        // Sender name
+        const senderName = message.sender ? message.sender.user : 'Unknown';
+        senderEl.textContent = senderName;
+
+        // Message time if available
+        if (message.formattedTime) {
+            timeEl.textContent = message.formattedTime;
+        }
+
+        // Message content
+        contentDiv.textContent = message.content;
+
+        // Format based on current user
+        if (isCurrentUser) {
+            messageDiv.classList.add('text-end');
+            contentDiv.classList.add('bg-primary', 'text-white');
+        } else {
+            contentDiv.classList.add('bg-light');
+        }
+
+        // Add message to container
+        messagesContainer.appendChild(messageNode);
+
+        // Scroll to bottom
+        messagesContainer.scrollTop = messagesContainer.scrollHeight;
+    }
+</script>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,480 @@
+{% extends "discussion/base.html" %}
+
+{% block title %}Discussion - Chanx Example{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1>Discussions</h1>
+        <div class="d-flex align-items-center gap-3">
+            {% if request.user.is_authenticated %}
+            <a href="{% url 'discussion-new' %}" class="btn btn-primary">
+                <i class="bi bi-plus-circle"></i> Ask Question
+            </a>
+            {% else %}
+            <a href="{% url 'rest_login' %}?next={{ request.path }}" class="btn btn-primary">
+                <i class="bi bi-box-arrow-in-right"></i> Log In to Ask
+            </a>
+            {% endif %}
+        </div>
+    </div>
+
+    {% if not request.user.is_authenticated %}
+    <div class="alert alert-info">
+        <h4 class="alert-heading">Welcome to Chanx Discussion!</h4>
+        <p>This is a demonstration of a real-time discussion forum built with Django Channels and Django REST Framework.</p>
+        <hr>
+        <p class="mb-0">Please <a href="{% url 'rest_login' %}?next={{ request.path }}" class="alert-link">log in</a> to participate in discussions.</p>
+    </div>
+    {% endif %}
+
+    <!-- Topic List -->
+    <div id="topicsList">
+        {% if request.user.is_authenticated %}
+            {% for topic in recent_topics %}
+            <div class="topic-card" data-topic-id="{{ topic.id }}">
+                <div class="d-flex">
+                    <!-- Vote and Stats Column -->
+                    <div class="topic-stats me-3">
+                        <div class="stat-item">
+                            <div class="stat-number vote-score {% if topic.vote_count > 0 %}positive{% elif topic.vote_count < 0 %}negative{% endif %}">
+                                {{ topic.vote_count }}
+                            </div>
+                            <div class="stat-label">votes</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-number reply-count">{{ topic.reply_count }}</div>
+                            <div class="stat-label">answers</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-number">{{ topic.view_count }}</div>
+                            <div class="stat-label">views</div>
+                        </div>
+                    </div>
+
+                    <!-- Topic Content -->
+                    <div class="flex-grow-1">
+                        <div class="topic-title">
+                            <a href="{% url 'discussion-detail' topic.pk %}">{{ topic.title }}</a>
+                            <div class="badges">
+                                {% if topic.is_pinned %}
+                                <span class="badge badge-pinned">Pinned</span>
+                                {% endif %}
+                                {% if topic.is_locked %}
+                                <span class="badge badge-locked">Locked</span>
+                                {% endif %}
+                                {% if topic.accepted_answer %}
+                                <span class="badge badge-answered">Answered</span>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <div class="topic-meta">
+                            <div class="author-info">
+                                <div class="author-avatar">
+                                    {{ topic.author.email|first|upper }}
+                                </div>
+                                <span>asked by <strong>{{ topic.author.email }}</strong></span>
+                                <span class="text-muted">{{ topic.created_at|timesince }} ago</span>
+                            </div>
+                            {% if topic.updated_at != topic.created_at %}
+                            <div class="text-muted">
+                                <small>last activity {{ topic.updated_at|timesince }} ago</small>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% empty %}
+            <div class="text-center py-5" id="emptyState">
+                <i class="bi bi-chat-square-text fs-1 text-muted"></i>
+                <p class="mt-3 text-muted">No discussions yet.</p>
+                <p>
+                    <a href="{% url 'discussion-new' %}" class="btn btn-primary">Start a Discussion</a>
+                </p>
+            </div>
+            {% endfor %}
+        {% else %}
+            <!-- Show placeholder content for unauthenticated users -->
+            <div class="text-center py-5">
+                <i class="bi bi-chat-square-text fs-1 text-muted"></i>
+                <p class="mt-3 text-muted">Join the discussion community!</p>
+                <p class="mb-4">Log in to see the latest discussions, ask questions, and share your knowledge.</p>
+                <a href="{% url 'rest_login' %}?next={{ request.path }}" class="btn btn-primary btn-lg">
+                    <i class="bi bi-box-arrow-in-right"></i> Log In to View Discussions
+                </a>
+            </div>
+        {% endif %}
+    </div>
+
+    <!-- Load More Button (only for authenticated users) -->
+    {% if request.user.is_authenticated and recent_topics|length >= 20 %}
+    <div class="text-center mt-4">
+        <button id="loadMoreBtn" class="btn btn-outline-primary">
+            Load More Topics
+        </button>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+{{ block.super }}
+{% if request.user.is_authenticated %}
+<script>
+/**
+ * Discussion Home WebSocket Client
+ */
+class DiscussionHomeClient {
+    constructor() {
+        this.socket = null;
+        this.topicsList = document.getElementById('topicsList');
+        this.loadMoreBtn = document.getElementById('loadMoreBtn');
+        this.emptyState = document.getElementById('emptyState');
+        this.offset = 20; // For pagination
+        this.connectionRetryCount = 0;
+        this.maxRetries = 5;
+
+        this.initializeConnection();
+        this.initializeEventListeners();
+    }
+
+    initializeConnection() {
+        const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+        const wsUrl = `${protocol}//${window.location.host}/ws/discussion/`;
+
+        this.socket = new WebSocket(wsUrl);
+
+        this.socket.onopen = () => {
+            console.log('Discussion WebSocket connected');
+            this.connectionRetryCount = 0;
+        };
+
+        this.socket.onclose = (event) => {
+            console.log('Discussion WebSocket disconnected');
+
+            // Retry connection with exponential backoff
+            if (this.connectionRetryCount < this.maxRetries) {
+                const retryDelay = Math.pow(2, this.connectionRetryCount) * 1000;
+                setTimeout(() => {
+                    this.connectionRetryCount++;
+                    this.initializeConnection();
+                }, retryDelay);
+            }
+        };
+
+        this.socket.onerror = (error) => {
+            console.error('WebSocket error:', error);
+        };
+
+        this.socket.onmessage = (event) => {
+            const data = JSON.parse(event.data);
+            this.handleIncomingMessage(data);
+        };
+    }
+
+    initializeEventListeners() {
+        if (this.loadMoreBtn) {
+            this.loadMoreBtn.addEventListener('click', () => {
+                this.loadMoreTopics();
+            });
+        }
+    }
+
+    handleIncomingMessage(data) {
+        switch (data.action) {
+            case 'topic_created':
+                this.handleNewTopic(data.payload);
+                break;
+
+            case 'vote_updated':
+                this.handleVoteUpdate(data.payload);
+                break;
+
+            case 'answer_accepted':
+                this.handleAnswerAccepted(data.payload);
+                break;
+
+            case 'answer_unaccepted':
+                this.handleAnswerUnaccepted(data.payload);
+                break;
+
+            case 'authentication':
+                if (data.payload.statusCode !== 200) {
+                    console.error('Authentication failed:', data.payload.statusText);
+                }
+                break;
+
+            case 'error':
+                console.error('WebSocket error:', data.payload);
+                break;
+
+            default:
+                console.log('Unhandled message type:', data.action);
+        }
+    }
+
+    handleNewTopic(topicData) {
+        // Remove empty state if it exists
+        if (this.emptyState) {
+            this.emptyState.remove();
+            this.emptyState = null;
+        }
+
+        // Create and add new topic to the top of the list
+        const topicElement = this.createTopicElement(topicData);
+        this.topicsList.insertBefore(topicElement, this.topicsList.firstChild);
+
+        // Add animation
+        topicElement.style.opacity = '0';
+        topicElement.style.transform = 'translateY(-20px)';
+
+        // Trigger animation
+        requestAnimationFrame(() => {
+            topicElement.style.transition = 'all 0.3s ease-in-out';
+            topicElement.style.opacity = '1';
+            topicElement.style.transform = 'translateY(0)';
+        });
+
+        // Show notification
+        showNotification(`New topic: "${topicData.title}" by ${topicData.author.email}`, 'info');
+    }
+
+    handleVoteUpdate(voteData) {
+        if (voteData.targetType === 'topic') {
+            const topicElement = this.topicsList.querySelector(`[data-topic-id="${voteData.targetId}"]`);
+            if (topicElement) {
+                const scoreElement = topicElement.querySelector('.vote-score');
+                if (scoreElement) {
+                    // Animate the vote count change
+                    scoreElement.style.transform = 'scale(1.1)';
+                    scoreElement.style.transition = 'all 0.2s ease-in-out';
+
+                    setTimeout(() => {
+                        scoreElement.textContent = voteData.voteCount;
+
+                        // Update score color
+                        scoreElement.classList.remove('positive', 'negative');
+                        if (voteData.voteCount > 0) {
+                            scoreElement.classList.add('positive');
+                        } else if (voteData.voteCount < 0) {
+                            scoreElement.classList.add('negative');
+                        }
+
+                        scoreElement.style.transform = 'scale(1)';
+                    }, 100);
+                }
+            }
+        }
+        // For reply votes, we might want to update reply counts or show notifications
+        else if (voteData.targetType === 'reply') {
+            // Could show a subtle notification for reply votes if desired
+            console.log('Reply vote updated:', voteData);
+        }
+    }
+
+    handleAnswerAccepted(acceptanceData) {
+        const topicElement = this.topicsList.querySelector(`[data-topic-id="${acceptanceData.topicId}"]`);
+        if (topicElement) {
+            // Add "Answered" badge if not already present
+            const badgesContainer = topicElement.querySelector('.badges');
+            if (badgesContainer && !badgesContainer.querySelector('.badge-answered')) {
+                const answeredBadge = document.createElement('span');
+                answeredBadge.className = 'badge badge-answered';
+                answeredBadge.textContent = 'Answered';
+                badgesContainer.appendChild(answeredBadge);
+
+                // Animate the badge appearance
+                answeredBadge.style.opacity = '0';
+                answeredBadge.style.transform = 'scale(0.8)';
+                requestAnimationFrame(() => {
+                    answeredBadge.style.transition = 'all 0.3s ease-in-out';
+                    answeredBadge.style.opacity = '1';
+                    answeredBadge.style.transform = 'scale(1)';
+                });
+            }
+
+            // Move topic to top (recent activity)
+            this.moveTopicToTop(topicElement);
+        }
+
+        showNotification(`Answer accepted for "${acceptanceData.topicTitle}"`, 'success');
+    }
+
+    handleAnswerUnaccepted(unacceptanceData) {
+        const topicElement = this.topicsList.querySelector(`[data-topic-id="${unacceptanceData.topicId}"]`);
+        if (topicElement) {
+            // Remove "Answered" badge if present
+            const answeredBadge = topicElement.querySelector('.badge-answered');
+            if (answeredBadge) {
+                answeredBadge.style.transition = 'all 0.3s ease-in-out';
+                answeredBadge.style.opacity = '0';
+                answeredBadge.style.transform = 'scale(0.8)';
+
+                setTimeout(() => {
+                    answeredBadge.remove();
+                }, 300);
+            }
+
+            // Move topic to top (recent activity)
+            this.moveTopicToTop(topicElement);
+        }
+
+        showNotification(`Answer unaccepted for "${unacceptanceData.topicTitle}"`, 'info');
+    }
+
+    moveTopicToTop(topicElement) {
+        // Smoothly move topic to top
+        const rect = topicElement.getBoundingClientRect();
+        const clone = topicElement.cloneNode(true);
+
+        // Position clone at current location
+        clone.style.position = 'fixed';
+        clone.style.top = rect.top + 'px';
+        clone.style.left = rect.left + 'px';
+        clone.style.width = rect.width + 'px';
+        clone.style.zIndex = '1000';
+        clone.style.transition = 'all 0.5s ease-in-out';
+
+        document.body.appendChild(clone);
+
+        // Hide original temporarily
+        topicElement.style.opacity = '0';
+
+        // Move original to top
+        this.topicsList.insertBefore(topicElement, this.topicsList.firstChild);
+
+        // Animate clone to new position
+        requestAnimationFrame(() => {
+            const newRect = topicElement.getBoundingClientRect();
+            clone.style.top = newRect.top + 'px';
+            clone.style.left = newRect.left + 'px';
+
+            setTimeout(() => {
+                // Show original and remove clone
+                topicElement.style.opacity = '1';
+                clone.remove();
+            }, 500);
+        });
+    }
+
+    createTopicElement(topicData) {
+        const topicElement = document.createElement('div');
+        topicElement.className = 'topic-card';
+        topicElement.setAttribute('data-topic-id', topicData.id);
+
+        const formattedDate = this.formatTimeAgo(topicData.createdAt);
+        const hasAnsweredBadge = topicData.hasAcceptedAnswer;
+
+        topicElement.innerHTML = `
+            <div class="d-flex">
+                <!-- Vote and Stats Column -->
+                <div class="topic-stats me-3">
+                    <div class="stat-item">
+                        <div class="stat-number vote-score ${topicData.voteCount > 0 ? 'positive' : topicData.voteCount < 0 ? 'negative' : ''}">
+                            ${topicData.voteCount}
+                        </div>
+                        <div class="stat-label">votes</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-number reply-count">${topicData.replyCount}</div>
+                        <div class="stat-label">answers</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-number">${topicData.viewCount}</div>
+                        <div class="stat-label">views</div>
+                    </div>
+                </div>
+
+                <!-- Topic Content -->
+                <div class="flex-grow-1">
+                    <div class="topic-title">
+                        <a href="/discussion/${topicData.id}/">${this.escapeHtml(topicData.title)}</a>
+                        <div class="badges">
+                            ${hasAnsweredBadge ? '<span class="badge badge-answered">Answered</span>' : ''}
+                        </div>
+                    </div>
+
+                    <div class="topic-meta">
+                        <div class="author-info">
+                            <div class="author-avatar">
+                                ${topicData.author.email.charAt(0).toUpperCase()}
+                            </div>
+                            <span>asked by <strong>${this.escapeHtml(topicData.author.email)}</strong></span>
+                            <span class="text-muted">${formattedDate} ago</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        return topicElement;
+    }
+
+    formatTimeAgo(isoDateString) {
+        const date = new Date(isoDateString);
+        const now = new Date();
+        const diffInSeconds = Math.floor((now - date) / 1000);
+
+        if (diffInSeconds < 60) {
+            return `${diffInSeconds} second${diffInSeconds !== 1 ? 's' : ''}`;
+        } else if (diffInSeconds < 3600) {
+            const minutes = Math.floor(diffInSeconds / 60);
+            return `${minutes} minute${minutes !== 1 ? 's' : ''}`;
+        } else if (diffInSeconds < 86400) {
+            const hours = Math.floor(diffInSeconds / 3600);
+            return `${hours} hour${hours !== 1 ? 's' : ''}`;
+        } else {
+            const days = Math.floor(diffInSeconds / 86400);
+            return `${days} day${days !== 1 ? 's' : ''}`;
+        }
+    }
+
+    escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+
+    async loadMoreTopics() {
+        try {
+            this.loadMoreBtn.disabled = true;
+            this.loadMoreBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Loading...';
+
+            const response = await fetch(`/api/discussion/?offset=${this.offset}&limit=20`);
+            const data = await response.json();
+
+            if (data.results && data.results.length > 0) {
+                // Add topics to the list
+                data.results.forEach(topicData => {
+                    const topicElement = this.createTopicElement(topicData);
+                    this.topicsList.appendChild(topicElement);
+                });
+
+                this.offset += data.results.length;
+
+                if (!data.next) {
+                    this.loadMoreBtn.style.display = 'none';
+                }
+            } else {
+                this.loadMoreBtn.style.display = 'none';
+            }
+
+        } catch (error) {
+            console.error('Error loading more topics:', error);
+            showNotification('Failed to load more topics', 'error');
+        } finally {
+            this.loadMoreBtn.disabled = false;
+            this.loadMoreBtn.innerHTML = 'Load More Topics';
+        }
+    }
+}
+
+// Initialize the client when the page loads
+document.addEventListener('DOMContentLoaded', () => {
+    new DiscussionHomeClient();
+});
+</script>
+{% endif %}
+{% endblock %}

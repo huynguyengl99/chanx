@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Chanx Example{% endblock %}</title>
+
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+
+    <!-- Bootstrap Icons -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.8.1/font/bootstrap-icons.css">
+
+    <!-- Custom styles -->
+    <style>
+        body {
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .navbar-brand {
+            font-weight: bold;
+        }
+
+        .main-content {
+            flex: 1;
+        }
+
+        .footer {
+            padding: 1rem 0;
+            margin-top: auto;
+        }
+
+        /* Global notification styling */
+        .global-notification {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 1050;
+            border-radius: 0;
+            margin: 0;
+        }
+
+        /* Additional base styles */
+        .chat-container {
+            height: 75vh;
+        }
+
+        .message .message-content {
+            display: inline-block;
+            max-width: 80%;
+            word-break: break-word;
+        }
+
+        .message.text-end .message-content {
+            text-align: left;
+        }
+    </style>
+
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+    <!-- Navbar -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+        <div class="container">
+            <a class="navbar-brand" href="{% url 'chat-home' %}">Chanx Example</a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav me-auto">
+                    <li class="nav-item">
+                        <a class="nav-link {% block nav_chat_active %}{% endblock %}" href="{% url 'chat-home' %}">
+                            <i class="bi bi-chat-left-text"></i> Chat
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link {% block nav_discussion_active %}{% endblock %}" href="{% url 'discussion-home' %}">
+                            <i class="bi bi-question-circle"></i> Discussion
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link {% block nav_assistant_active %}{% endblock %}" href="{% url 'assistant_chat' %}">
+                            <i class="bi bi-robot"></i> AI Assistant
+                        </a>
+                    </li>
+                </ul>
+                <ul class="navbar-nav">
+                    {% if request.user.is_authenticated %}
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" id="userDropdown" role="button" data-bs-toggle="dropdown">
+                            <i class="bi bi-person-circle"></i> {{ request.user.email }}
+                        </a>
+                        <ul class="dropdown-menu dropdown-menu-end">
+                            <li><a class="dropdown-item" href="{% url 'admin:index' %}">
+                                <i class="bi bi-gear"></i> Admin
+                            </a></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li>
+                                <form method="post" action="{% url 'rest_logout' %}" class="d-inline">
+                                    {% csrf_token %}
+                                    <button type="submit" class="dropdown-item">
+                                        <i class="bi bi-box-arrow-right"></i> Logout
+                                    </button>
+                                </form>
+                            </li>
+                        </ul>
+                    </li>
+                    {% else %}
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'rest_login' %}">
+                            <i class="bi bi-box-arrow-in-right"></i> Login
+                        </a>
+                    </li>
+                    {% endif %}
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main content -->
+    <div class="main-content">
+        {% block content %}{% endblock %}
+    </div>
+
+    <!-- Footer -->
+    <footer class="footer bg-light text-center">
+        <div class="container">
+            <span class="text-muted">© {% now "Y" %} Chanx Example -
+                <a href="{% url 'chat-home' %}" class="text-decoration-none">Chat</a> |
+                <a href="{% url 'assistant_chat' %}" class="text-decoration-none">AI Assistant</a>
+            </span>
+        </div>
+    </footer>
+
+    <!-- Bootstrap JS bundle (includes Popper) -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+
+    <!-- Global scripts -->
+    <script>
+        // Global notification function available to all pages
+        function showNotification(message, type = 'info') {
+            // Create notification element
+            const notification = document.createElement('div');
+            notification.className = `alert alert-${type} alert-dismissible fade show global-notification`;
+            notification.innerHTML = `
+                <div class="container">
+                    ${message}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            `;
+
+            // Add to body
+            document.body.appendChild(notification);
+
+            // Auto-remove after 5 seconds
+            setTimeout(() => {
+                notification.classList.remove('show');
+                setTimeout(() => notification.remove(), 150);
+            }, 5000);
+        }
+
+        // Check for notifications from redirects on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            // Handle chat notifications (existing functionality)
+            const notification = sessionStorage.getItem('chat_notification');
+            if (notification) {
+                showNotification(notification, 'warning');
+                sessionStorage.removeItem('chat_notification');
+            }
+
+            // Handle Django messages from redirects
+            {% if messages %}
+                {% for message in messages %}
+                    {% if message.tags == 'error' %}
+                    showNotification('{{ message|escapejs }}', 'danger');
+                    {% elif message.tags == 'warning' %}
+                    showNotification('{{ message|escapejs }}', 'warning');
+                    {% elif message.tags == 'success' %}
+                    showNotification('{{ message|escapejs }}', 'success');
+                    {% elif message.tags == 'info' %}
+                    showNotification('{{ message|escapejs }}', 'info');
+                    {% else %}
+                    showNotification('{{ message|escapejs }}', 'info');
+                    {% endif %}
+                {% endfor %}
+            {% endif %}
+        });
+    </script>
+
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

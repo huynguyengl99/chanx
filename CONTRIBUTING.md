@@ -74,13 +74,13 @@ Before working with the sandbox or running tests, ensure:
 
 ```bash
 # Apply database migrations
-python sandbox/manage.py migrate
+python sandbox_django/manage.py migrate
 
 # Create a superuser for accessing the admin interface
-python sandbox/manage.py createsuperuser
+python sandbox_django/manage.py createsuperuser
 
 # Run Django development server
-python sandbox/manage.py runserver
+python sandbox_django/manage.py runserver
 ```
 
 Once the server is running, you can:
@@ -92,7 +92,7 @@ Once the server is running, you can:
 
 ```bash
 # Create migrations for your changes
-python sandbox/manage.py makemigrations
+python sandbox_django/manage.py makemigrations
 ```
 
 ## Code quality tools
@@ -133,11 +133,11 @@ We use multiple type checking tools for maximum safety:
 # Run mypy on the chanx package
 bash scripts/mypy.sh
 
-# Run mypy on the sandbox
-bash scripts/mypy.sh --sandbox
+# Run mypy on the sandbox_django
+bash scripts/mypy.sh --sandbox_django
 
-# Run basedpyright (a faster pyright implementation)
-basedpyright
+# Run pyright
+pyright
 ```
 
 The project uses strict type checking settings to ensure high code quality.
@@ -159,10 +159,10 @@ The project requires at least 80% docstring coverage as configured in the projec
 
 ```bash
 # Run all tests
-pytest sandbox
+pytest sandbox_django
 
 # Run tests with coverage report
-pytest --cov-report term-missing --cov=chanx sandbox
+pytest --cov-report term-missing --cov=chanx sandbox_django
 ```
 
 ### Writing tests
@@ -180,15 +180,15 @@ Before creating a pull request, please ensure your code meets the project's stan
 ### 1. Run the test suite
 
 ```bash
-pytest --cov-report term-missing --cov=chanx sandbox
+pytest --cov-report term-missing --cov=chanx sandbox_django
 ```
 
 ### 2. Run type checkers
 
 ```bash
 bash scripts/mypy.sh
-bash scripts/mypy.sh --sandbox
-basedpyright
+bash scripts/mypy.sh --sandbox_django
+pyright
 ```
 
 ### 3. Lint and format your code

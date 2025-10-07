@@ -1,0 +1,272 @@
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: #fafafa;
+    padding: 20px;
+    color: #333;
+}
+
+h1 {
+    text-align: center;
+    color: #2d3748;
+    font-size: 2em;
+    margin-bottom: 20px;
+    font-weight: 600;
+}
+
+.analytics-btn {
+    display: block;
+    margin: 0 auto 30px;
+    background: #4a90e2;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 6px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.analytics-btn:hover {
+    background: #357abd;
+}
+
+.chat-container {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 20px;
+    max-width: 1400px;
+    margin: 0 auto;
+}
+
+.chat-box {
+    background: white;
+    border-radius: 8px;
+    padding: 20px;
+    border: 1px solid #e0e0e0;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+}
+
+.system-chat {
+    border-top: 3px solid #10b981;
+}
+
+.regular-chat {
+    border-top: 3px solid #4a90e2;
+}
+
+.room-chat {
+    border-top: 3px solid #e74c3c;
+}
+
+.job-chat {
+    border-top: 3px solid #9b59b6;
+}
+
+.chat-box h3 {
+    margin-bottom: 16px;
+    font-size: 1.1em;
+    font-weight: 600;
+}
+
+.system-chat h3 {
+    color: #10b981;
+}
+
+.regular-chat h3 {
+    color: #4a90e2;
+}
+
+.room-chat h3 {
+    color: #e74c3c;
+}
+
+.job-chat h3 {
+    color: #9b59b6;
+}
+
+.input-form {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 16px;
+}
+
+.input-form input {
+    flex: 1;
+    padding: 10px 12px;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    font-size: 14px;
+    outline: none;
+    transition: border-color 0.2s;
+}
+
+.input-form input:focus {
+    border-color: #4a90e2;
+}
+
+.system-chat .input-form input:focus {
+    border-color: #10b981;
+}
+
+.input-form button {
+    padding: 10px 16px;
+    background: #4a90e2;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.system-chat .input-form button {
+    background: #10b981;
+}
+
+.input-form button:hover {
+    background: #357abd;
+}
+
+.system-chat .input-form button:hover {
+    background: #059669;
+}
+
+.messages {
+    height: 280px;
+    overflow-y: auto;
+    background: #f9f9f9;
+    border-radius: 6px;
+    padding: 12px;
+    border: 1px solid #e0e0e0;
+}
+
+.messages::-webkit-scrollbar {
+    width: 4px;
+}
+
+.messages::-webkit-scrollbar-track {
+    background: #f1f1f1;
+}
+
+.messages::-webkit-scrollbar-thumb {
+    background: #ccc;
+    border-radius: 2px;
+}
+
+.messages li {
+    list-style: none;
+    padding: 8px 12px;
+    margin: 6px 0;
+    border-radius: 8px;
+    max-width: 80%;
+    word-wrap: break-word;
+    font-size: 14px;
+}
+
+.system {
+    background: #10b981;
+    color: white;
+    font-weight: 500;
+    margin-left: auto;
+}
+
+.user-message {
+    background: #e9ecef;
+    color: #495057;
+    margin-right: auto;
+}
+
+.chat {
+    background: #4a90e2;
+    color: white;
+    margin-left: auto;
+}
+
+.notification {
+    background: #f39c12;
+    color: white;
+    margin-left: auto;
+}
+
+.reliable {
+    background: #27ae60;
+    color: white;
+    margin-left: auto;
+}
+
+.analytics {
+    background: #9b59b6;
+    color: white;
+    margin-left: auto;
+}
+
+.room {
+    background: #e74c3c;
+    color: white;
+    margin-left: auto;
+}
+
+.job {
+    background: #9b59b6;
+    color: white;
+    margin-left: auto;
+}
+
+.room-controls, .job-controls {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 16px;
+    align-items: center;
+}
+
+.room-controls input {
+    flex: 1;
+    padding: 8px 12px;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    font-size: 14px;
+}
+
+.room-controls button, .job-controls select {
+    padding: 8px 12px;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    font-size: 14px;
+    cursor: pointer;
+}
+
+.room-controls button {
+    background: #e74c3c;
+    color: white;
+    border: none;
+}
+
+.room-controls button:hover {
+    background: #c0392b;
+}
+
+.job-controls select {
+    background: white;
+}
+
+@media (max-width: 768px) {
+    .chat-container {
+        grid-template-columns: 1fr;
+        gap: 16px;
+    }
+
+    body {
+        padding: 12px;
+    }
+
+    h1 {
+        font-size: 1.6em;
+    }
+}

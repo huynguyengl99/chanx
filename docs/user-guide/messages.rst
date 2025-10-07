@@ -142,13 +142,13 @@ Use it in your consumer:
                     group_msg = ChatGroupMessage(payload=payload)
 
                     # Send to all in the default groups
-                    await self.send_group_message(
+                    await self.broadcast_message(
                         group_msg,
                         exclude_current=False  # Include sender in recipients
                     )
 
                     # Or send to specific groups
-                    await self.send_group_message(
+                    await self.broadcast_message(
                         group_msg,
                         groups=["room_123", "announcements"],
                         exclude_current=True  # Don't send to sender
@@ -221,7 +221,7 @@ To send events from outside the consumer (e.g., from a view or task):
 .. code-block:: python
 
     # Send from synchronous code
-    ChatConsumer.send_channel_event(
+    ChatConsumer.send_event_sync(
         "general_announcements",  # Group name
         NotifyEvent(payload=NotifyEvent.Payload(
             content="Important system message",
@@ -230,7 +230,7 @@ To send events from outside the consumer (e.g., from a view or task):
     )
 
     # Send from asynchronous code
-    await ChatConsumer.asend_channel_event(
+    await ChatConsumer.send_event(
         "general_announcements",
         NotifyEvent(payload=NotifyEvent.Payload(
             content="Important system message",

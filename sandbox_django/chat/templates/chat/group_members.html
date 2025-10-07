@@ -1,0 +1,247 @@
+{% extends "chat/base.html" %}
+
+{% block title %}{{ group_chat.title }} - Members{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-12">
+            <h2>{{ group_chat.title }} - Members</h2>
+
+            <div class="mb-4">
+                <a href="{% url 'chat-group-detail' group_chat.pk %}" class="btn btn-secondary">Back to Chat</a>
+            </div>
+
+            {% if not request.user.is_authenticated %}
+            <div class="alert alert-info">
+                <h4 class="alert-heading">Member Management</h4>
+                <p>This page shows the members of "{{ group_chat.title }}".</p>
+                <hr>
+                <p class="mb-0">Please <a href="{% url 'rest_login' %}?next={{ request.path }}" class="alert-link">log in</a> to view detailed member information and manage this group.</p>
+            </div>
+            {% elif not is_member %}
+            <div class="alert alert-warning">
+                <h4 class="alert-heading">Access Restricted</h4>
+                <p>You are not a member of "{{ group_chat.title }}".</p>
+                <hr>
+                <p class="mb-0">Contact a group administrator to be added to this chat, or <a href="{% url 'chat-home' %}" class="alert-link">return to your chats</a>.</p>
+            </div>
+            {% endif %}
+
+
+            {% if request.user.is_authenticated and can_manage %}
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Add New Member</h5>
+                </div>
+                <div class="card-body">
+                    <form method="post" action="{% url 'group_members' group_chat.pk %}">
+                        {% csrf_token %}
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <input type="email" name="email" class="form-control" placeholder="Enter email"
+                                       required>
+                            </div>
+                            <div class="col-md-4">
+                                <select name="role" class="form-select">
+                                    <option value="{{ roles.ADMIN }}">Admin</option>
+                                    <option value="{{ roles.MEMBER }}" selected>Member</option>
+                                </select>
+                            </div>
+                            <div class="col-md-2">
+                                <button type="submit" class="btn btn-primary w-100">Add Member</button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+            {% endif %}
+
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="card-title mb-0">
+                        Members
+                        {% if request.user.is_authenticated and is_member %}
+                            ({{ members|length }})
+                        {% endif %}
+                    </h5>
+                    {% if request.user.is_authenticated and is_member %}
+                    <span id="connectionStatus" class="badge bg-warning">Connecting...</span>
+                    {% endif %}
+                </div>
+                <div class="card-body p-0">
+                    {% if not request.user.is_authenticated %}
+                    <div class="text-center py-5">
+                        <i class="bi bi-people fs-1 text-muted"></i>
+                        <p class="mt-3 text-muted">Log in to view member details and manage this group.</p>
+                        <a href="{% url 'rest_login' %}?next={{ request.path }}" class="btn btn-primary">
+                            <i class="bi bi-box-arrow-in-right"></i> Log In
+                        </a>
+                    </div>
+                    {% elif not is_member %}
+                    <div class="text-center py-5">
+                        <i class="bi bi-lock fs-1 text-muted"></i>
+                        <p class="mt-3 text-muted">You need to be a member to view detailed member information.</p>
+                        <a href="{% url 'chat-home' %}" class="btn btn-outline-primary">
+                            <i class="bi bi-arrow-left"></i> Back to Your Chats
+                        </a>
+                    </div>
+                    {% else %}
+                    <table class="table table-striped mb-0">
+                        <thead>
+                        <tr>
+                            <th>Email</th>
+                            <th>Role</th>
+                            {% if can_manage %}
+                            <th>Actions</th>
+                            {% endif %}
+                        </tr>
+                        </thead>
+                        <tbody id="membersList">
+                        {% for member in members %}
+                        <tr data-member-id="{{ member.pk }}">
+                            <td>{{ member.user.email }}</td>
+                            <td>
+                                {% if member.chat_role == roles.OWNER %}
+                                <span class="badge bg-danger">Owner</span>
+                                {% elif member.chat_role == roles.ADMIN %}
+                                <span class="badge bg-warning text-dark">Admin</span>
+                                {% else %}
+                                <span class="badge bg-secondary">Member</span>
+                                {% endif %}
+                            </td>
+                            {% if can_manage %}
+                            <td>
+                                {% if member.chat_role != roles.OWNER and member.user.pk != user_member.user.id %}
+                                <a href="{% url 'remove_member' group_chat.pk member.pk %}"
+                                   class="btn btn-sm btn-danger remove-btn"
+                                   onclick="return confirm('Are you sure you want to remove this member?')">
+                                    Remove
+                                </a>
+                                {% endif %}
+                            </td>
+                            {% endif %}
+                        </tr>
+                        {% endfor %}
+                        </tbody>
+                    </table>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+{{ block.super }}
+{% if request.user.is_authenticated and is_member %}
+<script>
+    // Group chat ID
+    const groupId = {{ group_chat.pk }};
+
+    // WebSocket connection
+    let socket;
+
+    // DOM elements
+    const connectionStatus = document.getElementById('connectionStatus');
+    const membersList = document.getElementById('membersList');
+
+    document.addEventListener('DOMContentLoaded', () => {
+        // Connect WebSocket
+        connectWebSocket();
+    });
+
+    // Connect WebSocket - using the same connection as the chat detail page
+    function connectWebSocket() {
+        const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+        const wsUrl = `${protocol}//${window.location.host}/ws/chat/${groupId}/`;
+
+        socket = new WebSocket(wsUrl);
+
+        socket.onopen = () => {
+            connectionStatus.textContent = 'Connected';
+            connectionStatus.className = 'badge bg-success';
+        };
+
+        socket.onclose = () => {
+            connectionStatus.textContent = 'Disconnected';
+            connectionStatus.className = 'badge bg-danger';
+
+            // Try to reconnect after 5 seconds
+            setTimeout(connectWebSocket, 5000);
+        };
+
+        socket.onerror = (error) => {
+            console.error('WebSocket error:', error);
+            connectionStatus.textContent = 'Connection Error';
+            connectionStatus.className = 'badge bg-danger';
+        };
+
+        socket.onmessage = (event) => {
+            const data = JSON.parse(event.data);
+
+            // Handle different message types
+            switch (data.action) {
+                case 'member_added':
+                    // Reload page to show new member
+                    window.location.reload();
+                    break;
+
+                case 'member_removed':
+                    // Handle member removal
+                    handleMemberRemoved(data.payload);
+                    break;
+
+                case 'user_removed_from_group':
+                    // Current user was removed - redirect to home
+                    sessionStorage.setItem('chat_notification',
+                        data.payload.message || 'You have been removed from this group chat.');
+                    window.location.href = data.payload.redirect || '/chat/';
+                    break;
+
+            }
+        };
+    }
+
+    // Handle member removed notification
+    function handleMemberRemoved(payload) {
+        if (!payload || !payload.user_id) return;
+
+        // Check if it's the current user who was removed
+        // This is a fallback - main handling is in the user_removed_from_group case
+        if (payload.is_current_user) {
+            sessionStorage.setItem('chat_notification', 'You have been removed from this group.');
+            window.location.href = '/chat/';
+            return;
+        }
+
+        // Otherwise, show notification and reload to update the member list
+        showNotification(`Member removed: ${payload.email || 'A member'}`, 'info');
+
+        // Option 1: Reload the page to refresh the member list
+        window.location.reload();
+
+        // Option 2: Remove the member from the UI directly without page reload
+        // const memberRow = document.querySelector(`tr[data-member-id="${payload.member_id}"]`);
+        // if (memberRow) {
+        //     memberRow.remove();
+        // }
+    }
+</script>
+{% elif request.user.is_authenticated %}
+<script>
+// Simple script for authenticated users who are not members
+document.addEventListener('DOMContentLoaded', () => {
+    console.log('User is authenticated but not a member of this group');
+});
+</script>
+{% else %}
+<script>
+// Simple script for unauthenticated users
+document.addEventListener('DOMContentLoaded', () => {
+    console.log('User is not authenticated');
+});
+</script>
+{% endif %}
+{% endblock %}

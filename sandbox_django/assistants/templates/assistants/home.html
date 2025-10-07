@@ -1,0 +1,352 @@
+{% extends "assistants/base.html" %}
+
+{% block title %}AI Assistant - Chanx Example{% endblock %}
+
+{% block content %}
+<!-- Sidebar Backdrop for Mobile -->
+<div class="sidebar-backdrop" id="sidebarBackdrop"></div>
+
+{% if is_authenticated %}
+<!-- Sidebar for Authenticated Users -->
+<div class="sidebar" id="sidebar">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h5 class="mb-0">Conversations</h5>
+        <button id="newConversationBtn" class="btn btn-sm btn-primary">
+            <i class="bi bi-plus"></i> New
+        </button>
+    </div>
+    <div class="list-group list-group-flush" id="conversationsList">
+        {% for conv in conversations %}
+        <a href="{% url 'assistant_conversation' conv.id %}"
+           class="list-group-item list-group-item-action">
+            <div class="conversation-item">
+                <h6 class="conversation-title">{{ conv.title|default:"New Conversation" }}</h6>
+                <small class="conversation-timestamp text-muted">{{ conv.updated_at|timesince }} ago</small>
+                {% with last_message=conv.messages.last %}
+                {% if last_message %}
+                <p class="conversation-preview small text-muted">
+                    {% if last_message.content|length > 100 %}
+                        {{ last_message.content|slice:":100" }}...
+                    {% else %}
+                        {{ last_message.content }}
+                    {% endif %}
+                </p>
+                {% endif %}
+                {% endwith %}
+            </div>
+        </a>
+        {% empty %}
+        <div class="list-group-item text-center text-muted">
+            <i class="bi bi-chat-left-text fs-4"></i>
+            <p class="mb-0 mt-2">No conversations yet</p>
+            <small>Start a new conversation to begin!</small>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+<!-- Sidebar Toggle Button -->
+<button class="sidebar-toggle" id="sidebarToggle">
+    <i class="bi bi-chevron-left" id="toggleIcon"></i>
+</button>
+{% endif %}
+
+<!-- Main Content Wrapper -->
+<div class="main-content-wrapper">
+    <div class="container py-4">
+        <!-- Welcome Content -->
+        <div class="card">
+            <div class="card-body text-center py-5">
+                <i class="bi bi-robot fs-1 text-primary mb-3"></i>
+                <h1 class="mb-3">AI Assistant</h1>
+                <p class="lead mb-4">
+                    Get instant help from our AI assistant. Start a conversation to ask questions,
+                    get explanations, generate content, or brainstorm ideas.
+                </p>
+
+                {% if is_authenticated %}
+                <p class="mb-4 text-muted">
+                    Your conversations will be saved and you can access them anytime from the sidebar.
+                </p>
+                <button id="newConversationMainBtn" class="btn btn-primary btn-lg">
+                    <i class="bi bi-plus-circle me-2"></i>Start New Conversation
+                </button>
+                {% else %}
+                <p class="mb-4 text-muted">
+                    Start an anonymous conversation or
+                    <a href="{% url 'rest_login' %}?next={{ request.path }}">log in</a>
+                    to save your chat history.
+                </p>
+                <a href="#" id="newAnonymousConversationBtn" class="btn btn-primary btn-lg me-3">
+                    <i class="bi bi-chat-dots me-2"></i>Start Anonymous Chat
+                </a>
+                <a href="{% url 'rest_login' %}?next={{ request.path }}" class="btn btn-outline-primary btn-lg">
+                    <i class="bi bi-person-plus me-2"></i>Login to Save Chats
+                </a>
+                {% endif %}
+            </div>
+        </div>
+
+        {% if is_authenticated %}
+        <!-- Features Section for Authenticated Users -->
+        <div class="row mt-4">
+            <div class="col-md-4">
+                <div class="card h-100">
+                    <div class="card-body">
+                        <div class="text-center mb-3">
+                            <i class="bi bi-chat-text fs-1 text-success"></i>
+                        </div>
+                        <h5 class="card-title text-center">Natural Conversations</h5>
+                        <p class="card-text">
+                            Have natural, flowing conversations with our AI assistant.
+                            Ask follow-up questions and build on previous topics.
+                        </p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card h-100">
+                    <div class="card-body">
+                        <div class="text-center mb-3">
+                            <i class="bi bi-code-slash fs-1 text-info"></i>
+                        </div>
+                        <h5 class="card-title text-center">Code Help</h5>
+                        <p class="card-text">
+                            Get assistance with programming, debugging, code reviews,
+                            and explanations with syntax highlighting.
+                        </p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card h-100">
+                    <div class="card-body">
+                        <div class="text-center mb-3">
+                            <i class="bi bi-save fs-1 text-warning"></i>
+                        </div>
+                        <h5 class="card-title text-center">Saved History</h5>
+                        <p class="card-text">
+                            All your conversations are automatically saved and
+                            accessible from the sidebar for future reference.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Hidden data for JavaScript -->
+<script type="application/json" id="appData">
+{
+    "isAuthenticated": {% if is_authenticated %}true{% else %}false{% endif %},
+    "conversationId": null,
+    "isAnonymous": false,
+    "csrfToken": "{{ csrf_token }}"
+}
+</script>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+class AssistantHomeManager {
+    constructor() {
+        // Get app data from template
+        const appDataElement = document.getElementById('appData');
+        this.appData = appDataElement ? JSON.parse(appDataElement.textContent) : {};
+
+        this.initializeElements();
+
+        if (this.appData.isAuthenticated) {
+            this.initializeSidebar();
+        }
+
+        this.attachEventListeners();
+    }
+
+    initializeElements() {
+        this.newConversationBtn = document.getElementById('newConversationBtn');
+        this.newConversationMainBtn = document.getElementById('newConversationMainBtn');
+        this.newAnonymousConversationBtn = document.getElementById('newAnonymousConversationBtn');
+
+        // Sidebar elements
+        this.sidebar = document.getElementById('sidebar');
+        this.sidebarToggle = document.getElementById('sidebarToggle');
+        this.toggleIcon = document.getElementById('toggleIcon');
+        this.backdrop = document.getElementById('sidebarBackdrop');
+    }
+
+    initializeSidebar() {
+        if (!this.sidebar) return;
+
+        this.isCollapsed = false;
+        this.updateSidebarForScreenSize();
+
+        // Restore saved state on desktop
+        const savedState = localStorage.getItem('sidebarCollapsed');
+        if (savedState === 'true' && window.innerWidth > 768) {
+            this.collapseSidebar();
+        }
+    }
+
+    // Sidebar management methods
+    toggleSidebar() {
+        if (this.isCollapsed) {
+            this.expandSidebar();
+        } else {
+            this.collapseSidebar();
+        }
+    }
+
+    collapseSidebar() {
+        if (!this.sidebar) return;
+
+        this.sidebar.classList.add('collapsed');
+        if (this.toggleIcon) {
+            this.toggleIcon.className = 'bi bi-chevron-right';
+        }
+        if (this.backdrop) {
+            this.backdrop.classList.remove('show');
+        }
+        this.isCollapsed = true;
+
+        if (window.innerWidth > 768) {
+            localStorage.setItem('sidebarCollapsed', 'true');
+        }
+    }
+
+    expandSidebar() {
+        if (!this.sidebar) return;
+
+        this.sidebar.classList.remove('collapsed');
+        if (this.toggleIcon) {
+            this.toggleIcon.className = 'bi bi-chevron-left';
+        }
+
+        if (window.innerWidth <= 768 && this.backdrop) {
+            this.backdrop.classList.add('show');
+        }
+
+        this.isCollapsed = false;
+
+        if (window.innerWidth > 768) {
+            localStorage.setItem('sidebarCollapsed', 'false');
+        }
+    }
+
+    updateSidebarForScreenSize() {
+        if (window.innerWidth <= 768) {
+            this.collapseSidebar();
+        } else {
+            const savedState = localStorage.getItem('sidebarCollapsed');
+            if (savedState === 'true') {
+                this.collapseSidebar();
+            } else {
+                this.expandSidebar();
+            }
+            if (this.backdrop) {
+                this.backdrop.classList.remove('show');
+            }
+        }
+    }
+
+    attachEventListeners() {
+        // Sidebar events
+        if (this.sidebarToggle && this.appData.isAuthenticated) {
+            this.sidebarToggle.addEventListener('click', () => {
+                this.toggleSidebar();
+            });
+        }
+
+        if (this.backdrop && this.appData.isAuthenticated) {
+            this.backdrop.addEventListener('click', () => {
+                this.collapseSidebar();
+            });
+        }
+
+        // Window resize
+        window.addEventListener('resize', () => {
+            if (this.appData.isAuthenticated) {
+                this.updateSidebarForScreenSize();
+            }
+        });
+
+        // Handle conversation navigation on mobile
+        const conversationLinks = document.querySelectorAll('.list-group-item-action');
+        conversationLinks.forEach(link => {
+            link.addEventListener('click', () => {
+                if (window.innerWidth <= 768) {
+                    this.collapseSidebar();
+                }
+            });
+        });
+
+        // Handle authenticated user new conversation buttons
+        if (this.newConversationBtn || this.newConversationMainBtn) {
+            const handleNewConversation = async () => {
+                try {
+                    const response = await fetch('/api/assistants/conversations/', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRFToken': this.appData.csrfToken
+                        },
+                        body: JSON.stringify({})
+                    });
+
+                    if (!response.ok) {
+                        throw new Error('Failed to create conversation');
+                    }
+
+                    const conversation = await response.json();
+                    window.location.href = `/assistants/${conversation.id}/`;
+                } catch (error) {
+                    console.error('Error creating conversation:', error);
+                    alert('Failed to create new conversation');
+                }
+            };
+
+            if (this.newConversationBtn) {
+                this.newConversationBtn.addEventListener('click', handleNewConversation);
+            }
+
+            if (this.newConversationMainBtn) {
+                this.newConversationMainBtn.addEventListener('click', handleNewConversation);
+            }
+        }
+
+        // Handle anonymous user new conversation
+        if (this.newAnonymousConversationBtn) {
+            this.newAnonymousConversationBtn.addEventListener('click', async () => {
+                try {
+                    const response = await fetch('/api/assistants/anonymous/', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRFToken': this.appData.csrfToken
+                        },
+                        body: JSON.stringify({})
+                    });
+
+                    if (!response.ok) {
+                        throw new Error('Failed to create anonymous conversation');
+                    }
+
+                    const conversation = await response.json();
+                    window.location.href = `/assistants/${conversation.id}/`;
+                } catch (error) {
+                    console.error('Error creating anonymous conversation:', error);
+                    alert('Failed to create anonymous conversation');
+                }
+            });
+        }
+    }
+}
+
+// Initialize when the page loads
+document.addEventListener('DOMContentLoaded', () => {
+    new AssistantHomeManager();
+});
+</script>
+{% endblock %}

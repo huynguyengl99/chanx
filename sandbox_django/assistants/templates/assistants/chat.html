@@ -1,0 +1,826 @@
+{% extends "assistants/base.html" %}
+{% load static %}
+
+{% block title %}
+{% if conversation %}{{ conversation.title|default:"AI Assistant" }}{% else %}AI Assistant{% endif %} - Chanx Example
+{% endblock %}
+
+{% block extra_css %}
+{{ block.super }}
+<!-- Include markdown and syntax highlighting libraries -->
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-core.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/autoloader/prism-autoloader.min.js"></script>
+<link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism.min.css" rel="stylesheet" />
+{% endblock %}
+
+{% block content %}
+<!-- Sidebar Backdrop for Mobile -->
+<div class="sidebar-backdrop" id="sidebarBackdrop"></div>
+
+{% if is_authenticated %}
+<!-- Sidebar for Authenticated Users -->
+<div class="sidebar" id="sidebar">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h5 class="mb-0">Conversations</h5>
+        <button id="newConversationBtn" class="btn btn-sm btn-primary">
+            <i class="bi bi-plus"></i> New
+        </button>
+    </div>
+    <div class="list-group list-group-flush" id="conversationsList">
+        {% for conv in conversations %}
+        <a href="{% url 'assistant_conversation' conv.id %}"
+           class="list-group-item list-group-item-action {% if conversation and conversation.id == conv.id %}active{% endif %}">
+            <div class="conversation-item">
+                <h6 class="conversation-title">{{ conv.title|default:"New Conversation" }}</h6>
+                <small class="conversation-timestamp text-muted">{{ conv.updated_at|timesince }} ago</small>
+                {% with last_message=conv.messages.last %}
+                {% if last_message %}
+                <p class="conversation-preview small text-muted">
+                    {% if last_message.content|length > 100 %}
+                        {{ last_message.content|slice:":100" }}...
+                    {% else %}
+                        {{ last_message.content }}
+                    {% endif %}
+                </p>
+                {% endif %}
+                {% endwith %}
+            </div>
+        </a>
+        {% empty %}
+        <div class="list-group-item text-center text-muted">
+            <i class="bi bi-chat-left-text fs-4"></i>
+            <p class="mb-0 mt-2">No conversations yet</p>
+            <small>Start a new conversation to begin!</small>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+<!-- Sidebar Toggle Button -->
+<button class="sidebar-toggle" id="sidebarToggle">
+    <i class="bi bi-chevron-left" id="toggleIcon"></i>
+</button>
+{% endif %}
+
+<!-- Main Content Wrapper -->
+<div class="main-content-wrapper">
+    <div class="container py-4">
+        <div class="chat-container">
+            <div class="chat-header">
+                <h1>
+                    {% if conversation %}
+                        {{ conversation.title|default:"AI Assistant" }}
+                        {% if not is_authenticated %}
+                            <small class="text-muted">(Anonymous)</small>
+                        {% endif %}
+                    {% else %}
+                        AI Assistant
+                    {% endif %}
+                </h1>
+                <div class="connection-status">
+                    <span id="connectionStatus">Connecting...</span>
+                    {% if not is_authenticated and conversation %}
+                    <div class="mt-1">
+                        <small class="text-warning">
+                            <i class="bi bi-exclamation-triangle"></i>
+                            This anonymous conversation won't be saved.
+                            <a href="{% url 'rest_login' %}?next={{ request.path }}">Log in</a> to save your chats.
+                        </small>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="chat-messages" id="chatMessages">
+                <div class="message assistant">
+                    <div class="message-header">
+                        <div class="avatar">AI</div>
+                        <span class="sender-name">Assistant</span>
+                        <span class="timestamp">Just now</span>
+                    </div>
+                    <div class="message-content">
+                        Hello! I'm your AI assistant. How can I help you today?
+                        <br><br>
+                        {% if conversation %}
+                            {% if is_authenticated %}
+                                You're in conversation: <strong>{{ conversation.title|default:"New Conversation" }}</strong>
+                            {% else %}
+                                You're in an anonymous conversation. Your messages won't be saved.
+                            {% endif %}
+                        {% endif %}
+                        <br><br>
+                        I can format my responses with:
+                        <ul>
+                            <li><strong>Markdown formatting</strong></li>
+                            <li><code>Syntax highlighting</code> for code</li>
+                            <li>Lists, tables, and more!</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <div class="chat-input-container">
+                <form class="chat-input-form" id="chatForm">
+                    {% csrf_token %}
+                    <textarea
+                        class="chat-input"
+                        id="chatInput"
+                        placeholder="Type your message (markdown supported)..."
+                        rows="1"
+                        {% if not conversation %}disabled{% endif %}
+                    ></textarea>
+                    <button type="submit" class="send-button" id="sendButton"
+                            {% if not conversation %}disabled{% endif %}>
+                        <span>➤</span>
+                    </button>
+                </form>
+                {% if not conversation %}
+                <div class="text-center mt-2">
+                    <small class="text-muted">
+                        <a href="{% url 'assistant_chat' %}">Go back</a> to start a new conversation
+                    </small>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Hidden data for JavaScript -->
+<script type="application/json" id="appData">
+{
+    "isAuthenticated": {% if is_authenticated %}true{% else %}false{% endif %},
+    "conversationId": {% if conversation %}"{{ conversation.id }}"{% else %}null{% endif %},
+    "isAnonymous": {% if conversation and not conversation.user %}true{% else %}false{% endif %},
+    "csrfToken": "{{ csrf_token }}"
+}
+</script>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Configure marked for better markdown parsing
+marked.setOptions({
+    breaks: true,
+    gfm: true,
+    highlight: function(code, lang) {
+        if (lang && Prism.languages[lang]) {
+            return Prism.highlight(code, Prism.languages[lang], lang);
+        }
+        return code;
+    }
+});
+
+// Function to format current time
+function getCurrentTime() {
+    return new Date().toLocaleTimeString([], {
+        hour: '2-digit',
+        minute: '2-digit'
+    });
+}
+
+class AssistantChatManager {
+    constructor() {
+        this.socket = null;
+        this.currentStreamingMessage = null;
+        this.currentStreamingElement = null;
+        this.currentMessageId = null;
+        this.streamingBuffer = ''; // Buffer to accumulate streaming content
+        this.isStreaming = false;   // Track streaming state
+
+        // Get app data from template
+        const appDataElement = document.getElementById('appData');
+        this.appData = appDataElement ? JSON.parse(appDataElement.textContent) : {};
+
+        this.initializeElements();
+        this.initializeSidebar();
+
+        // Only initialize WebSocket and load messages if we have a conversation
+        if (this.appData.conversationId) {
+            this.initializeWebSocket();
+            this.loadMessages();
+        }
+
+        this.attachEventListeners();
+    }
+
+    initializeElements() {
+        this.chatMessages = document.getElementById('chatMessages');
+        this.chatForm = document.getElementById('chatForm');
+        this.chatInput = document.getElementById('chatInput');
+        this.sendButton = document.getElementById('sendButton');
+        this.connectionStatus = document.getElementById('connectionStatus');
+        this.newConversationBtn = document.getElementById('newConversationBtn');
+
+        // Sidebar elements
+        this.sidebar = document.getElementById('sidebar');
+        this.sidebarToggle = document.getElementById('sidebarToggle');
+        this.toggleIcon = document.getElementById('toggleIcon');
+        this.backdrop = document.getElementById('sidebarBackdrop');
+    }
+
+    initializeSidebar() {
+        if (!this.appData.isAuthenticated || !this.sidebar) return;
+
+        this.isCollapsed = false;
+        this.updateSidebarForScreenSize();
+
+        // Restore saved state on desktop
+        const savedState = localStorage.getItem('sidebarCollapsed');
+        if (savedState === 'true' && window.innerWidth > 768) {
+            this.collapseSidebar();
+        }
+    }
+
+    initializeWebSocket() {
+        if (!this.appData.conversationId) return;
+
+        const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+        const wsUrl = `${protocol}//${window.location.host}/ws/assistants/${this.appData.conversationId}/`;
+
+        this.socket = new WebSocket(wsUrl);
+
+        this.socket.addEventListener('open', () => {
+            this.updateConnectionStatus('Connected', 'green');
+        });
+
+        this.socket.addEventListener('close', () => {
+            this.updateConnectionStatus('Disconnected', 'red');
+            setTimeout(() => this.initializeWebSocket(), 5000);
+        });
+
+        this.socket.addEventListener('error', () => {
+            this.updateConnectionStatus('Connection Error', 'red');
+        });
+
+        this.socket.addEventListener('message', (event) => {
+            this.handleMessage(JSON.parse(event.data));
+        });
+    }
+
+    // Sidebar management methods
+    toggleSidebar() {
+        if (this.isCollapsed) {
+            this.expandSidebar();
+        } else {
+            this.collapseSidebar();
+        }
+    }
+
+    collapseSidebar() {
+        if (!this.sidebar) return;
+
+        this.sidebar.classList.add('collapsed');
+        if (this.toggleIcon) {
+            this.toggleIcon.className = 'bi bi-chevron-right';
+        }
+        if (this.backdrop) {
+            this.backdrop.classList.remove('show');
+        }
+        this.isCollapsed = true;
+
+        if (window.innerWidth > 768) {
+            localStorage.setItem('sidebarCollapsed', 'true');
+        }
+    }
+
+    expandSidebar() {
+        if (!this.sidebar) return;
+
+        this.sidebar.classList.remove('collapsed');
+        if (this.toggleIcon) {
+            this.toggleIcon.className = 'bi bi-chevron-left';
+        }
+
+        if (window.innerWidth <= 768 && this.backdrop) {
+            this.backdrop.classList.add('show');
+        }
+
+        this.isCollapsed = false;
+
+        if (window.innerWidth > 768) {
+            localStorage.setItem('sidebarCollapsed', 'false');
+        }
+    }
+
+    updateSidebarForScreenSize() {
+        if (window.innerWidth <= 768) {
+            this.collapseSidebar();
+        } else {
+            const savedState = localStorage.getItem('sidebarCollapsed');
+            if (savedState === 'true') {
+                this.collapseSidebar();
+            } else {
+                this.expandSidebar();
+            }
+            if (this.backdrop) {
+                this.backdrop.classList.remove('show');
+            }
+        }
+    }
+
+    attachEventListeners() {
+        // Sidebar events
+        if (this.sidebarToggle && this.appData.isAuthenticated) {
+            this.sidebarToggle.addEventListener('click', () => {
+                this.toggleSidebar();
+            });
+        }
+
+        if (this.backdrop && this.appData.isAuthenticated) {
+            this.backdrop.addEventListener('click', () => {
+                this.collapseSidebar();
+            });
+        }
+
+        window.addEventListener('resize', () => {
+            if (this.appData.isAuthenticated) {
+                this.updateSidebarForScreenSize();
+            }
+        });
+
+        // Chat form submission
+        if (this.chatForm) {
+            this.chatForm.addEventListener('submit', (e) => {
+                e.preventDefault();
+                this.sendMessage();
+            });
+        }
+
+        // Enter key handling
+        if (this.chatInput) {
+            this.chatInput.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    this.sendMessage();
+                }
+            });
+
+            // Auto-resize textarea
+            this.chatInput.addEventListener('input', () => {
+                this.chatInput.style.height = 'auto';
+                this.chatInput.style.height = this.chatInput.scrollHeight + 'px';
+            });
+        }
+
+        // New conversation button
+        if (this.newConversationBtn && this.appData.isAuthenticated) {
+            this.newConversationBtn.addEventListener('click', () => {
+                this.createNewConversation();
+            });
+        }
+
+        // Handle conversation navigation on mobile
+        const conversationLinks = document.querySelectorAll('.list-group-item-action');
+        conversationLinks.forEach(link => {
+            link.addEventListener('click', () => {
+                if (window.innerWidth <= 768) {
+                    this.collapseSidebar();
+                }
+            });
+        });
+    }
+
+    updateConnectionStatus(status, color) {
+        if (this.connectionStatus) {
+            this.connectionStatus.textContent = status;
+            this.connectionStatus.style.color = color;
+        }
+    }
+
+    async loadMessages() {
+        if (!this.appData.conversationId) return;
+
+        try {
+            let apiUrl;
+            if (this.appData.isAuthenticated) {
+                apiUrl = `/api/assistants/conversations/${this.appData.conversationId}/messages/`;
+            } else {
+                apiUrl = `/api/assistants/anonymous/${this.appData.conversationId}/messages/`;
+            }
+
+            const response = await fetch(apiUrl);
+            if (!response.ok) {
+                throw new Error('Failed to load messages');
+            }
+
+            const data = await response.json();
+
+            // Clear existing messages except the welcome message
+            const welcomeMessage = this.chatMessages.querySelector('.message.assistant');
+            this.chatMessages.innerHTML = '';
+            if (welcomeMessage) {
+                this.chatMessages.appendChild(welcomeMessage);
+            }
+
+            // Add historical messages
+            data.results.forEach(message => {
+                this.addMessageToDOM(message.messageType, message.content, message.createdAt);
+            });
+
+            this.scrollToBottom();
+        } catch (error) {
+            console.error('Error loading messages:', error);
+        }
+    }
+
+    async createNewConversation() {
+        if (!this.appData.isAuthenticated) return;
+
+        try {
+            const response = await fetch('/api/assistants/conversations/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': this.appData.csrfToken
+                },
+                body: JSON.stringify({})
+            });
+
+            if (!response.ok) {
+                throw new Error('Failed to create conversation');
+            }
+
+            const conversation = await response.json();
+            window.location.href = `/assistants/${conversation.id}/`;
+        } catch (error) {
+            console.error('Error creating conversation:', error);
+            alert('Failed to create new conversation');
+        }
+    }
+
+    async sendMessage() {
+        const message = this.chatInput.value.trim();
+        if (!message || !this.appData.conversationId) {
+            return;
+        }
+
+        this.addMessageToDOM('user', message);
+
+        this.chatInput.value = '';
+        this.chatInput.style.height = 'auto';
+        this.sendButton.disabled = true;
+
+        try {
+            let apiUrl;
+            if (this.appData.isAuthenticated) {
+                apiUrl = `/api/assistants/conversations/${this.appData.conversationId}/messages/`;
+            } else {
+                apiUrl = `/api/assistants/anonymous/${this.appData.conversationId}/messages/`;
+            }
+
+            const response = await fetch(apiUrl, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': this.appData.csrfToken
+                },
+                body: JSON.stringify({ content: message })
+            });
+
+            if (!response.ok) {
+                throw new Error('Failed to send message');
+            }
+
+        } catch (error) {
+            console.error('Error sending message:', error);
+            this.showError('Failed to send message. Please try again.');
+            this.sendButton.disabled = false;
+        }
+    }
+
+    // ENHANCED MESSAGE HANDLING WITH PROPER STREAMING
+    handleMessage(data) {
+        switch (data.action) {
+            case 'authentication':
+                if (data.payload.statusCode === 200) {
+                    this.updateConnectionStatus('Connected', 'green');
+                } else {
+                    this.updateConnectionStatus('Authentication Failed', 'red');
+                }
+                break;
+
+            case 'streaming':
+                this.handleStreamingMessage(data.payload);
+                break;
+
+            case 'complete_streaming':
+                this.handleStreamingComplete(data.payload);
+                break;
+
+            case 'new_assistant_message':
+                // Handle user message broadcast
+                if (data.payload.messageType === 'user') {
+                    // User message was successfully sent, we can enable send button
+                    // (but keep it disabled until AI response is complete)
+                }
+                break;
+
+            case 'error':
+                this.showError('Error: ' + data.payload.content);
+                this.sendButton.disabled = false;
+                this.resetStreamingState();
+                break;
+        }
+    }
+
+    // CORRECTED STREAMING MESSAGE HANDLING
+    handleStreamingMessage(payload) {
+        const { content, messageId } = payload;
+
+        // Start new streaming if needed
+        if (!this.isStreaming || this.currentMessageId !== messageId) {
+            this.startNewStreaming(messageId);
+        }
+
+        // Accumulate content in buffer
+        this.streamingBuffer += content;
+
+        // Update streaming display with accumulated content
+        this.updateStreamingDisplay();
+    }
+
+    handleStreamingComplete(payload) {
+        const { messageId } = payload;
+
+        if (this.isStreaming && this.currentMessageId === messageId) {
+            this.finalizeStreamingMessage();
+            this.resetStreamingState();
+            this.sendButton.disabled = false;
+        }
+    }
+
+    startNewStreaming(messageId) {
+        // Reset any existing streaming
+        this.resetStreamingState();
+
+        this.currentMessageId = messageId;
+        this.streamingBuffer = '';
+        this.isStreaming = true;
+        this.currentStreamingElement = this.createStreamingMessage();
+    }
+
+    updateStreamingDisplay() {
+        if (!this.currentStreamingElement || !this.isStreaming) return;
+
+        const contentDiv = this.currentStreamingElement.querySelector('.message-content');
+        if (!contentDiv) return;
+
+        // Clear content but preserve typing indicator
+        const typingIndicator = contentDiv.querySelector('.typing-indicator');
+        contentDiv.innerHTML = '';
+
+        // Add accumulated content with markdown parsing
+        const parsedContent = this.parseMarkdownIncremental(this.streamingBuffer);
+        contentDiv.innerHTML = parsedContent;
+
+        // Add blinking cursor for streaming effect
+        const cursor = document.createElement('span');
+        cursor.className = 'streaming-cursor';
+        cursor.style.display = 'inline-block';
+        cursor.style.width = '2px';
+        cursor.style.height = '1em';
+        cursor.style.background = '#ff9800';
+        cursor.style.marginLeft = '2px';
+        cursor.style.animation = 'blink 1s infinite';
+        contentDiv.appendChild(cursor);
+
+        // Re-add typing indicator
+        if (typingIndicator) {
+            contentDiv.appendChild(typingIndicator);
+        }
+
+        this.scrollToBottom();
+    }
+
+    parseMarkdownIncremental(text) {
+        // For streaming, we need to be careful with markdown parsing
+        // Parse what we can without breaking incomplete markdown
+        let parsed = text;
+
+        // Handle complete code blocks only
+        parsed = parsed.replace(/```(\w+)?\n([\s\S]*?)```/g, (match, lang, code) => {
+            const header = lang ? `<div class="code-header"><span>${lang}</span><button class="copy-button" onclick="this.copyCode()">Copy</button></div>` : '';
+            return `${header}<pre style="background: #f8f8f8; border: 1px solid #eee; border-radius: ${lang ? '0 0 8px 8px' : '8px'}; padding: 16px; margin: 12px 0; overflow-x: auto;"><code>${this.escapeHtml(code)}</code></pre>`;
+        });
+
+        // Handle inline code (only complete ones)
+        parsed = parsed.replace(/`([^`\n]+)`/g, '<code style="background: rgba(0,0,0,0.1); padding: 2px 6px; border-radius: 4px; font-family: Monaco, Menlo, Ubuntu Mono, monospace; font-size: 0.9em;">$1</code>');
+
+        // Handle line breaks
+        parsed = parsed.replace(/\n/g, '<br>');
+
+        return parsed;
+    }
+
+    resetStreamingState() {
+        this.isStreaming = false;
+        this.currentStreamingElement = null;
+        this.currentMessageId = null;
+        this.streamingBuffer = '';
+    }
+
+    createStreamingMessage() {
+        const messageDiv = document.createElement('div');
+        messageDiv.className = 'message assistant streaming';
+
+        const headerDiv = document.createElement('div');
+        headerDiv.className = 'message-header';
+
+        const avatar = document.createElement('div');
+        avatar.className = 'avatar';
+        avatar.textContent = 'AI';
+
+        const senderName = document.createElement('span');
+        senderName.className = 'sender-name';
+        senderName.textContent = 'Assistant';
+
+        const timestamp = document.createElement('span');
+        timestamp.className = 'timestamp';
+        timestamp.textContent = getCurrentTime();
+
+        headerDiv.appendChild(avatar);
+        headerDiv.appendChild(senderName);
+        headerDiv.appendChild(timestamp);
+
+        const contentDiv = document.createElement('div');
+        contentDiv.className = 'message-content';
+
+        // Add typing indicator initially
+        const typingIndicator = document.createElement('div');
+        typingIndicator.className = 'typing-indicator';
+        typingIndicator.innerHTML = '<span></span><span></span><span></span>';
+        contentDiv.appendChild(typingIndicator);
+
+        messageDiv.appendChild(headerDiv);
+        messageDiv.appendChild(contentDiv);
+        this.chatMessages.appendChild(messageDiv);
+        this.scrollToBottom();
+
+        return messageDiv;
+    }
+
+    finalizeStreamingMessage() {
+        if (!this.currentStreamingElement) return;
+
+        // Remove streaming class and indicators
+        this.currentStreamingElement.classList.remove('streaming');
+        const contentDiv = this.currentStreamingElement.querySelector('.message-content');
+
+        if (contentDiv) {
+            // Remove typing indicator and cursor
+            const typingIndicator = contentDiv.querySelector('.typing-indicator');
+            const cursor = contentDiv.querySelector('.streaming-cursor');
+
+            if (typingIndicator) typingIndicator.remove();
+            if (cursor) cursor.remove();
+
+            // Apply final markdown parsing
+            const finalContent = this.parseMarkdown(this.streamingBuffer);
+            contentDiv.innerHTML = finalContent;
+
+            // Apply syntax highlighting to code blocks
+            contentDiv.querySelectorAll('pre code').forEach((block) => {
+                if (typeof Prism !== 'undefined') {
+                    Prism.highlightElement(block);
+                }
+            });
+
+            // Add copy functionality to code blocks
+            this.addCopyButtonsToCodeBlocks(contentDiv);
+        }
+
+        this.scrollToBottom();
+    }
+
+    addCopyButtonsToCodeBlocks(container) {
+        container.querySelectorAll('.copy-button').forEach(button => {
+            button.addEventListener('click', function() {
+                const codeBlock = this.closest('.code-header').nextElementSibling.querySelector('code');
+                if (codeBlock) {
+                    navigator.clipboard.writeText(codeBlock.textContent).then(() => {
+                        const originalText = this.textContent;
+                        this.textContent = 'Copied!';
+                        this.classList.add('copied');
+                        setTimeout(() => {
+                            this.textContent = originalText;
+                            this.classList.remove('copied');
+                        }, 2000);
+                    }).catch(err => {
+                        console.error('Failed to copy text: ', err);
+                    });
+                }
+            });
+        });
+    }
+
+    parseMarkdown(text) {
+        const html = marked.parse(text);
+        const tempDiv = document.createElement('div');
+        tempDiv.innerHTML = html;
+
+        // Add code headers and copy buttons
+        tempDiv.querySelectorAll('pre > code').forEach((codeBlock) => {
+            const pre = codeBlock.parentElement;
+            const language = codeBlock.className.replace('language-', '') || 'text';
+
+            const header = document.createElement('div');
+            header.className = 'code-header';
+            header.innerHTML = `
+                <span>${language}</span>
+                <button class="copy-button">Copy</button>
+            `;
+
+            pre.parentNode.insertBefore(header, pre);
+            pre.style.borderRadius = '0 0 8px 8px';
+        });
+
+        return tempDiv.innerHTML;
+    }
+
+    escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+
+    addMessageToDOM(sender, content, createdAt = null) {
+        const messageDiv = document.createElement('div');
+        messageDiv.className = `message ${sender}`;
+
+        const headerDiv = document.createElement('div');
+        headerDiv.className = 'message-header';
+
+        const avatar = document.createElement('div');
+        avatar.className = 'avatar';
+        avatar.textContent = sender === 'user' ? 'U' : 'AI';
+
+        const senderName = document.createElement('span');
+        senderName.className = 'sender-name';
+        senderName.textContent = sender === 'user' ? 'You' : 'Assistant';
+
+        const timestamp = document.createElement('span');
+        timestamp.className = 'timestamp';
+        if (createdAt) {
+            const messageDate = new Date(createdAt);
+            timestamp.textContent = messageDate.toLocaleTimeString([], {
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+        } else {
+            timestamp.textContent = getCurrentTime();
+        }
+
+        headerDiv.appendChild(avatar);
+        headerDiv.appendChild(senderName);
+        headerDiv.appendChild(timestamp);
+
+        const contentDiv = document.createElement('div');
+        contentDiv.className = 'message-content';
+
+        if (sender === 'assistant') {
+            contentDiv.innerHTML = this.parseMarkdown(content);
+            // Apply syntax highlighting and add copy buttons
+            contentDiv.querySelectorAll('pre code').forEach((block) => {
+                if (typeof Prism !== 'undefined') {
+                    Prism.highlightElement(block);
+                }
+            });
+            this.addCopyButtonsToCodeBlocks(contentDiv);
+        } else {
+            contentDiv.textContent = content;
+        }
+
+        messageDiv.appendChild(headerDiv);
+        messageDiv.appendChild(contentDiv);
+        this.chatMessages.appendChild(messageDiv);
+        this.scrollToBottom();
+    }
+
+    showError(message) {
+        const errorDiv = document.createElement('div');
+        errorDiv.className = 'error-message';
+        errorDiv.innerHTML = `<strong>Error:</strong> ${message}`;
+
+        this.chatMessages.appendChild(errorDiv);
+        this.scrollToBottom();
+
+        setTimeout(() => {
+            if (errorDiv.parentNode) {
+                errorDiv.parentNode.removeChild(errorDiv);
+            }
+        }, 5000);
+    }
+
+    scrollToBottom() {
+        this.chatMessages.scrollTop = this.chatMessages.scrollHeight;
+    }
+}
+
+// Initialize the chat when the page loads
+document.addEventListener('DOMContentLoaded', () => {
+    new AssistantChatManager();
+});
+</script>
+{% endblock %}

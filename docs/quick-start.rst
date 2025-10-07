@@ -128,7 +128,7 @@ Let's create a basic echo consumer that authenticates users and echoes back mess
 .. code-block:: python
 
     # myapp/routing.py
-    from chanx.routing import path
+    from chanx.ext.channels.routing import path
     from channels.routing import URLRouter
 
     from myapp.consumers import EchoConsumer
@@ -142,7 +142,7 @@ Let's create a basic echo consumer that authenticates users and echoes back mess
 .. code-block:: python
 
     # myproject/routing.py
-    from chanx.routing import include, path
+    from chanx.ext.channels.routing import include, path
     from channels.routing import URLRouter
 
     router = URLRouter([
@@ -164,7 +164,7 @@ Let's create a basic echo consumer that authenticates users and echoes back mess
     from channels.sessions import CookieMiddleware
     from django.conf import settings
 
-    from chanx.routing import include
+    from chanx.ext.channels.routing import include
 
     os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'myproject.settings')
     django_asgi_app = get_asgi_application()
@@ -267,7 +267,7 @@ Now let's enhance our consumer to support group messaging. First, we need to add
                     username = getattr(self.user, 'username', 'Anonymous')
 
                     # Send to the whole group
-                    await self.send_group_message(
+                    await self.broadcast_message(
                         ChatGroupMessage(
                             payload=MessagePayload(content=f"{username}: {payload.content}")
                         )
@@ -280,7 +280,7 @@ Update the routing:
 .. code-block:: python
 
     # myapp/routing.py - updated
-    from chanx.routing import path, re_path
+    from chanx.ext.channels.routing import path, re_path
     from channels.routing import URLRouter
 
     from myapp.consumers import EchoConsumer, ChatConsumer
@@ -384,7 +384,7 @@ Let's add support for system notifications using channel events:
 
         if serializer.is_valid():
             # Send event to the channel layer
-            ChatConsumer.send_channel_event(
+            ChatConsumer.send_event_sync(
                 f"chat_{room_id}",
                 NotifyEvent(
                     payload=NotifyEvent.Payload(

@@ -198,9 +198,9 @@ Then, configure your consumer to handle group messaging:
             """Handle incoming messages and broadcast to groups."""
             match message:
                 case ChatMessage(payload=payload):
-                    # Using send_group_message
+                    # Using broadcast_message
                     username = getattr(self.user, 'username', 'Anonymous')
-                    await self.send_group_message(
+                    await self.broadcast_message(
                         ChatGroupMessage(payload={"username": username, "content": payload.content}),
                         exclude_current=False  # Include sender in recipients
                     )
@@ -268,7 +268,7 @@ To send events from outside the consumer (e.g., from a Django view or task):
 
     # Using synchronous code (e.g., in a Django view)
     def send_notification(request):
-        ChatConsumer.send_channel_event(
+        ChatConsumer.send_event_sync(
             "announcements",  # Group name to send to
             NotifyEvent(payload=NotifyEvent.Payload(
                 content="Important system notice",
@@ -279,7 +279,7 @@ To send events from outside the consumer (e.g., from a Django view or task):
 
     # Using asynchronous code
     async def async_send_notification():
-        await ChatConsumer.asend_channel_event(
+        await ChatConsumer.send_event(
             "announcements",
             NotifyEvent(payload=NotifyEvent.Payload(
                 content="Important system notice",
@@ -424,7 +424,7 @@ Here's a complete example of a chat consumer:
 
                     message_serializer = ChatMessageSerializer(instance=new_message)
 
-                    await self.send_group_message(
+                    await self.broadcast_message(
                         MemberMessage(payload=cast(Any, message_serializer.data)),
                         groups=groups,
                         exclude_current=False,

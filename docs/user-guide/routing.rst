@@ -28,7 +28,7 @@ App-Level Routing
 
     # chat/routing.py
     from channels.routing import URLRouter
-    from chanx.routing import path, re_path
+    from chanx.ext.channels.routing import path, re_path
 
     from chat.consumers import ChatConsumer, ChatDetailConsumer
 
@@ -45,7 +45,7 @@ Project-Level Routing
 
     # myproject/routing.py
     from channels.routing import URLRouter
-    from chanx.routing import path, include
+    from chanx.ext.channels.routing import path, include
 
     # Main router for the project
     router = URLRouter([
@@ -68,7 +68,7 @@ ASGI Configuration
     from channels.sessions import CookieMiddleware
     from django.conf import settings
 
-    from chanx.routing import include
+    from chanx.ext.channels.routing import include
 
     os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'myproject.settings')
     django_asgi_app = get_asgi_application()
@@ -87,7 +87,7 @@ Chanx provides ``path()`` and ``re_path()`` functions that work exactly like Dja
 
 .. code-block:: python
 
-    from chanx.routing import path, re_path
+    from chanx.ext.channels.routing import path, re_path
 
     # Path with converter
     path('users/<int:user_id>/', UserConsumer.as_asgi())
@@ -121,7 +121,7 @@ The ``include()`` function lets you organize routing in a modular way:
 
 .. code-block:: python
 
-    from chanx.routing import include
+    from chanx.ext.channels.routing import include
 
     # Include by string reference (uses 'router' variable in the module)
     path('chat/', include('chat.routing'))

@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>{{ title }}</title>
+    <link rel="stylesheet" href="https://unpkg.com/@asyncapi/react-component@latest/styles/default.min.css">
+</head>
+<body>
+    {% if error %}
+        <div style="padding: 2rem; background: #fee; border: 1px solid #fcc; margin: 2rem; border-radius: 8px; color: #c33;">
+            <h3>Error</h3>
+            <p>{{ error }}</p>
+        </div>
+    {% else %}
+        <div id="asyncapi"></div>
+
+        <script src="https://unpkg.com/@asyncapi/react-component@latest/browser/standalone/index.js"></script>
+        <script>
+            AsyncApiStandalone.render({
+                schema: {{ schema_json|safe }},
+                config: {
+                    show: {
+                        sidebar: true,
+                    }
+                },
+            }, document.getElementById('asyncapi'));
+        </script>
+    {% endif %}
+</body>
+</html>

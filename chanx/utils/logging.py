@@ -1,10 +1,11 @@
 """
 Structured logging configuration for Chanx.
 
-This module provides a pre-configured structured logger instance that can be
-imported and used throughout the Chanx package for consistent logging.
+Provides a pre-configured structlog logger with context support and
+both sync and async methods for all log levels.
 """
 
 import structlog
 
 logger: structlog.stdlib.BoundLogger = structlog.get_logger("chanx")
+"""Pre-configured structured logger for the Chanx framework."""

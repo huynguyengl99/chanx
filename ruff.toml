@@ -3,8 +3,10 @@ target-version = "py310"
 
 [lint]
 ignore = [
+  "B009",  # we need to use getattr in some special case
   "E501",  # line too long, handled by black
-  "F405"  # defined from star imports
+  "F405",  # defined from star imports
+  "PLR0913"  # Too many arguments in function definition
 ]
 select = [
   "B",  # flake8-bugbear
@@ -26,4 +28,7 @@ section-order = ["future", "standard-library", "django", "third-party", "first-p
 django = ["channels", "django", "rest_framework"]
 
 [lint.per-file-ignores]
-"sandbox/*/test_*.py" = ["B009", "C901", "N806", "PLR0911", "PLR2004"]
+"chanx/asyncapi/type_defs.py" = ["N815"]
+"ext/*" = ["PLR2004"]
+"sandbox_*/*/test_*.py" = ["B009", "C901", "N806", "PLR0911", "PLR2004"]
+"tests/*" = ["B009", "C901", "N806", "PLR0911", "PLR2004"]

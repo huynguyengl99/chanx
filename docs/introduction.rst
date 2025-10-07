@@ -68,13 +68,13 @@ Chanx fills these gaps with a cohesive framework that provides:
       return [f"room_{self.room_id}"]
 
   async def receive_message(self, message: ChatMessage, **kwargs: Any) -> None:
-      await self.send_group_message(message)
+      await self.broadcast_message(message)
 
 4. **Enhanced URL Routing**: Django-style routing utilities for WebSocket endpoints with type hints support
 
 .. code-block:: python
 
-  from chanx.routing import path, re_path, include
+  from chanx.ext.channels.routing import path, re_path, include
 
   router = [
       path('ws/chat/<str:room_id>/', ChatConsumer.as_asgi()),
@@ -141,7 +141,7 @@ Chanx fills these gaps with a cohesive framework that provides:
                   await self.send_message(NotificationMessage(payload=event.payload))
 
   # Send from anywhere
-  MyConsumer.send_channel_event("group_name", NotifyEvent(payload=payload))
+  MyConsumer.send_event_sync("group_name", NotifyEvent(payload=payload))
 
 9. **Generic Type Parameters**: Complete mypy and pyright support for better IDE integration and type safety
 

@@ -2,12 +2,11 @@
 Asyncio task management utilities for Chanx.
 
 This module provides enhanced task management for asynchronous operations
-in Django Channels WebSocket consumers. It offers utilities to safely create
+in Chanx WebSocket consumers. It offers utilities to safely create
 and manage background tasks with proper error handling, database connection
 cleanup, and task tracking.
 
 Key features:
-- Automatic cleanup of database connections to prevent connection leaks
 - Structured error logging for background tasks
 - Task tracking to prevent memory leaks from forgotten tasks
 - Support for context variables to maintain context across task boundaries
@@ -23,11 +22,11 @@ from collections.abc import Coroutine
 from contextvars import Context
 from typing import Any, TypeVar
 
-from django.db import close_old_connections
-
 from chanx.utils.logging import logger
 
 global_background_tasks: set[asyncio.Task[Any]] = set()
+"""Global set to track background tasks and prevent garbage collection."""
+
 T = TypeVar("T")
 
 
@@ -53,8 +52,6 @@ async def wrap_task(coro: Coroutine[Any, Any, T]) -> T:
     except Exception as e:
         await logger.aexception(str(e), reason="Async task has error.")
         raise  # Re-raising to maintain the original behavior
-    finally:
-        close_old_connections()
 
 
 def create_task(

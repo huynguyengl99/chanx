@@ -1,15 +1,25 @@
 {
   "include": [
     "chanx",
-    "sandbox"
+    "sandbox_django",
+    "sandbox_fastapi",
+    "tests"
   ],
   "exclude": [
-    "sandbox/config/settings/test.py"
+    "sandbox_django/config/settings/test.py",
   ],
   "typeCheckingMode": "strict",
   "reportMissingTypeArgument": "warning",
   "reportMissingTypeStubs": "warning",
   "reportPrivateUsage": "none",
-  "pythonVersion": "3.10",
-  "reportIncompatibleVariableOverride": "none"
+  "pythonVersion": "3.11",
+  "reportIncompatibleVariableOverride": "none",
+  "reportUnknownMemberType": "none",
+  "reportIncompatibleMethodOverride": "none",
+    "executionEnvironments": [
+      {
+          "root": "sandbox_django/config/settings",
+          "reportConstantRedefinition": "none"
+      }
+  ]
 }

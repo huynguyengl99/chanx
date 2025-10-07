@@ -88,7 +88,7 @@
 ### Feat
 
 - **python310**: add support for python version 310
-- **websocket**: add kind to send_group_message to handle both pydantic message and json case
+- **websocket**: add kind to broadcast_message to handle both pydantic message and json case
 
 ### Fix
 

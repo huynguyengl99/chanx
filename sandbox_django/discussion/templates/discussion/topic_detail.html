@@ -1,0 +1,933 @@
+{% extends "discussion/base.html" %}
+
+{% block title %}{% if request.user.is_authenticated %}{{ topic.title }}{% else %}Discussion{% endif %} - Discussion{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <!-- Navigation -->
+    <div class="mb-3">
+        <a href="{% url 'discussion-home' %}" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left"></i> Back to Discussions
+        </a>
+    </div>
+
+    {% if not request.user.is_authenticated %}
+    <div class="alert alert-info">
+        <h4 class="alert-heading">Join the Discussion!</h4>
+        <p>This discussion contains valuable content from our community, but you need to log in to view any discussion details.</p>
+        <hr>
+        <p class="mb-0">
+            <a href="{% url 'rest_login' %}?next={{ request.path }}" class="alert-link btn btn-primary btn-sm">
+                <i class="bi bi-box-arrow-in-right"></i> Log In to View Discussion
+            </a>
+        </p>
+    </div>
+
+    <!-- Completely hidden topic card for unauthenticated users -->
+    <div class="topic-card">
+        <div class="d-flex">
+            <!-- Minimal vote display without actual numbers -->
+            <div class="vote-buttons me-3">
+                <div class="vote-btn disabled">
+                    <i class="bi bi-chevron-up"></i>
+                </div>
+                <div class="vote-score-display">
+                    <i class="bi bi-lock" style="font-size: 0.8rem;"></i>
+                </div>
+                <div class="vote-btn disabled">
+                    <i class="bi bi-chevron-down"></i>
+                </div>
+                <small class="text-muted mt-2">Log in to vote</small>
+            </div>
+
+            <!-- Completely hidden content -->
+            <div class="flex-grow-1">
+                <div class="topic-title">
+                    <h1>
+                        <i class="bi bi-lock"></i> Private Discussion
+                    </h1>
+                    <div class="badges">
+                        <span class="badge bg-secondary">
+                            <i class="bi bi-lock"></i> Protected
+                        </span>
+                    </div>
+                </div>
+
+                <!-- Hide all content details -->
+                <div class="topic-content mb-3">
+                    <div class="alert alert-secondary">
+                        <i class="bi bi-lock"></i> <strong>All content is private</strong> - Please log in to view discussion details.
+                    </div>
+                </div>
+
+                <div class="topic-meta">
+                    <div class="author-info">
+                        <div class="author-avatar">
+                            <i class="bi bi-person" style="font-size: 0.8rem;"></i>
+                        </div>
+                        <span class="text-muted">Details hidden - log in to view</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Simplified protected content section -->
+    <div class="mt-4">
+        <div class="alert alert-warning">
+            <h5 class="alert-heading">
+                <i class="bi bi-shield-lock"></i> Discussion Access Required
+            </h5>
+            <p>This is a private discussion. All details including title, content, author information, and replies are only visible to authenticated users.</p>
+            <hr>
+            <a href="{% url 'rest_login' %}?next={{ request.path }}" class="btn btn-primary">
+                <i class="bi bi-box-arrow-in-right"></i> Log In to Access Discussion
+            </a>
+        </div>
+    </div>
+
+    {% else %}
+    <!-- Full content for authenticated users -->
+
+    <!-- Topic Card -->
+    <div class="topic-card" data-topic-id="{{ topic.id }}">
+        <div class="d-flex">
+            <!-- Vote Column -->
+            <div class="vote-buttons me-3" data-target-type="topic" data-target-id="{{ topic.id }}">
+                <button class="vote-btn upvote" data-vote="1">
+                    <i class="bi bi-chevron-up"></i>
+                </button>
+                <div class="vote-score-display">{{ topic.vote_count }}</div>
+                <button class="vote-btn downvote" data-vote="-1">
+                    <i class="bi bi-chevron-down"></i>
+                </button>
+            </div>
+
+            <!-- Topic Content -->
+            <div class="flex-grow-1">
+                <div class="topic-title">
+                    <h1>{{ topic.title }}</h1>
+                    <div class="badges">
+                        {% if topic.accepted_answer %}
+                        <span class="badge badge-answered">Answered</span>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <div class="topic-content mb-3">
+                    {{ topic.content|linebreaks }}
+                </div>
+
+                <div class="topic-meta">
+                    <div class="author-info">
+                        <div class="author-avatar">
+                            {{ topic.author.email|first|upper }}
+                        </div>
+                        <span>asked by <strong>{{ topic.author.email }}</strong></span>
+                        <span class="text-muted">{{ topic.created_at|timesince }} ago</span>
+                        {% if topic.created_at != topic.updated_at %}
+                        <span class="text-muted">• edited {{ topic.updated_at|timesince }} ago</span>
+                        {% endif %}
+                    </div>
+                    <div class="d-flex align-items-center gap-2">
+                        <small class="text-muted">{{ topic.view_count }} views</small>
+                        {% if topic.author == request.user %}
+                        <button class="btn btn-sm btn-outline-secondary">
+                            <i class="bi bi-pencil"></i> Edit
+                        </button>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Answers Section -->
+    <div class="mt-4">
+        <h3>
+            <span id="answerCount">{{ replies|length }}</span>
+            Answer{{ replies|length|pluralize }}
+        </h3>
+
+        <!-- Sort Options -->
+        {% if replies %}
+        <div class="mb-3">
+            <div class="btn-group" role="group">
+                <button type="button" class="btn btn-outline-secondary active" data-sort="votes">
+                    <i class="bi bi-arrow-up"></i> Most Votes
+                </button>
+                <button type="button" class="btn btn-outline-secondary" data-sort="newest">
+                    <i class="bi bi-clock"></i> Newest
+                </button>
+                <button type="button" class="btn btn-outline-secondary" data-sort="oldest">
+                    <i class="bi bi-clock-history"></i> Oldest
+                </button>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Replies List -->
+        <div id="repliesList">
+            {% for reply in replies %}
+            <div class="reply-card {% if reply.is_accepted %}accepted-answer{% endif %}" data-reply-id="{{ reply.id }}" data-created-at="{{ reply.created_at|date:'c' }}" data-vote-count="{{ reply.vote_count }}">
+                <div class="d-flex">
+                    <!-- Vote Column -->
+                    <div class="vote-buttons me-3" data-target-type="reply" data-target-id="{{ reply.id }}">
+                        <button class="vote-btn upvote" data-vote="1">
+                            <i class="bi bi-chevron-up"></i>
+                        </button>
+                        <div class="vote-score-display">{{ reply.vote_count }}</div>
+                        <button class="vote-btn downvote" data-vote="-1">
+                            <i class="bi bi-chevron-down"></i>
+                        </button>
+
+                        <!-- Accept/Unaccept Answer Button (only for topic author) -->
+                        {% if topic.author == request.user and reply.author != request.user %}
+                        <button class="accept-answer-btn mt-2" data-reply-id="{{ reply.id }}">
+                            {% if reply.is_accepted %}
+                            <i class="bi bi-x-circle"></i> Unaccept
+                            {% else %}
+                            <i class="bi bi-check-circle"></i> Accept
+                            {% endif %}
+                        </button>
+                        {% endif %}
+                    </div>
+
+                    <!-- Reply Content -->
+                    <div class="flex-grow-1">
+                        {% if reply.is_accepted %}
+                        <div class="accepted-badge mb-2">
+                            <i class="bi bi-check-circle-fill"></i> Accepted Answer
+                        </div>
+                        {% endif %}
+
+                        <div class="reply-content">
+                            {{ reply.content|linebreaks }}
+                        </div>
+
+                        <div class="reply-meta">
+                            <div class="author-info">
+                                <div class="author-avatar">
+                                    {{ reply.author.email|first|upper }}
+                                </div>
+                                <span>answered by <strong>{{ reply.author.email }}</strong></span>
+                                <span class="text-muted">{{ reply.created_at|timesince }} ago</span>
+                                {% if reply.created_at != reply.updated_at %}
+                                <span class="text-muted">• edited</span>
+                                {% endif %}
+                            </div>
+                            <div>
+                                {% if reply.author == request.user %}
+                                <button class="btn btn-sm btn-outline-secondary">
+                                    <i class="bi bi-pencil"></i> Edit
+                                </button>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% empty %}
+            <div class="text-center py-4" id="noRepliesMessage">
+                <i class="bi bi-chat-left-text fs-1 text-muted"></i>
+                <p class="mt-3 text-muted">No answers yet. Be the first to help!</p>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- New Answer Form (only for authenticated users) -->
+    <div class="mt-4">
+        <h4>Your Answer</h4>
+        <div class="reply-form">
+            {% csrf_token %}
+            <textarea id="newAnswerContent" class="form-control" rows="6" placeholder="Write your answer here... Be helpful and clear in your explanation."></textarea>
+            <div class="form-text mb-3">
+                Markdown formatting is supported
+            </div>
+            <div class="form-actions">
+                <button type="button" id="postAnswerBtn" class="btn-reply">
+                    <i class="bi bi-send"></i> Post Your Answer
+                </button>
+                <button type="button" id="previewAnswerBtn" class="btn btn-outline-secondary">
+                    <i class="bi bi-eye"></i> Preview
+                </button>
+            </div>
+        </div>
+
+        <!-- Answer Preview -->
+        <div id="answerPreview" class="reply-card mt-3" style="display: none;">
+            <h5>Preview</h5>
+            <div id="previewContent"></div>
+        </div>
+    </div>
+
+    <!-- Hidden data for the current user (only if authenticated) -->
+    <script type="application/json" id="currentUserData">
+        {
+            "id": {{ request.user.id|default:"null" }},
+            "email": "{{ request.user.email|default:"" }}",
+            "isTopicAuthor": {% if topic.author == request.user %}true{% else %}false{% endif %}
+        }
+    </script>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+{{ block.super }}
+{% if request.user.is_authenticated %}
+<!-- Include marked for markdown preview -->
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+
+<script>
+// Configure marked
+marked.setOptions({
+    breaks: true,
+    gfm: true
+});
+
+/**
+ * Discussion Topic Detail Client
+ */
+class DiscussionTopicClient {
+    constructor() {
+        this.socket = null;
+        this.topicId = {{ topic.id }};
+        this.repliesList = document.getElementById('repliesList');
+        this.answerCount = document.getElementById('answerCount');
+        this.noRepliesMessage = document.getElementById('noRepliesMessage');
+        this.currentSortOrder = 'votes'; // Track current sort order - default to votes
+
+        // Get current user data
+        const userDataElement = document.getElementById('currentUserData');
+        this.currentUser = userDataElement ? JSON.parse(userDataElement.textContent) : null;
+
+        this.initializeConnection();
+        this.initializeEventListeners();
+        this.initializeVoting();
+    }
+
+    initializeConnection() {
+        const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+        const wsUrl = `${protocol}//${window.location.host}/ws/discussion/${this.topicId}/`;
+
+        this.socket = new WebSocket(wsUrl);
+
+        this.socket.onopen = () => {
+            console.log('Discussion topic WebSocket connected');
+        };
+
+        this.socket.onclose = () => {
+            console.log('Discussion topic WebSocket disconnected');
+            setTimeout(() => this.initializeConnection(), 5000);
+        };
+
+        this.socket.onerror = (error) => {
+            console.error('WebSocket error:', error);
+        };
+
+        this.socket.onmessage = (event) => {
+            const data = JSON.parse(event.data);
+            this.handleIncomingMessage(data);
+        };
+    }
+
+    initializeEventListeners() {
+        // Post new answer
+        document.getElementById('postAnswerBtn')?.addEventListener('click', () => {
+            this.postNewAnswer();
+        });
+
+        // Preview answer
+        document.getElementById('previewAnswerBtn')?.addEventListener('click', () => {
+            this.toggleAnswerPreview();
+        });
+
+        // Sort options
+        document.querySelectorAll('[data-sort]').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                this.currentSortOrder = e.target.dataset.sort;
+                this.sortReplies(this.currentSortOrder);
+
+                // Update active state
+                document.querySelectorAll('[data-sort]').forEach(b => b.classList.remove('active'));
+                e.target.classList.add('active');
+            });
+        });
+    }
+
+    initializeVoting() {
+        // Use event delegation for both existing and dynamically added vote buttons
+        document.addEventListener('click', (e) => {
+            const btn = e.target.closest('.vote-btn');
+            if (btn && !btn.classList.contains('disabled')) {
+                e.preventDefault();
+                e.stopPropagation();
+                e.stopImmediatePropagation();
+
+                const container = btn.closest('.vote-buttons');
+                const targetType = container.dataset.targetType;
+                const targetId = container.dataset.targetId;
+                const voteValue = btn.dataset.vote;
+
+                this.vote(targetType, targetId, voteValue, btn);
+            }
+        });
+
+        document.addEventListener('click', (e) => {
+            const btn = e.target.closest('.accept-answer-btn');
+            if (btn) {
+                e.preventDefault();
+                e.stopPropagation();
+                e.stopImmediatePropagation();
+
+                // Prevent double clicks by temporarily disabling the button
+                if (btn.disabled) {
+                    return;
+                }
+
+                btn.disabled = true;
+                const originalHTML = btn.innerHTML;
+                btn.innerHTML = '<i class="bi bi-hourglass-split"></i> Processing...';
+
+                const replyId = btn.dataset.replyId;
+
+                // Check if this reply is currently accepted (by checking if button shows "Unaccept")
+                const isCurrentlyAccepted = originalHTML.includes('Unaccept');
+
+                if (isCurrentlyAccepted) {
+                    this.unacceptAnswer(replyId).finally(() => {
+                        // Re-enable button after API call completes
+                        setTimeout(() => {
+                            btn.disabled = false;
+                            if (btn.innerHTML.includes('Processing')) {
+                                btn.innerHTML = originalHTML;
+                            }
+                        }, 1000);
+                    });
+                } else {
+                    this.acceptAnswer(replyId).finally(() => {
+                        // Re-enable button after API call completes
+                        setTimeout(() => {
+                            btn.disabled = false;
+                            if (btn.innerHTML.includes('Processing')) {
+                                btn.innerHTML = originalHTML;
+                            }
+                        }, 1000);
+                    });
+                }
+            }
+        });
+    }
+
+    handleIncomingMessage(data) {
+        switch (data.action) {
+            case 'reply_created':
+                if (data.payload.topicId === this.topicId) {
+                    this.handleNewReply(data.payload, data.isMine);
+                }
+                break;
+
+            case 'vote_updated':
+                this.handleVoteUpdate(data.payload);
+                break;
+
+            case 'answer_accepted':
+                if (data.payload.topicId === this.topicId) {
+                    this.handleAnswerAccepted(data.payload);
+                }
+                break;
+
+            case 'answer_unaccepted':
+                if (data.payload.topicId === this.topicId) {
+                    this.handleAnswerUnaccepted(data.payload);
+                }
+                break;
+        }
+    }
+
+    async vote(targetType, targetId, voteValue, buttonElement) {
+        try {
+            const url = targetType === 'topic'
+                ? `/api/discussion/${targetId}/vote/`
+                : `/api/discussion/${this.topicId}/replies/${targetId}/vote/`;
+
+            const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]')?.value;
+
+            const response = await fetch(url, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': csrfToken
+                },
+                body: JSON.stringify({ vote: parseInt(voteValue) })
+            });
+
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+
+            const data = await response.json();
+
+            if (data.voteCount !== undefined) {
+                // Update UI immediately
+                const container = buttonElement.closest('.vote-buttons');
+                const scoreDisplay = container.querySelector('.vote-score-display');
+                const upBtn = container.querySelector('.upvote');
+                const downBtn = container.querySelector('.downvote');
+
+                // Update score
+                scoreDisplay.textContent = data.voteCount;
+
+                // Update vote count in data attribute for sorting
+                const replyCard = container.closest('.reply-card');
+                if (replyCard) {
+                    replyCard.dataset.voteCount = data.voteCount;
+                }
+
+                // Update button states
+                upBtn.classList.remove('active');
+                downBtn.classList.remove('active');
+
+                if (parseInt(voteValue) > 0) {
+                    upBtn.classList.add('active');
+                } else if (parseInt(voteValue) < 0) {
+                    downBtn.classList.add('active');
+                }
+
+                // Re-sort if current sort is by votes (since vote count changed)
+                if (this.currentSortOrder === 'votes') {
+                    this.sortReplies('votes');
+                }
+            }
+
+        } catch (error) {
+            console.error('Voting error:', error);
+            showNotification('Failed to vote', 'error');
+        }
+    }
+
+    async postNewAnswer() {
+        const content = document.getElementById('newAnswerContent').value.trim();
+        if (!content) {
+            showNotification('Please enter your answer', 'error');
+            return;
+        }
+
+        try {
+            const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]')?.value;
+
+            const response = await fetch(`/api/discussion/${this.topicId}/replies/`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': csrfToken
+                },
+                body: JSON.stringify({ content })
+            });
+
+            if (response.ok) {
+                document.getElementById('newAnswerContent').value = '';
+                showNotification('Answer posted successfully!', 'success');
+
+                // Don't reload - the WebSocket will handle adding the new reply
+            } else {
+                const data = await response.json();
+                showNotification(data.detail || 'Failed to post answer', 'error');
+            }
+
+        } catch (error) {
+            console.error('Post answer error:', error);
+            showNotification('Failed to post answer', 'error');
+        }
+    }
+
+    toggleAnswerPreview() {
+        const content = document.getElementById('newAnswerContent').value;
+        const preview = document.getElementById('answerPreview');
+        const previewContent = document.getElementById('previewContent');
+
+        if (preview.style.display === 'none') {
+            previewContent.innerHTML = marked.parse(content || 'Nothing to preview');
+            preview.style.display = 'block';
+            document.getElementById('previewAnswerBtn').innerHTML = '<i class="bi bi-eye-slash"></i> Hide Preview';
+        } else {
+            preview.style.display = 'none';
+            document.getElementById('previewAnswerBtn').innerHTML = '<i class="bi bi-eye"></i> Preview';
+        }
+    }
+
+    handleNewReply(replyData, isMine) {
+        // Increment answer count
+        const currentCount = parseInt(this.answerCount.textContent);
+        const newCount = currentCount + 1;
+        this.answerCount.textContent = newCount;
+
+        // Update the pluralization
+        const answerText = newCount === 1 ? 'Answer' : 'Answers';
+        this.answerCount.nextSibling.textContent = ` ${answerText}`;
+
+        // Hide "no replies" message if it exists
+        if (this.noRepliesMessage) {
+            this.noRepliesMessage.style.display = 'none';
+        }
+
+        // Create and add the new reply element
+        const replyElement = this.createReplyElement(replyData, isMine);
+
+        // Add based on current sort order
+        this.addReplyToCorrectPosition(replyElement);
+
+        // Show notification
+        const notificationText = isMine ? 'Your answer was posted!' : 'New answer posted!';
+        showNotification(notificationText, 'success');
+
+        // Scroll to the new reply if it's mine
+        if (isMine) {
+            replyElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+    }
+
+    addReplyToCorrectPosition(replyElement) {
+        // New replies always go to the bottom since they start with 0 votes
+        // This matches the vote-based ordering where 0 votes = lowest position
+        this.repliesList.appendChild(replyElement);
+    }
+
+    createReplyElement(replyData, isMine) {
+        const replyDiv = document.createElement('div');
+        replyDiv.className = `reply-card${replyData.isAccepted ? ' accepted-answer' : ''}`;
+        replyDiv.setAttribute('data-reply-id', replyData.id);
+        replyDiv.setAttribute('data-created-at', replyData.createdAt || new Date().toISOString());
+        replyDiv.setAttribute('data-vote-count', replyData.voteCount || 0);
+
+        // Determine if current user can accept this answer
+        const canAccept = this.currentUser &&
+                         this.currentUser.isTopicAuthor &&
+                         replyData.author.id !== this.currentUser.id;
+
+        replyDiv.innerHTML = `
+            <div class="d-flex">
+                <!-- Vote Column -->
+                <div class="vote-buttons me-3" data-target-type="reply" data-target-id="${replyData.id}">
+                    <button class="vote-btn upvote" data-vote="1">
+                        <i class="bi bi-chevron-up"></i>
+                    </button>
+                    <div class="vote-score-display">${replyData.voteCount || 0}</div>
+                    <button class="vote-btn downvote" data-vote="-1">
+                        <i class="bi bi-chevron-down"></i>
+                    </button>
+
+                    ${canAccept ? `
+                    <button class="accept-answer-btn mt-2" data-reply-id="${replyData.id}">
+                        <i class="bi bi-check-circle"></i> Accept
+                    </button>
+                    ` : ''}
+                </div>
+
+                <!-- Reply Content -->
+                <div class="flex-grow-1">
+                    ${replyData.isAccepted ? `
+                    <div class="accepted-badge mb-2">
+                        <i class="bi bi-check-circle-fill"></i> Accepted Answer
+                    </div>
+                    ` : ''}
+
+                    <div class="reply-content">
+                        ${this.formatContent(replyData.content)}
+                    </div>
+
+                    <div class="reply-meta">
+                        <div class="author-info">
+                            <div class="author-avatar">
+                                ${replyData.author.email.charAt(0).toUpperCase()}
+                            </div>
+                            <span>answered by <strong>${replyData.author.email}</strong></span>
+                            <span class="text-muted">${this.formatDate(replyData.formattedCreatedAt || replyData.createdAt)}</span>
+                        </div>
+                        <div>
+                            ${isMine ? `
+                            <button class="btn btn-sm btn-outline-secondary">
+                                <i class="bi bi-pencil"></i> Edit
+                            </button>
+                            ` : ''}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        return replyDiv;
+    }
+
+    handleVoteUpdate(voteData) {
+        const container = document.querySelector(
+            `[data-target-type="${voteData.targetType}"][data-target-id="${voteData.targetId}"]`
+        );
+
+        if (container && voteData.voteCount !== undefined) {
+            const scoreDisplay = container.querySelector('.vote-score-display');
+            if (scoreDisplay) {
+                scoreDisplay.textContent = voteData.voteCount;
+
+                // Update vote count in data attribute for sorting
+                const replyCard = container.closest('.reply-card');
+                if (replyCard) {
+                    replyCard.dataset.voteCount = voteData.voteCount;
+
+                    // Re-sort if current sort is by votes
+                    if (this.currentSortOrder === 'votes') {
+                        this.sortReplies('votes');
+                    }
+                }
+            }
+        }
+    }
+
+    handleAnswerAccepted(acceptanceData) {
+        // First, remove accepted styling from ALL other replies
+        const allReplyCards = document.querySelectorAll('.reply-card');
+        allReplyCards.forEach(replyCard => {
+            replyCard.classList.remove('accepted-answer');
+
+            // Remove accepted badge
+            const acceptedBadge = replyCard.querySelector('.accepted-badge');
+            if (acceptedBadge) {
+                acceptedBadge.remove();
+            }
+
+            // Reset accept buttons to "Accept" state
+            const acceptBtn = replyCard.querySelector('.accept-answer-btn');
+            if (acceptBtn) {
+                acceptBtn.innerHTML = '<i class="bi bi-check-circle"></i> Accept';
+                acceptBtn.classList.remove('accepted');
+                acceptBtn.disabled = false;
+            }
+        });
+
+        // Now apply accepted styling to the new accepted answer
+        const newAcceptedReplyCard = document.querySelector(`[data-reply-id="${acceptanceData.replyId}"]`);
+        if (newAcceptedReplyCard) {
+            newAcceptedReplyCard.classList.add('accepted-answer');
+
+            // Add accepted badge
+            const acceptedBadge = document.createElement('div');
+            acceptedBadge.className = 'accepted-badge mb-2';
+            acceptedBadge.innerHTML = '<i class="bi bi-check-circle-fill"></i> Accepted Answer';
+
+            const replyContent = newAcceptedReplyCard.querySelector('.reply-content');
+            if (replyContent && !newAcceptedReplyCard.querySelector('.accepted-badge')) {
+                replyContent.parentNode.insertBefore(acceptedBadge, replyContent);
+            }
+
+            // Update the accept button to "Unaccept"
+            const acceptBtn = newAcceptedReplyCard.querySelector('.accept-answer-btn');
+            if (acceptBtn) {
+                acceptBtn.innerHTML = '<i class="bi bi-x-circle"></i> Unaccept';
+                acceptBtn.classList.add('accepted');
+                acceptBtn.disabled = false;
+            }
+
+            // Add topic badge if not already present
+            const topicCard = document.querySelector('.topic-card');
+            if (topicCard) {
+                const badges = topicCard.querySelector('.badges');
+                if (badges && !badges.querySelector('.badge-answered')) {
+                    const answeredBadge = document.createElement('span');
+                    answeredBadge.className = 'badge badge-answered';
+                    answeredBadge.textContent = 'Answered';
+                    badges.appendChild(answeredBadge);
+                }
+            }
+
+            // Trigger the glow animation
+            newAcceptedReplyCard.style.animation = 'none';
+            newAcceptedReplyCard.offsetHeight; // Trigger reflow
+            newAcceptedReplyCard.style.animation = 'acceptedGlow 0.5s ease-in-out';
+        }
+
+        showNotification('Answer accepted!', 'success');
+    }
+
+    handleAnswerUnaccepted(unacceptanceData) {
+        // Remove accepted styling from the previously accepted reply
+        const previouslyAcceptedReplyCard = document.querySelector(`[data-reply-id="${unacceptanceData.replyId}"]`);
+        if (previouslyAcceptedReplyCard) {
+            previouslyAcceptedReplyCard.classList.remove('accepted-answer');
+
+            // Remove accepted badge
+            const acceptedBadge = previouslyAcceptedReplyCard.querySelector('.accepted-badge');
+            if (acceptedBadge) {
+                acceptedBadge.remove();
+            }
+
+            // Update the button back to "Accept"
+            const acceptBtn = previouslyAcceptedReplyCard.querySelector('.accept-answer-btn');
+            if (acceptBtn) {
+                acceptBtn.innerHTML = '<i class="bi bi-check-circle"></i> Accept';
+                acceptBtn.classList.remove('accepted');
+                acceptBtn.disabled = false;
+            }
+        }
+
+        // Remove topic badge
+        const topicCard = document.querySelector('.topic-card');
+        if (topicCard) {
+            const badges = topicCard.querySelector('.badges');
+            if (badges) {
+                const answeredBadge = badges.querySelector('.badge-answered');
+                if (answeredBadge) {
+                    answeredBadge.remove();
+                }
+            }
+        }
+
+        showNotification('Answer unaccepted!', 'info');
+    }
+
+    async acceptAnswer(replyId) {
+        try {
+            const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]')?.value;
+
+            const response = await fetch(`/api/discussion/${this.topicId}/accept-answer/`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': csrfToken
+                },
+                body: JSON.stringify({ replyId: replyId }) // Using camelCase for consistency
+            });
+
+            if (!response.ok) {
+                const data = await response.json();
+                showNotification(data.detail || 'Failed to accept answer', 'error');
+            }
+
+        } catch (error) {
+            console.error('Accept answer error:', error);
+            showNotification('Failed to accept answer', 'error');
+        }
+    }
+
+    async unacceptAnswer(replyId) {
+        try {
+            const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]')?.value;
+
+            const response = await fetch(`/api/discussion/${this.topicId}/unaccept-answer/`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': csrfToken
+                },
+                body: JSON.stringify({ replyId: replyId }) // Using camelCase for consistency
+            });
+
+            if (!response.ok) {
+                const data = await response.json();
+                showNotification(data.detail || 'Failed to unaccept answer', 'error');
+            }
+
+        } catch (error) {
+            console.error('Unaccept answer error:', error);
+            showNotification('Failed to unaccept answer', 'error');
+        }
+    }
+
+    sortReplies(sortType) {
+        const replies = Array.from(this.repliesList.children);
+
+        // Filter out non-reply elements (like "no replies" message)
+        const replyCards = replies.filter(el => el.classList.contains('reply-card'));
+
+        replyCards.sort((a, b) => {
+            switch (sortType) {
+                case 'votes':
+                    const scoreA = parseInt(a.dataset.voteCount || a.querySelector('.vote-score-display')?.textContent || '0');
+                    const scoreB = parseInt(b.dataset.voteCount || b.querySelector('.vote-score-display')?.textContent || '0');
+
+                    // If votes are equal, sort by oldest first
+                    if (scoreA === scoreB) {
+                        const timeA = new Date(a.dataset.createdAt || 0);
+                        const timeB = new Date(b.dataset.createdAt || 0);
+                        return timeA - timeB; // Older first for ties
+                    }
+                    return scoreB - scoreA; // Higher votes first
+
+                case 'newest':
+                    const timeA = new Date(a.dataset.createdAt || 0);
+                    const timeB = new Date(b.dataset.createdAt || 0);
+                    return timeB - timeA; // Newer first
+
+                case 'oldest':
+                    const oldTimeA = new Date(a.dataset.createdAt || 0);
+                    const oldTimeB = new Date(b.dataset.createdAt || 0);
+                    return oldTimeA - oldTimeB; // Older first
+
+                default:
+                    return 0;
+            }
+        });
+
+        // Re-append sorted replies
+        replyCards.forEach(reply => this.repliesList.appendChild(reply));
+    }
+
+    formatContent(content) {
+        if (!content) return '';
+        // Simple newline to <br> conversion
+        return content.replace(/\n/g, '<br>');
+    }
+
+    formatDate(dateStr) {
+        if (!dateStr) return 'just now';
+
+        try {
+            const date = new Date(dateStr);
+            const now = new Date();
+            const diffMs = now - date;
+            const diffMins = Math.floor(diffMs / 60000);
+
+            if (diffMins < 1) return 'just now';
+            if (diffMins < 60) return `${diffMins} minute${diffMins === 1 ? '' : 's'} ago`;
+
+            // For longer times, use the formatted date if available
+            if (dateStr.includes('at')) {
+                return dateStr;
+            }
+
+            return date.toLocaleDateString();
+        } catch (e) {
+            return dateStr;
+        }
+    }
+}
+
+// Initialize the client when the page loads
+document.addEventListener('DOMContentLoaded', () => {
+    new DiscussionTopicClient();
+
+    // Auto-resize textarea
+    const textarea = document.getElementById('newAnswerContent');
+    if (textarea) {
+        textarea.addEventListener('input', function() {
+            this.style.height = 'auto';
+            this.style.height = this.scrollHeight + 'px';
+        });
+    }
+});
+</script>
+{% else %}
+<!-- Simple script for unauthenticated users - just handle basic interactions -->
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    // Show helpful message when clicking on disabled elements
+    document.addEventListener('click', (e) => {
+        if (e.target.closest('.vote-btn.disabled')) {
+            showNotification('Please log in to vote on discussions', 'info');
+        }
+    });
+});
+</script>
+{% endif %}
+{% endblock %}

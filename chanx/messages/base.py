@@ -7,8 +7,6 @@ uses discriminated unions to enable type-safe message handling with runtime vali
 
 Key components:
 - BaseMessage: Abstract base class for all message types with action discriminator
-- BaseGroupMessage: Extends base messages with group-specific metadata
-- BaseChannelEvent: Base class for typed channel layer events
 
 The message system enforces that all concrete message types must define a unique 'action'
 field using a Literal type, which serves as the discriminator for message type identification.
@@ -16,10 +14,6 @@ This enables both static type checking and runtime validation of message structu
 
 Message containers use Pydantic's discriminated union pattern to automatically deserialize
 JSON messages into the correct message type based on the 'action' field.
-
-Channel events provide a separate communication channel through the Django Channels layer,
-allowing consumers to send typed messages to each other outside of the WebSocket connection.
-Each event type must define a unique 'handler' field.
 """
 
 import abc
@@ -31,14 +25,19 @@ from typing_extensions import Unpack
 
 class BaseMessage(BaseModel, abc.ABC):
     """
-    Base websocket message.
+    Base message for all Chanx communications.
 
-    All message types should inherit from this class and define
-    a unique 'action' field using a Literal type.
+    Use cases:
+    - Incoming messages: Client to server WebSocket communication
+    - Outgoing messages: Server to client responses and notifications
+    - Channel events: Server to server communication via channel layer
+
+    All message types must define a unique 'action' field using a Literal type.
+    Action values must be unique within each consumer for proper routing.
 
     Attributes:
         action: Discriminator field identifying message type
-        payload: Optional message payload data
+        payload: Message data
     """
 
     action: Any
@@ -71,40 +70,7 @@ class BaseMessage(BaseModel, abc.ABC):
                 f"Class {cls.__name__!r} must define an 'action' field"
             ) from e
 
-        if get_origin(action_field) is not Literal:
+        if get_origin(action_field) is not Literal:  # type: ignore[comparison-overlap,unused-ignore]
             raise TypeError(
                 f"Class {cls.__name__!r} requires the field 'action' to be a `Literal` type"
             )
-
-
-class BaseGroupMessage(BaseMessage, abc.ABC):
-    """
-    Base message for group broadcasting.
-
-    Extends BaseMessage with properties to indicate message's relationship
-    to the current user and connection.
-
-    Attributes:
-        is_mine: Whether message was sent by the current user
-        is_current: Whether message was sent by the current connection
-    """
-
-    is_mine: bool = False
-    is_current: bool = False
-
-
-class BaseChannelEvent(BaseModel, abc.ABC):
-    """
-    Base class for typed channel events.
-
-    Channel events provide a way to send typed messages through the channel layer
-    to specific consumer methods. Each event type must define a unique 'handler'
-    field that corresponds to a method name on the target consumer.
-
-    Attributes:
-        handler: Method name on the consumer that will handle this event
-        payload: Event-specific data payload
-    """
-
-    handler: Any
-    payload: Any

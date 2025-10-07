@@ -8,32 +8,53 @@ build = [
   "twine>=6.1.0"
 ]
 dev = [
-  "Faker>=37.1.0,<38",
   "commitizen>=4.5.0,<5",
   "coveralls>=4.0.1,<5",
-  "daphne>=4.1.2,<5",
-  "dj-rest-auth[with-social]>=7.0.1",
-  "django-cleanup>=9.0.0,<10",
-  "django-debug-toolbar>=5.1.0,<6",
-  "django-extensions>=3.2.3,<4",
-  "django-structlog>=9.1.1",
-  "django-stubs[compatible-mypy]>=5.2",
-  "djangorestframework-simplejwt>=5.5.0",
-  "drf-spectacular>=0.28.0,<1",
-  "environs>=14.1.1",
-  "factory-boy>=3.3.3,<4",
   "freezegun>=1.5.1,<2",
   "interrogate>=1.7.0",
-  "ipython>=8.35.0",
   "mock>=5.2.0,<6",
+  "pytest-cov>=6.1.1,<7",
+  "pytest-mock>=3.14.0,<4",
+  "pytest-rerunfailures>=16.0.1",
+  "pytest-xdist>=3.6.1,<4",
+  "redis[hiredis]",
+  "uvicorn[standard]>=0.35.0"
+]
+dev-django = [
+  "Faker>=37.1.0,<38",
+  "celery>=5.5.3",
+  "daphne>=4.1.2,<5",
+  "django-cleanup>=9.0.0,<10",
+  "django-cors-headers>=4.9.0",
+  "django-debug-toolbar>=5.1.0,<6",
+  "django-extensions>=3.2.3,<4",
+  "django-filter>=25.1",
+  "django-structlog>=9.1.1",
+  "django-stubs[compatible-mypy]>=5.2",
+  "djangorestframework-camel-case>=1.4.2",
+  "djangorestframework-simplejwt>=5.5.0",
+  "drf-auth-kit[social]>=0.3.9",
+  "drf-nested-routers>=0.95.0",
+  "drf-spectacular>=0.28.0,<1",
+  "drf-standardized-errors>=0.15.0",
+  "environs>=14.1.1",
+  "factory-boy>=3.3.3,<4",
+  "ipython>=8.35.0",
+  "langchain-community>=0.3.5,<1.0",
+  "langchain-openai>=0.2.10,<1.0",
+  "langchain>=0.3.0,<1.0",
   "psycopg-pool>=3.2.6,<4",
   "psycopg[binary]>=3.2.6,<4",
-  "pytest-cov>=6.1.1,<7",
   "pytest-django>=4.11.1,<5",
-  "pytest-mock>=3.14.0,<4",
-  "pytest-xdist>=3.6.1,<4",
   "types-channels>=4.2.0.20250712",
-  "uvicorn[standard]>=0.35.0"
+  "whitenoise>=6.11.0",
+  {include-group = "dev"}
+]
+dev-fastapi = [
+  "arq>=0.26.3",
+  "pytest-asyncio>=1.2.0",
+  "pytest-env>=1.1.5",
+  {include-group = "dev"}
 ]
 docs = [
   "Sphinx>=7.0.0,<8",
@@ -41,11 +62,11 @@ docs = [
   "sphinx_rtd_theme"
 ]
 lint = [
-  "basedpyright>=1.29.1",
-  "black>=25.1.0,<26",
+  "black>=25.9.0,<26",
   "djangorestframework-stubs[compatible-mypy]>=3.15.3",
   "mypy>=1.15.0",
   "pre-commit>=3.4.0,<4.0.0",
+  "pyright[nodejs]>=1.1.405",
   "ruff>=0.11.3,<0.12",
   "toml-sort>=0.24.2,<0.25"
 ]
@@ -67,7 +88,6 @@ classifiers = [
   "Operating System :: OS Independent",
   "Programming Language :: Python :: 3 :: Only",
   "Programming Language :: Python :: 3",
-  "Programming Language :: Python :: 3.10",
   "Programming Language :: Python :: 3.11",
   "Programming Language :: Python :: 3.12",
   "Programming Language :: Python :: 3.13",
@@ -78,26 +98,28 @@ classifiers = [
   "Topic :: Software Development"
 ]
 dependencies = [
-  "Django>=5,<6",
-  "channels-redis>=4,<5",
-  "channels>=4,<5",
-  "djangorestframework>=3,<4",
-  "polyfactory>=2.20.0",
   "pydantic>=2,<3",
-  "redis[hiredis]",
+  "pyhumps>=3.8.0",
   "structlog",
   "typing-extensions"
 ]
-description = "The missing toolkit for Django Channels — auth, logging, consumers, and more."
+description = "The missing toolkit for Channels — auth, logging, consumers, and more."
 license = {file = "LICENSE"}
 name = "chanx"
 readme = "README.rst"
-requires-python = ">=3.10,<4.0"
+requires-python = ">=3.11,<4.0"
 version = "0.13.3"
 
 [project.optional-dependencies]
-camel-case = [
-  "pyhumps>=3.8.0"
+channels = [
+  "Django>=5,<6",
+  "channels-redis>=4,<5",
+  "channels>=4,<5",
+  "djangorestframework>=3,<4"
+]
+fast_channels = [
+  "fast-channels>=1.0.2",
+  "fastapi>=0.117.1"
 ]
 
 [project.urls]
@@ -131,7 +153,7 @@ include = ["chanx"]
 [tool.interrogate]
 badge-format = "svg"
 color = true
-exclude = ["build", "docs", "sandbox", "setup.py"]
+exclude = ["build", "docs", "sandbox_django", "sandbox_fastapi", "setup.py"]
 ext = []
 fail-under = 80
 generate-badge = "docs/_static/"

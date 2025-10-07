@@ -7,6 +7,7 @@ Provides ready-to-use message types for server-to-client communication:
 - AuthenticationMessage: Informs clients about authentication results
 - CompleteMessage: Signals completion of message processing
 - GroupCompleteMessage: Signals completion of group message distribution
+- EventCompleteMessage: Signals completion of event processing
 
 These messages handle common communication patterns in WebSocket applications
 including status updates, error reporting, and process completion signals.
@@ -16,15 +17,16 @@ from typing import Any, Literal
 
 from pydantic import BaseModel
 
+from chanx.constants import (
+    EVENT_ACTION_COMPLETE,
+    GROUP_ACTION_COMPLETE,
+    MESSAGE_ACTION_COMPLETE,
+)
 from chanx.messages.base import BaseMessage
 
 
 class PongMessage(BaseMessage):
-    """
-    Simple pong message to verify connection status.
-
-    Used as a reply to ping messages to confirm that the connection is alive.
-    """
+    """Simple pong message response to ping requests."""
 
     action: Literal["pong"] = "pong"
     payload: None = None
@@ -34,10 +36,8 @@ class ErrorMessage(BaseMessage):
     """
     Error message for communicating issues to the client.
 
-    Contains error details in the payload field.
-
     Attributes:
-        payload: Error information (typically includes a 'detail' field)
+        payload: Error information dictionary with 'detail' field and optional error codes
     """
 
     action: Literal["error"] = "error"
@@ -76,7 +76,6 @@ class AuthenticationMessage(BaseMessage):
 
 
 # Constant for complete action type
-ACTION_COMPLETE: Literal["complete"] = "complete"
 
 
 class CompleteMessage(BaseMessage):
@@ -86,11 +85,8 @@ class CompleteMessage(BaseMessage):
     Sent after a request has been fully processed to signal completion.
     """
 
-    action: Literal["complete"] = ACTION_COMPLETE
+    action: Literal["complete"] = MESSAGE_ACTION_COMPLETE
     payload: None = None
-
-
-GROUP_ACTION_COMPLETE: Literal["group_complete"] = "group_complete"
 
 
 class GroupCompleteMessage(BaseMessage):
@@ -106,4 +102,20 @@ class GroupCompleteMessage(BaseMessage):
     """
 
     action: Literal["group_complete"] = GROUP_ACTION_COMPLETE
+    payload: None = None
+
+
+class EventCompleteMessage(BaseMessage):
+    """
+    Confirmation message indicating event processing is complete.
+
+    Sent after a channel event has been fully processed to signal completion of
+    the event handling operation. This allows clients to know when event processing
+    has finished.
+
+    Attributes:
+        action: Literal string 'event_complete' as the discriminator value
+    """
+
+    action: Literal["event_complete"] = EVENT_ACTION_COMPLETE
     payload: None = None

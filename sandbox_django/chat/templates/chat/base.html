@@ -1,0 +1,19 @@
+{% extends "core/base.html" %}
+
+{% block nav_chat_active %}active{% endblock %}
+
+{% block extra_css %}
+{{ block.super }}
+<style>
+    /* Chat-specific styles */
+    .message .message-content {
+        display: inline-block;
+        max-width: 80%;
+        word-break: break-word;
+    }
+
+    .message.text-end .message-content {
+        text-align: left;
+    }
+</style>
+{% endblock %}

@@ -10,7 +10,8 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 from django.contrib.auth.models import User
 from django.test import RequestFactory, TestCase
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.generics import GenericAPIView
+from rest_framework.permissions import BasePermission, IsAuthenticated
 from rest_framework.request import Request
 from rest_framework.response import Response
 
@@ -63,21 +64,6 @@ class TestChanxAuthView:
         response = self.view.get_response(self.view.request)
         assert not self.view.get_object.called
         assert response.data == {"detail": "ok"}
-
-    def test_http_methods(self) -> None:
-        """Test that all HTTP methods return the response from get_response."""
-        methods = ["get", "post", "put", "patch", "delete"]
-
-        for method_name in methods:
-            method = getattr(self.view, method_name)
-
-            with patch.object(self.view, "get_response") as mock_get_response:
-                mock_get_response.return_value = Response({"test": "value"})
-
-                response = method(self.view.request)
-
-                assert mock_get_response.called
-                assert response == mock_get_response.return_value
 
 
 @pytest.mark.parametrize("method_name", ["get", "post", "put", "patch", "delete"])
@@ -196,53 +182,6 @@ class TestDjangoAuthenticator(TestCase):
         assert result
         assert authenticator.obj == user
 
-    def test_get_queryset_no_queryset_set(self) -> None:
-        """Test get_queryset raises AssertionError when no queryset is set."""
-        with pytest.raises(
-            AssertionError, match="should either include a `queryset` attribute"
-        ):
-            self.authenticator.get_queryset()
-
-    @pytest.mark.django_db
-    def test_get_queryset_with_queryset(self) -> None:
-        """Test get_queryset returns re-evaluated queryset when QuerySet is set."""
-        queryset = User.objects.all()
-        self.authenticator.queryset = queryset
-
-        result = self.authenticator.get_queryset()
-
-        # Should call .all() to re-evaluate
-        assert result is not queryset
-        assert result.model == queryset.model
-        assert str(result.query) == str(queryset.query)
-
-    @pytest.mark.django_db
-    def test_get_queryset_with_manager(self) -> None:
-        """Test get_queryset returns Manager cast to QuerySet."""
-        manager = User.objects
-        self.authenticator.queryset = manager
-
-        result = self.authenticator.get_queryset()
-
-        # Manager should be returned as-is (cast to QuerySet)
-        assert result is manager  # type: ignore[comparison-overlap]
-
-    @pytest.mark.django_db
-    def test_get_queryset_override(self) -> None:
-        """Test get_queryset can be overridden in subclass."""
-        user = User.objects.create(username="testuser")
-
-        class FilteredAuthenticator(DjangoAuthenticator):
-            queryset = User.objects.all()
-
-            def get_queryset(self) -> Any:
-                return super().get_queryset().filter(username="testuser")
-
-        authenticator = FilteredAuthenticator(AsyncMock())
-        result = authenticator.get_queryset()
-
-        assert list(result) == [user]
-
     @pytest.mark.django_db
     @pytest.mark.asyncio
     async def test_authenticate_without_queryset(self) -> None:
@@ -250,3 +189,129 @@ class TestDjangoAuthenticator(TestCase):
         result = await self.authenticator.authenticate(self.default_scope)
         assert result
         assert self.authenticator.obj is None
+
+    def test_default_auth_view_class(self) -> None:
+        """Test default auth_view_class is ChanxAuthView."""
+        assert self.authenticator.auth_view_class is ChanxAuthView
+
+    def test_custom_auth_view_with_interception(self) -> None:
+        """Test using custom auth view with override_http_methods=True."""
+
+        class CustomView(GenericAPIView[Any]):
+            def get(self, request: Request, *args: Any, **kwargs: Any) -> Response:
+                return Response({"custom": "response"})
+
+        class CustomAuthenticator(DjangoAuthenticator):
+            auth_view_class = CustomView
+            override_http_methods = True
+
+        authenticator = CustomAuthenticator(AsyncMock())
+        authenticator._setup_auth_view()
+
+        # View should be an instance of dynamically created InterceptedCustomView
+        assert "Intercepted" in authenticator._view.__class__.__name__
+        assert issubclass(authenticator._view.__class__, CustomView)
+
+    def test_custom_auth_view_without_interception(self) -> None:
+        """Test using custom auth view with override_http_methods=False."""
+
+        class CustomView(GenericAPIView[Any]):
+            def get(self, request: Request, *args: Any, **kwargs: Any) -> Response:
+                return Response({"custom": "response"})
+
+        class CustomAuthenticator(DjangoAuthenticator):
+            auth_view_class = CustomView
+            override_http_methods = False
+
+        authenticator = CustomAuthenticator(AsyncMock())
+        authenticator._setup_auth_view()
+
+        # View should be exactly CustomView, not intercepted
+        assert authenticator._view.__class__ is CustomView
+
+    @pytest.mark.django_db
+    @pytest.mark.asyncio
+    async def test_custom_view_with_object_permission(self) -> None:
+        """Test custom view with object-level permissions."""
+        user = await sync_to_async(User.objects.create)(username="testuser")
+
+        class IsOwnerPermission(BasePermission):
+            def has_object_permission(
+                self, request: Request, view: Any, obj: Any
+            ) -> bool:
+                return bool(obj.username == "testuser")
+
+        class CustomAuthView(GenericAPIView[Any]):
+            pass
+
+        class CustomAuthenticator(DjangoAuthenticator):
+            auth_view_class = CustomAuthView
+            permission_classes = [IsOwnerPermission]
+            queryset = User.objects.all()
+
+        authenticator = CustomAuthenticator(AsyncMock())
+        scope = self._create_scope_with_pk(user.pk)
+
+        result = await authenticator.authenticate(scope)
+
+        assert result
+        assert authenticator.obj == user
+
+    @pytest.mark.django_db
+    @pytest.mark.asyncio
+    async def test_object_permission_denied(self) -> None:
+        """Test authentication fails when object permission is denied."""
+        user = await sync_to_async(User.objects.create)(username="testuser")
+
+        class IsOwnerPermission(BasePermission):
+            def has_object_permission(
+                self, request: Request, view: Any, obj: Any
+            ) -> bool:
+                return bool(obj.username == "admin")
+
+        class CustomAuthenticator(DjangoAuthenticator):
+            permission_classes = [IsOwnerPermission]
+            queryset = User.objects.all()
+
+        authenticator = CustomAuthenticator(AsyncMock())
+        scope = self._create_scope_with_pk(user.pk)
+
+        result = await authenticator.authenticate(scope)
+
+        assert not result
+        assert authenticator.obj is None
+
+    @pytest.mark.django_db
+    def test_authenticator_config_override(self) -> None:
+        """Test authenticator config overrides view defaults."""
+
+        class CustomAuthenticator(DjangoAuthenticator):
+            authentication_classes = []
+            permission_classes = [IsAuthenticated]
+            queryset = User.objects.all()
+
+        authenticator = CustomAuthenticator(AsyncMock())
+        authenticator._setup_auth_view()
+
+        assert authenticator._view.authentication_classes == []
+        assert authenticator._view.permission_classes == [IsAuthenticated]
+        assert authenticator._view.queryset is not None
+        assert authenticator._view.queryset.model == User
+
+    @pytest.mark.django_db
+    def test_custom_view_config_preserved(self) -> None:
+        """Test custom view config is preserved when authenticator doesn't override."""
+
+        class CustomView(GenericAPIView[Any]):
+            queryset = User.objects.all()
+            permission_classes = [IsAuthenticated]
+
+        class CustomAuthenticator(DjangoAuthenticator):
+            auth_view_class = CustomView
+
+        authenticator = CustomAuthenticator(AsyncMock())
+        authenticator._setup_auth_view()
+
+        assert authenticator._view.queryset is not None
+        assert authenticator._view.queryset.model == User
+        assert authenticator._view.permission_classes == [IsAuthenticated]

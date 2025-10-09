@@ -24,6 +24,23 @@ Views
 .. autofunction:: chanx.ext.channels.views.generate_asyncapi_schema
 
 
+Authenticator
+~~~~~~~~~~~~~
+.. module:: chanx.ext.channels.authenticator
+
+Django REST Framework integration for WebSocket authentication.
+
+.. autoclass:: chanx.ext.channels.authenticator.DjangoAuthenticator
+   :members:
+   :exclude-members: authenticate
+
+   .. automethod:: authenticate(scope: dict[str, Any]) -> bool
+      :async:
+
+.. autoclass:: chanx.ext.channels.authenticator.ChanxAuthView
+   :members:
+
+
 Testing
 ~~~~~~~
 .. module:: chanx.ext.channels.testing

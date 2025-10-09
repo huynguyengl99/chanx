@@ -33,7 +33,7 @@ Django provides built-in views for serving AsyncAPI documentation from your WebS
 
 **Django Authenticators**
 
-Chanx provides Django REST Framework integration for WebSocket authentication:
+Chanx provides Django REST Framework integration for WebSocket authentication using ``DjangoAuthenticator``:
 
 .. code-block:: python
 
@@ -58,6 +58,62 @@ Chanx provides Django REST Framework integration for WebSocket authentication:
 
             # Join room-specific group
             await self.channel_layer.group_add(f"room_{room.id}", self.channel_name)
+
+**Advanced Configuration**
+
+Override attributes to customize authentication behavior:
+
+.. code-block:: python
+
+    from rest_framework.authentication import TokenAuthentication
+    from rest_framework.permissions import IsAuthenticated, BasePermission
+
+    class IsRoomMember(BasePermission):
+        def has_object_permission(self, request, view, obj):
+            return obj.members.filter(id=request.user.id).exists()
+
+    class RoomAuthenticator(DjangoAuthenticator):
+        authentication_classes = [TokenAuthentication]
+        permission_classes = [IsAuthenticated, IsRoomMember]
+        queryset = ChatRoom.objects.all()
+        lookup_field = 'slug'  # Use slug instead of pk
+        lookup_url_kwarg = 'room_slug'  # URL kwarg name
+
+Override methods for dynamic behavior:
+
+.. code-block:: python
+
+    class RoomAuthenticator(DjangoAuthenticator):
+        permission_classes = [IsAuthenticated]
+
+        def get_queryset(self):
+            # Only show rooms the user has access to
+            return ChatRoom.objects.filter(members=self.user)
+
+        def get_object(self):
+            # Custom object retrieval logic
+            obj = super().get_object()
+            if not obj.is_active:
+                raise Http404("Room is not active")
+            return obj
+
+**Using Custom View Classes**
+
+Use existing DRF views for authentication:
+
+.. code-block:: python
+
+    from rest_framework.generics import RetrieveAPIView
+
+    class CustomRoomView(RetrieveAPIView):
+        queryset = ChatRoom.objects.all()
+        permission_classes = [IsAuthenticated, IsRoomMember]
+
+    class RoomAuthenticator(DjangoAuthenticator):
+        auth_view_class = CustomRoomView
+        # override_http_methods = True by default (prevents side effects)
+
+By default, ``override_http_methods=True`` intercepts HTTP methods (get, post, etc.) to prevent unintended operations during authentication. Set to ``False`` if you need the real action methods to execute, though this is rarely desired.
 
 **Configuration via Django Settings**
 

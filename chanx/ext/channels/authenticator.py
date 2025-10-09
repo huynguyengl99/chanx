@@ -18,7 +18,7 @@ Key components:
 
 import uuid
 from collections.abc import Sequence
-from typing import Any, Literal, cast
+from typing import TYPE_CHECKING, Any, Literal, cast
 
 from django.contrib.auth.base_user import AbstractBaseUser
 from django.contrib.auth.models import AnonymousUser
@@ -27,11 +27,6 @@ from django.http import HttpRequest
 from rest_framework import serializers, status
 from rest_framework.authentication import BaseAuthentication
 from rest_framework.generics import GenericAPIView
-from rest_framework.permissions import (
-    BasePermission,
-    OperandHolder,
-    SingleOperandHolder,
-)
 from rest_framework.request import Request
 from rest_framework.response import Response
 
@@ -43,6 +38,9 @@ from chanx.ext.channels.utils import request_from_scope
 from chanx.messages.outgoing import AuthenticationMessage, AuthenticationPayload
 from chanx.type_defs import SendMessageFn
 from chanx.utils.logging import logger
+
+if TYPE_CHECKING:
+    from rest_framework.permissions import _PermissionClass  # noqa
 
 
 class ChanxSerializer(serializers.Serializer[Any]):
@@ -58,15 +56,8 @@ class ExtendedRequest(Request):
     obj: Model | None
 
 
-class ChanxAuthView(GenericAPIView[Model]):
-    """
-    Base authentication view for Chanx websockets.
-
-    Provides a REST-like interface for WebSocket authentication
-    with Django REST Framework authentication and permissions.
-    """
-
-    serializer_class = ChanxSerializer
+class AuthActionInterceptMixin:
+    """Mixin that intercepts HTTP action methods for authentication flow."""
 
     def get_response(self, request: Request) -> Response:
         """
@@ -78,8 +69,8 @@ class ChanxAuthView(GenericAPIView[Model]):
         Returns:
             Response with OK detail
         """
-        if isinstance(self.queryset, QuerySet):
-            _ = self.get_object()
+        if isinstance(self.queryset, QuerySet):  # type: ignore[attr-defined]
+            _ = self.get_object()  # type: ignore[attr-defined]
         return Response({"detail": "ok"})
 
     def get(self, request: Request, *args: Any, **kwargs: Any) -> Response:
@@ -88,27 +79,30 @@ class ChanxAuthView(GenericAPIView[Model]):
 
     def post(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         """Stub post method"""
-
         return self.get_response(request)
 
     def put(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         """Stub put method"""
-
         return self.get_response(request)
 
     def patch(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         """Stub patch method"""
-
         return self.get_response(request)
 
     def delete(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         """Stub delete method"""
-
         return self.get_response(request)
 
 
-# Define a type for QuerysetLike that can be True, QuerySet, or Manager
-QuerysetLike = Literal[True] | QuerySet[Any] | Manager[Any]
+class ChanxAuthView(AuthActionInterceptMixin, GenericAPIView[Model]):
+    """
+    Base authentication view for Chanx websockets.
+
+    Provides a REST-like interface for WebSocket authentication
+    with Django REST Framework authentication and permissions.
+    """
+
+    serializer_class = ChanxSerializer
 
 
 class DjangoAuthenticator(BaseAuthenticator):
@@ -123,17 +117,29 @@ class DjangoAuthenticator(BaseAuthenticator):
         permission_classes: DRF permission classes for connection authorization
         queryset: QuerySet or Manager used for retrieving objects, or True if no objects needed
         auth_method: HTTP verb to emulate for authentication
+        auth_view_class: The view class to use for authentication (default: ChanxAuthView)
+        override_http_methods: Whether to override HTTP methods (get, post, etc.) of custom auth_view_class
+            to prevent side effects during authentication (default: True). Set to False if you want to call
+            the real action methods, but this is usually not desired as it may execute unintended operations.
+        lookup_field: Field name for object lookup (default: 'pk')
+        lookup_url_kwarg: URL kwarg name for lookup (default: None, uses lookup_field)
+
+    Configuration:
+        Set any of these attributes (authentication_classes, permission_classes, queryset,
+        lookup_field, lookup_url_kwarg) on the authenticator class or instance to override
+        the auth_view_class defaults. You can also override get_queryset() and get_object()
+        methods for custom logic.
     """
 
     # Authentication configuration (set from consumer)
-    authentication_classes: Sequence[type[BaseAuthentication]] | None = None
-    permission_classes: (
-        Sequence[type[BasePermission] | OperandHolder | SingleOperandHolder] | None
-    ) = None
-    queryset: QuerySet[Any] | Manager[Any] | None = None
+    authentication_classes: Sequence[type[BaseAuthentication]]
+    permission_classes: "Sequence[_PermissionClass]"
+    queryset: QuerySet[Any] | Manager[Any] | None
     auth_method: Literal["get", "post", "put", "patch", "delete", "options"] = "get"
-    lookup_field: str = "pk"
-    lookup_url_kwarg: str | None = None
+    lookup_field: str
+    lookup_url_kwarg: str | None
+    auth_view_class: type[GenericAPIView[Model]] = ChanxAuthView
+    override_http_methods: bool = True
 
     user: AbstractBaseUser | AnonymousUser | None = None
     obj: Model | None = None
@@ -142,7 +148,7 @@ class DjangoAuthenticator(BaseAuthenticator):
         """Initialize the authenticator."""
 
         super().__init__(send_message)
-        self._view: ChanxAuthView
+        self._view: GenericAPIView[Model]
         self.request: HttpRequest | None = None
 
     # Main public methods
@@ -186,12 +192,13 @@ class DjangoAuthenticator(BaseAuthenticator):
                 response_data = {"detail": "OK"}
 
             self.user = request.user
-            try:
-                self.get_queryset()
-                if status_code == status.HTTP_200_OK:
+            # Try to get object if authentication succeeded
+            if status_code == status.HTTP_200_OK:
+                try:
                     self.obj = await sync_to_async(self._view.get_object)()
-            except AssertionError:
-                pass
+                except Exception:
+                    # Object retrieval failed (no queryset, 404, permission denied, etc.)
+                    pass
 
             await self.send_message(
                 AuthenticationMessage(
@@ -212,56 +219,59 @@ class DjangoAuthenticator(BaseAuthenticator):
 
             return False
 
-    def get_queryset(self) -> QuerySet[Any]:
+    # Helper methods
+
+    def _get_view_class(self) -> type[GenericAPIView[Model]]:
         """
-        Get the queryset used for object retrieval during authentication.
+        Get the view class to use, potentially creating a dynamic subclass.
 
-        This method returns the queryset that will be used by the authentication
-        view to retrieve objects for permission checks. Defaults to using `self.queryset`.
-
-        Override this method in your authenticator subclass if you need to provide
-        different querysets based on the authenticated user or request context.
+        If override_http_methods is True and using a custom view class,
+        creates a dynamic subclass that overrides HTTP methods using the mixin.
 
         Returns:
-            A QuerySet for object retrieval
-
-        Raises:
-            AssertionError: If neither `queryset` attribute is set nor this method is overridden
+            The view class to instantiate
         """
-        assert self.queryset is not None, (
-            f"'{self.__class__.__name__}' should either include a `queryset` attribute, "
-            "or override the `get_queryset()` method."
+        # If not overriding or using default view, return as-is
+        if not self.override_http_methods or self.auth_view_class is ChanxAuthView:
+            return self.auth_view_class
+
+        # Create a dynamic class with the mixin using type()
+        base_view_class = self.auth_view_class
+        intercepted_class = type(
+            f"Intercepted{base_view_class.__name__}",
+            (AuthActionInterceptMixin, base_view_class),
+            {"__module__": base_view_class.__module__},
         )
 
-        queryset = self.queryset
-        if isinstance(queryset, QuerySet):
-            # Ensure queryset is re-evaluated on each request.
-            queryset = queryset.all()
-        return cast(QuerySet[Any], queryset)
-
-    # Helper methods
+        return intercepted_class
 
     def _setup_auth_view(self) -> None:
         """
-        Get or create the ChanxAuthView instance.
+        Get or create the authentication view instance.
+
+        Creates a view instance from auth_view_class (potentially intercepted),
+        applies configuration, and binds custom methods if overridden.
 
         Returns:
-            Configured ChanxAuthView instance
+            Configured view instance
         """
-        self._view = ChanxAuthView()
+        # Get the view class (may be dynamically created)
+        view_class = self._get_view_class()
+        self._view = view_class()
 
-        # Apply configuration from consumer
-        if self.authentication_classes is not None:
-            self._view.authentication_classes = self.authentication_classes
-        if self.permission_classes is not None:
-            self._view.permission_classes = self.permission_classes
-        if self.queryset is not None:
-            self._view.queryset = self.queryset
-
-        self._view.get_queryset = self.get_queryset  # type: ignore[method-assign]
-
-        self._view.lookup_field = self.lookup_field
-        self._view.lookup_url_kwarg = self.lookup_url_kwarg
+        # Apply configuration from authenticator if explicitly set
+        override_attrs = (
+            "authentication_classes",
+            "permission_classes",
+            "queryset",
+            "lookup_field",
+            "lookup_url_kwarg",
+            "get_queryset",
+            "get_object",
+        )
+        for attr in override_attrs:
+            if hasattr(self, attr):
+                setattr(self._view, attr, getattr(self, attr))
 
     @sync_to_async
     def _perform_dispatch(

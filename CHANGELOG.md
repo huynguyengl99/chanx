@@ -1,3 +1,9 @@
+## v1.0.3 (2025-10-10)
+
+### Fix
+
+- properly handle $defs references in AsyncAPI schemas
+
 ## v1.0.2 (2025-10-09)
 
 ### Fix

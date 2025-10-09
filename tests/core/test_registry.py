@@ -9,6 +9,7 @@ from typing import Any, Literal
 from chanx.core.registry import MessageRegistry
 from chanx.messages.base import BaseMessage
 from pydantic import BaseModel
+from typing_extensions import TypedDict
 
 
 class DummyMessage(BaseMessage):
@@ -160,3 +161,64 @@ class TestMessageRegistry:
             "TestConsumer": {RefDummyMessage, DummyMessage, OtherDummyMessage},
             "OtherConsumer": {DummyMessage},
         }
+
+    def test_build_messages_with_typeddict(self) -> None:
+        """Test adding message types with TypedDict payloads to the registry."""
+
+        class BaseMessageDict(TypedDict):
+            """Base message dict."""
+
+            id: int
+            message_type: str
+            content: str
+
+        class UserMessageDict(BaseMessageDict):
+            """User message dict extends base."""
+
+            author: int
+            fuid: str
+
+        class TypedDictMessage(BaseMessage):
+            action: Literal["typed_dict_test"] = "typed_dict_test"
+            payload: UserMessageDict
+
+        registry = MessageRegistry()
+        registry.add(TypedDictMessage, "TestConsumer")
+
+        # Should have registered the message
+        assert TypedDictMessage in registry.messages
+        assert (
+            registry.messages[TypedDictMessage]
+            == "#/components/messages/typed_dict_message"
+        )
+
+        # Should have registered the TypedDictMessage schema
+        assert TypedDictMessage in registry.schemas
+        assert (
+            registry.schemas[TypedDictMessage]
+            == "#/components/schemas/TypedDictMessage"
+        )
+
+        # The schema should have proper references to UserMessageDict
+        schema = registry.schema_objects["TypedDictMessage"]
+        assert (
+            schema["properties"]["payload"]["$ref"]
+            == "#/components/schemas/UserMessageDict"
+        )
+
+        # UserMessageDict should be registered as a separate schema
+        assert "UserMessageDict" in registry.schema_objects
+        user_msg_schema = registry.schema_objects["UserMessageDict"]
+
+        # Verify UserMessageDict has all required fields
+        assert "id" in user_msg_schema["properties"]
+        assert "message_type" in user_msg_schema["properties"]
+        assert "content" in user_msg_schema["properties"]
+        assert "author" in user_msg_schema["properties"]
+        assert "fuid" in user_msg_schema["properties"]
+
+        # Verify no $defs references remain in the schema
+        import json
+
+        schema_json = json.dumps(registry.schema_objects)
+        assert "#/$defs/" not in schema_json, "Found $defs references in schema"

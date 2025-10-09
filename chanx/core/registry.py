@@ -8,7 +8,7 @@ serves as the core message type registry for the chanx framework.
 
 from collections import defaultdict
 from types import UnionType
-from typing import Any, TypeAlias, Union, get_args, get_origin, get_type_hints
+from typing import Any, TypeAlias, Union, cast, get_args, get_origin, get_type_hints
 
 import humps
 from chanx.asyncapi.type_defs import SchemaObject
@@ -221,6 +221,33 @@ class MessageRegistry:
             return mapping if has_model else None
         return None
 
+    def _update_ref_recursively(
+        self, obj: Any, defs_to_schemas: dict[str, str]
+    ) -> None:
+        """
+        Recursively update all $ref pointers in a schema structure.
+
+        Replaces references from #/$defs/... to #/components/schemas/...
+
+        Args:
+            obj: The object to update (dict, list, or other)
+            defs_to_schemas: Mapping from $defs names to schema refs
+        """
+        if isinstance(obj, dict):
+            dict_obj = cast(dict[str, Any], obj)
+            if "$ref" in dict_obj:
+                ref = dict_obj["$ref"]
+                if isinstance(ref, str) and ref.startswith("#/$defs/"):
+                    schema_name = ref.replace("#/$defs/", "")
+                    if schema_name in defs_to_schemas:
+                        dict_obj["$ref"] = defs_to_schemas[schema_name]
+            for value in dict_obj.values():
+                self._update_ref_recursively(value, defs_to_schemas)
+        elif isinstance(obj, list):
+            list_obj = cast(list[Any], obj)  # type: ignore[redundant-cast]
+            for item in list_obj:
+                self._update_ref_recursively(item, defs_to_schemas)
+
     def _update_schema_references(
         self,
         model_schema: dict[str, Any],
@@ -238,7 +265,21 @@ class MessageRegistry:
             model_type_fields: Original field type mapping
         """
         """Update schema with proper references."""
-        model_schema.pop("$defs", None)
+        # Process $defs first - extract and register them as separate schemas
+        defs = model_schema.pop("$defs", None)
+        defs_to_schemas: dict[str, str] = {}
+
+        if defs:
+            for def_name, def_schema in defs.items():
+                # Register the def schema as a top-level schema
+                schema_ref = get_asyncapi_schema_ref(def_name)
+                defs_to_schemas[def_name] = schema_ref
+
+                # Only store if not already present (avoid duplicates)
+                if def_name not in self.schema_objects:
+                    self.schema_objects[def_name] = def_schema
+
+        # Update properties with explicit references
         properties = model_schema["properties"]
 
         if ref_fields:
@@ -250,6 +291,9 @@ class MessageRegistry:
                 field = properties[ref_name]["anyOf"]
                 for idx, model in ref_map.items():
                     field[idx]["$ref"] = self.schemas[model]
+
+        # Recursively update all remaining $ref pointers in the schema
+        self._update_ref_recursively(model_schema, defs_to_schemas)
 
     def build_message_schema(
         self, model_type: type[BaseModel], consumer_name: str

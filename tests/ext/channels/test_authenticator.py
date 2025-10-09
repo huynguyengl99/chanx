@@ -5,7 +5,6 @@ This module tests the ChanxSerializer and ChanxAuthView classes
 to ensure they work as expected for authentication.
 """
 
-import warnings
 from typing import Any
 from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -14,7 +13,6 @@ from django.test import RequestFactory, TestCase
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.request import Request
 from rest_framework.response import Response
-from rest_framework.views import APIView
 
 import pytest
 from asgiref.sync import sync_to_async
@@ -145,81 +143,6 @@ class TestDjangoAuthenticator(TestCase):
             },
         }
 
-    def test_validate_configuration_check_has_object_permission_method(self) -> None:
-        """Test validate_configuration checks for has_object_permission method."""
-
-        self.authenticator.permission_classes = [IsAuthenticated]
-        self.authenticator.queryset = True
-        with warnings.catch_warnings(record=True) as w:
-            self.authenticator.validate_configuration()
-            assert len(w) == 0
-
-        self.authenticator.permission_classes = None
-        self.authenticator.queryset = True
-
-        with warnings.catch_warnings(record=True) as w:
-            self.authenticator.validate_configuration()
-            assert len(w) == 0
-
-        # Create permission class with has_object_permission defined in parent class
-        class BaseObjectPermission(IsAuthenticated):
-            def has_object_permission(
-                self, request: Request, view: APIView, obj: Any
-            ) -> bool:
-                return True
-
-        class ChildPermission(BaseObjectPermission):
-            # Inherits has_object_permission from parent
-            pass
-
-        # Create permission class with has_object_permission defined in this class
-        class DirectObjectPermission(IsAuthenticated):
-            def has_object_permission(
-                self, request: Request, view: APIView, obj: Any
-            ) -> bool:
-                return True
-
-        self.authenticator.permission_classes = [ChildPermission]
-        self.authenticator.queryset = True
-
-        with warnings.catch_warnings(record=True) as w:
-            self.authenticator.validate_configuration()
-            assert len(w) == 1
-            assert "may require object access" in str(w[0].message)
-
-        self.authenticator.permission_classes = [DirectObjectPermission]
-        with warnings.catch_warnings(record=True) as w:
-            self.authenticator.validate_configuration()
-            assert len(w) == 1
-            assert "may require object access" in str(w[0].message)
-
-        # Will not warn for and operand
-        self.authenticator.permission_classes = [
-            DirectObjectPermission & IsAuthenticated
-        ]
-        with warnings.catch_warnings(record=True) as w:
-            self.authenticator.validate_configuration()
-            assert len(w) == 0
-
-    def test_validate_scope_configuration_no_lookup(self) -> None:
-        """Test _validate_scope_configuration with no lookup parameters."""
-        # Create a scope with no URL lookup parameters
-        scope: dict[str, Any] = {"url_route": {"kwargs": {}}}
-
-        # Should not raise any exceptions
-        self.authenticator._validate_scope_configuration(scope)
-
-    def test_validate_scope_configuration_with_lookup_no_queryset(self) -> None:
-        """Test _validate_scope_configuration with lookup but no queryset raises error."""
-        # Create a scope with a URL lookup parameter
-        scope = {"url_route": {"kwargs": {"pk": "1"}}}
-
-        # Should raise ValueError
-        with pytest.raises(ValueError) as context:
-            self.authenticator._validate_scope_configuration(scope)
-
-        assert "Object retrieval requires a queryset" in str(context.value)
-
     @pytest.mark.asyncio
     async def test_authenticate_no_permission(self) -> None:
         """Test that authentication works."""
@@ -272,3 +195,58 @@ class TestDjangoAuthenticator(TestCase):
         # Verify object was included in result
         assert result
         assert authenticator.obj == user
+
+    def test_get_queryset_no_queryset_set(self) -> None:
+        """Test get_queryset raises AssertionError when no queryset is set."""
+        with pytest.raises(
+            AssertionError, match="should either include a `queryset` attribute"
+        ):
+            self.authenticator.get_queryset()
+
+    @pytest.mark.django_db
+    def test_get_queryset_with_queryset(self) -> None:
+        """Test get_queryset returns re-evaluated queryset when QuerySet is set."""
+        queryset = User.objects.all()
+        self.authenticator.queryset = queryset
+
+        result = self.authenticator.get_queryset()
+
+        # Should call .all() to re-evaluate
+        assert result is not queryset
+        assert result.model == queryset.model
+        assert str(result.query) == str(queryset.query)
+
+    @pytest.mark.django_db
+    def test_get_queryset_with_manager(self) -> None:
+        """Test get_queryset returns Manager cast to QuerySet."""
+        manager = User.objects
+        self.authenticator.queryset = manager
+
+        result = self.authenticator.get_queryset()
+
+        # Manager should be returned as-is (cast to QuerySet)
+        assert result is manager  # type: ignore[comparison-overlap]
+
+    @pytest.mark.django_db
+    def test_get_queryset_override(self) -> None:
+        """Test get_queryset can be overridden in subclass."""
+        user = User.objects.create(username="testuser")
+
+        class FilteredAuthenticator(DjangoAuthenticator):
+            queryset = User.objects.all()
+
+            def get_queryset(self) -> Any:
+                return super().get_queryset().filter(username="testuser")
+
+        authenticator = FilteredAuthenticator(AsyncMock())
+        result = authenticator.get_queryset()
+
+        assert list(result) == [user]
+
+    @pytest.mark.django_db
+    @pytest.mark.asyncio
+    async def test_authenticate_without_queryset(self) -> None:
+        """Test authenticate works when no queryset is set (no object retrieval)."""
+        result = await self.authenticator.authenticate(self.default_scope)
+        assert result
+        assert self.authenticator.obj is None

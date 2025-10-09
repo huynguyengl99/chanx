@@ -16,9 +16,7 @@ Key components:
 - ChanxWebsocketAuthenticator: Main authenticator that processes WebSocket connections
 """
 
-import re
 import uuid
-import warnings
 from collections.abc import Sequence
 from typing import Any, Literal, cast
 
@@ -132,7 +130,7 @@ class DjangoAuthenticator(BaseAuthenticator):
     permission_classes: (
         Sequence[type[BasePermission] | OperandHolder | SingleOperandHolder] | None
     ) = None
-    queryset: QuerysetLike = True
+    queryset: QuerySet[Any] | Manager[Any] | None = None
     auth_method: Literal["get", "post", "put", "patch", "delete", "options"] = "get"
     lookup_field: str = "pk"
     lookup_url_kwarg: str | None = None
@@ -188,8 +186,12 @@ class DjangoAuthenticator(BaseAuthenticator):
                 response_data = {"detail": "OK"}
 
             self.user = request.user
-            if self.queryset is not True and status_code == status.HTTP_200_OK:
-                self.obj = await sync_to_async(self._view.get_object)()
+            try:
+                self.get_queryset()
+                if status_code == status.HTTP_200_OK:
+                    self.obj = await sync_to_async(self._view.get_object)()
+            except AssertionError:
+                pass
 
             await self.send_message(
                 AuthenticationMessage(
@@ -210,58 +212,32 @@ class DjangoAuthenticator(BaseAuthenticator):
 
             return False
 
-    # Configuration validation methods
-
-    def validate_configuration(self) -> None:
+    def get_queryset(self) -> QuerySet[Any]:
         """
-        Validate authenticator configuration to catch common issues early.
+        Get the queryset used for object retrieval during authentication.
 
-        Warns if permissions that might need object access are used without a queryset.
-        """
-        # Check if we might need object retrieval
-        needs_object = False
-        regex = r"(^|\.)BasePermission."
-        if self.permission_classes:
-            # Check if any permission class might need an object
-            for perm_class in self.permission_classes:
-                if hasattr(perm_class, "has_object_permission") and issubclass(perm_class, BasePermission):  # type: ignore
-                    meth = perm_class.has_object_permission
-                    qname = meth.__qualname__
+        This method returns the queryset that will be used by the authentication
+        view to retrieve objects for permission checks. Defaults to using `self.queryset`.
 
-                    if not re.match(regex, qname):
-                        needs_object = True
-                        break
+        Override this method in your authenticator subclass if you need to provide
+        different querysets based on the authenticated user or request context.
 
-        # Warn if we likely need an object but have no queryset
-        if needs_object and self.queryset is True:
-            warnings.warn(
-                "The authenticator has permissions that may require object "
-                + "access, but no queryset is defined. This might cause errors during "
-                + "authentication.",
-                RuntimeWarning,
-                stacklevel=2,
-            )
-
-    def _validate_scope_configuration(self, scope: dict[str, Any]) -> None:
-        """
-        Validate that the authenticator is properly configured for the given scope.
-
-        Args:
-            scope: The ASGI connection scope
+        Returns:
+            A QuerySet for object retrieval
 
         Raises:
-            ValueError: If configuration is invalid for the given scope
+            AssertionError: If neither `queryset` attribute is set nor this method is overridden
         """
-        # Check if we have URL parameters that would trigger get_object()
-        url_kwargs = scope.get("url_route", {}).get("kwargs", {})
-        has_lookup_param = bool(url_kwargs)
+        assert self.queryset is not None, (
+            f"'{self.__class__.__name__}' should either include a `queryset` attribute, "
+            "or override the `get_queryset()` method."
+        )
 
-        # If we have lookup parameters but no queryset, this will fail later
-        if has_lookup_param and self.queryset is True:
-            raise ValueError(
-                "Object retrieval requires a queryset. Please set the 'queryset' "
-                + "attribute on your consumer or use an auth_class with a defined queryset."
-            )
+        queryset = self.queryset
+        if isinstance(queryset, QuerySet):
+            # Ensure queryset is re-evaluated on each request.
+            queryset = queryset.all()
+        return cast(QuerySet[Any], queryset)
 
     # Helper methods
 
@@ -279,8 +255,10 @@ class DjangoAuthenticator(BaseAuthenticator):
             self._view.authentication_classes = self.authentication_classes
         if self.permission_classes is not None:
             self._view.permission_classes = self.permission_classes
-        if not isinstance(self.queryset, bool):  # Only set if it's not a boolean value
+        if self.queryset is not None:
             self._view.queryset = self.queryset
+
+        self._view.get_queryset = self.get_queryset  # type: ignore[method-assign]
 
         self._view.lookup_field = self.lookup_field
         self._view.lookup_url_kwarg = self.lookup_url_kwarg
@@ -299,9 +277,6 @@ class DjangoAuthenticator(BaseAuthenticator):
         Returns:
             Tuple of (response, updated request)
         """
-        # Validate configuration before attempting dispatch
-        self._validate_scope_configuration(scope)
-
         # Get the authentication view
         self._setup_auth_view()
 

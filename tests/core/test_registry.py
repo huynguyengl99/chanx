@@ -4,6 +4,7 @@ Tests for chanx.core.registry module.
 Tests the message registry functionality.
 """
 
+import json
 from typing import Any, Literal
 
 from chanx.core.registry import MessageRegistry
@@ -222,3 +223,80 @@ class TestMessageRegistry:
 
         schema_json = json.dumps(registry.schema_objects)
         assert "#/$defs/" not in schema_json, "Found $defs references in schema"
+
+    def test_build_messages_with_nested_typeddict(self) -> None:
+        """Test adding message types with nested TypedDict payloads to the registry."""
+
+        class AddressDict(TypedDict):
+            """Address information."""
+
+            street: str
+            city: str
+            country: str
+
+        class ContactDict(TypedDict):
+            """Contact information with address."""
+
+            email: str
+            phone: str
+            address: AddressDict
+
+        class UserProfileDict(TypedDict):
+            """User profile with nested contact."""
+
+            id: int
+            name: str
+            contact: ContactDict
+
+        class NestedTypedDictMessage(BaseMessage):
+            action: Literal["nested_typed_dict_test"] = "nested_typed_dict_test"
+            payload: UserProfileDict
+
+        registry = MessageRegistry()
+        registry.add(NestedTypedDictMessage, "TestConsumer")
+
+        # Should have registered the message
+        assert NestedTypedDictMessage in registry.messages
+        assert (
+            registry.messages[NestedTypedDictMessage]
+            == "#/components/messages/nested_typed_dict_message"
+        )
+
+        # Should have registered all schemas
+        assert NestedTypedDictMessage in registry.schemas
+        assert "NestedTypedDictMessage" in registry.schema_objects
+        assert "UserProfileDict" in registry.schema_objects
+        assert "ContactDict" in registry.schema_objects
+        assert "AddressDict" in registry.schema_objects
+
+        # Check that the main message schema references UserProfileDict correctly
+        message_schema = registry.schema_objects["NestedTypedDictMessage"]
+        assert (
+            message_schema["properties"]["payload"]["$ref"]
+            == "#/components/schemas/UserProfileDict"
+        )
+
+        # Check that UserProfileDict references ContactDict correctly
+        user_profile_schema = registry.schema_objects["UserProfileDict"]
+        assert (
+            user_profile_schema["properties"]["contact"]["$ref"]
+            == "#/components/schemas/ContactDict"
+        )
+
+        # Check that ContactDict references AddressDict correctly
+        contact_schema = registry.schema_objects["ContactDict"]
+        assert (
+            contact_schema["properties"]["address"]["$ref"]
+            == "#/components/schemas/AddressDict"
+        )
+
+        # Verify AddressDict has the correct properties
+        address_schema = registry.schema_objects["AddressDict"]
+        assert "street" in address_schema["properties"]
+        assert "city" in address_schema["properties"]
+        assert "country" in address_schema["properties"]
+
+        # Verify no $defs references remain anywhere in the schema
+
+        schema_json = json.dumps(registry.schema_objects)
+        assert "#/$defs/" not in schema_json, "Found $defs references in nested schema"

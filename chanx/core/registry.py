@@ -248,7 +248,7 @@ class MessageRegistry:
             for item in list_obj:
                 self._update_ref_recursively(item, defs_to_schemas)
 
-    def _update_schema_references(
+    def _update_schema_references(  # noqa: C901
         self,
         model_schema: dict[str, Any],
         ref_fields: set[str],
@@ -270,14 +270,10 @@ class MessageRegistry:
         defs_to_schemas: dict[str, str] = {}
 
         if defs:
-            for def_name, def_schema in defs.items():
+            for def_name, _def_schema in defs.items():
                 # Register the def schema as a top-level schema
                 schema_ref = get_asyncapi_schema_ref(def_name)
                 defs_to_schemas[def_name] = schema_ref
-
-                # Only store if not already present (avoid duplicates)
-                if def_name not in self.schema_objects:
-                    self.schema_objects[def_name] = def_schema
 
         # Update properties with explicit references
         properties = model_schema["properties"]
@@ -292,8 +288,18 @@ class MessageRegistry:
                 for idx, model in ref_map.items():
                     field[idx]["$ref"] = self.schemas[model]
 
-        # Recursively update all remaining $ref pointers in the schema
+        # Recursively update all remaining $ref pointers in the main schema
         self._update_ref_recursively(model_schema, defs_to_schemas)
+
+        # Now update references in the extracted def schemas and store them
+        if defs is not None:
+            for def_name, def_schema in defs.items():
+                # Recursively update refs in the def schema itself
+                self._update_ref_recursively(def_schema, defs_to_schemas)
+
+                # Only store if not already present (avoid duplicates)
+                if def_name not in self.schema_objects:
+                    self.schema_objects[def_name] = def_schema
 
     def build_message_schema(
         self, model_type: type[BaseModel], consumer_name: str

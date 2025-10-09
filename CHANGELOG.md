@@ -1,3 +1,9 @@
+## v1.0.4 (2025-10-10)
+
+### Fix
+
+- properly handle nested references in $defs schemas for message registry
+
 ## v1.0.3 (2025-10-10)
 
 ### Fix

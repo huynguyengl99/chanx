@@ -1,3 +1,9 @@
+## v1.0.2 (2025-10-09)
+
+### Fix
+
+- improve DjangoAuthenticator flexibility and type safety
+
 ## v1.0.1 (2025-10-09)
 
 ### Fix

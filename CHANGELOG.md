@@ -1,3 +1,9 @@
+## v1.0.1 (2025-10-09)
+
+### Fix
+
+- improve queryset handling in DjangoAuthenticator
+
 ## v1.0.0 (2025-10-08)
 
 ### BREAKING CHANGE

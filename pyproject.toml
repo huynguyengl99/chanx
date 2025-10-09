@@ -130,7 +130,7 @@ preview = true
 
 [tool.commitizen]
 gpg_sign = true
-major_version_zero = true
+major_version_zero = false
 name = "cz_conventional_commits"
 pre_bump_hooks = [
   "scripts/update_lock.sh"

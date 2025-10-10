@@ -8,7 +8,7 @@ handlers (@ws_handler, @event_handler, @channel).
 
 from textwrap import dedent
 from types import UnionType
-from typing import Any, get_args
+from typing import Any, cast, get_args
 
 import humps
 
@@ -43,6 +43,7 @@ class AsyncAPIGenerator:
         description: str | None = None,
         server_url: str | None = DEFAULT_SERVER_URL,
         server_protocol: str | None = DEFAULT_SERVER_PROTOCOL,
+        camelize: bool | None = False,
     ):
         """
         Initialize the AsyncAPI generator with routes and metadata.
@@ -54,6 +55,7 @@ class AsyncAPIGenerator:
             description: AsyncAPI document description
             server_url: Default server URL
             server_protocol: Default server protocol (ws/wss)
+            camelize: Whether to convert all keys to camelCase (default: False)
         """
         self.routes = routes
         self.title = title
@@ -61,6 +63,7 @@ class AsyncAPIGenerator:
         self.description = description
         self.server_url = server_url
         self.server_protocol = server_protocol
+        self.camelize = camelize
 
         self.channels: dict[str, dict[str, Any]] = {}
 
@@ -103,6 +106,10 @@ class AsyncAPIGenerator:
                 "schemas": dict(sorted(message_registry.schema_objects.items())),
             },
         }
+
+        # Apply camelization if enabled
+        if self.camelize:
+            spec = self._apply_camelization(spec)
 
         return spec
 
@@ -343,3 +350,164 @@ class AsyncAPIGenerator:
 
         # For regex patterns, return with prefix
         return f"regex: {pattern}"
+
+    def _camelize_schema(self, schema: dict[str, Any]) -> dict[str, Any]:
+        """
+        Camelize a JSON Schema object.
+
+        This camelizes:
+        - All property names in 'properties' and 'patternProperties'
+        - All field references in 'required' array
+        - All nested schema objects
+
+        JSON Schema keywords are already in camelCase so they don't change.
+
+        Args:
+            schema: JSON Schema object
+
+        Returns:
+            Schema with camelized property names
+        """
+        # Use humps to camelize all keys recursively
+        result = humps.camelize(schema)
+
+        # Special handling for 'required' array - camelize the property name strings
+        if "required" in schema and isinstance(schema["required"], list):
+            required_items = cast(list[Any], schema["required"])  # type: ignore[redundant-cast]
+            result["required"] = [
+                humps.camelize(item) if isinstance(item, str) else item
+                for item in required_items
+            ]
+
+        return result
+
+    def _camelize_ref(self, ref: str) -> str:
+        """
+        Camelize component names in a $ref path.
+
+        Args:
+            ref: Reference path like #/channels/channel_name/messages/message_name
+
+        Returns:
+            Reference with camelized component names
+        """
+        parts = ref.split("/")
+        camelized_parts: list[str] = []
+
+        for i, part in enumerate(parts):
+            # Don't camelize the first parts (#, channels, messages, operations, components, schemas)
+            if i <= 1 or part in [
+                "channels",
+                "messages",
+                "operations",
+                "components",
+                "schemas",
+            ]:
+                camelized_parts.append(part)
+            else:
+                # Camelize actual names
+                camelized_parts.append(humps.camelize(part))
+
+        return "/".join(camelized_parts)
+
+    def _camelize_refs_in_dict(self, obj: dict[str, Any]) -> dict[str, Any]:
+        """
+        Recursively camelize all $ref values in a dictionary.
+
+        Args:
+            obj: Dictionary to process
+
+        Returns:
+            Dictionary with camelized $ref values
+        """
+        result: dict[str, Any] = {}
+        for key, value in obj.items():
+            if key == "$ref" and isinstance(value, str):
+                result[key] = self._camelize_ref(value)
+            elif isinstance(value, dict):
+                value = cast(dict[str, Any], value)
+                result[key] = self._camelize_refs_in_dict(value)
+            elif isinstance(value, list):
+                value = cast(list[Any], value)  # type: ignore[redundant-cast]
+                processed_list: list[Any] = []
+                for item in value:
+                    if isinstance(item, dict):
+                        item = cast(dict[str, Any], item)
+                        processed_list.append(self._camelize_refs_in_dict(item))
+                    else:
+                        processed_list.append(item)
+                result[key] = processed_list
+            else:
+                result[key] = value
+
+        return result
+
+    def _apply_camelization(self, spec: dict[str, Any]) -> dict[str, Any]:  # noqa: C901
+        """
+        Apply camelization to the entire AsyncAPI spec.
+
+        This includes:
+        - Channel names
+        - Operation names
+        - Component message keys
+        - Component schema keys
+        - Schema properties (in 'properties' field)
+        - Schema required fields
+        - All $ref paths
+
+        Args:
+            spec: The AsyncAPI specification
+
+        Returns:
+            Camelized specification
+        """
+        result = spec.copy()
+
+        # Camelize channel names and their message keys
+        if "channels" in result:
+            camelized_channels: dict[str, Any] = {}
+            for channel_name, channel_spec in result["channels"].items():
+                camel_name = humps.camelize(channel_name)
+                camelized_channel = channel_spec.copy()
+
+                # Camelize message keys within the channel
+                if "messages" in camelized_channel:
+                    camelized_channel_messages: dict[str, Any] = {}
+                    for msg_key, msg_ref in camelized_channel["messages"].items():
+                        camel_msg_key = humps.camelize(msg_key)
+                        camelized_channel_messages[camel_msg_key] = msg_ref
+                    camelized_channel["messages"] = camelized_channel_messages
+
+                camelized_channels[camel_name] = camelized_channel
+            result["channels"] = camelized_channels
+
+        # Camelize operation names
+        if "operations" in result:
+            camelized_operations: dict[str, Any] = {}
+            for op_name, op_spec in result["operations"].items():
+                camel_name = humps.camelize(op_name)
+                camelized_operations[camel_name] = op_spec
+            result["operations"] = camelized_operations
+
+        # Camelize component message keys
+        if "components" in result and "messages" in result["components"]:
+            camelized_messages: dict[str, Any] = {}
+            for msg_key, msg_spec in result["components"]["messages"].items():
+                camel_key = humps.camelize(msg_key)
+                camelized_messages[camel_key] = msg_spec
+            result["components"]["messages"] = camelized_messages
+
+        # Camelize component schema keys and their properties
+        if "components" in result and "schemas" in result["components"]:
+            camelized_schemas: dict[str, Any] = {}
+            for schema_key, schema_spec in result["components"]["schemas"].items():
+                camel_key = humps.camelize(schema_key)
+                # Camelize schema properties and required fields
+                camelized_schema = self._camelize_schema(schema_spec)
+                camelized_schemas[camel_key] = camelized_schema
+            result["components"]["schemas"] = camelized_schemas
+
+        # Camelize all $ref paths
+        result = self._camelize_refs_in_dict(result)
+
+        return result

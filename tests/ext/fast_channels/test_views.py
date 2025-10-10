@@ -86,6 +86,55 @@ class TestGenerateAsyncAPISchema:
             assert call_kwargs["version"] == "2.0.0"  # Overridden
             assert call_kwargs["description"] == "Test description"  # From app
 
+    def test_generate_schema_without_camelize(self) -> None:
+        """Test that camelize defaults to False when not specified."""
+        with patch(
+            "chanx.ext.fast_channels.views.AsyncAPIGenerator"
+        ) as mock_generator_class:
+            mock_generator = Mock()
+            mock_generator.generate.return_value = {"asyncapi": "3.0.0"}
+            mock_generator_class.return_value = mock_generator
+
+            generate_asyncapi_schema(self.mock_request, self.app)
+
+            # Verify camelize defaults to False
+            call_kwargs = mock_generator_class.call_args[1]
+            assert call_kwargs["camelize"] is False
+
+    def test_generate_schema_with_camelize_true(self) -> None:
+        """Test that camelize=True is passed to generator."""
+        custom_config = cast(AsyncAPIConfig, {"camelize": True})
+
+        with patch(
+            "chanx.ext.fast_channels.views.AsyncAPIGenerator"
+        ) as mock_generator_class:
+            mock_generator = Mock()
+            mock_generator.generate.return_value = {"asyncapi": "3.0.0"}
+            mock_generator_class.return_value = mock_generator
+
+            generate_asyncapi_schema(self.mock_request, self.app, custom_config)
+
+            # Verify camelize is passed as True
+            call_kwargs = mock_generator_class.call_args[1]
+            assert call_kwargs["camelize"] is True
+
+    def test_generate_schema_with_camelize_false(self) -> None:
+        """Test that camelize=False is passed to generator."""
+        custom_config = cast(AsyncAPIConfig, {"camelize": False})
+
+        with patch(
+            "chanx.ext.fast_channels.views.AsyncAPIGenerator"
+        ) as mock_generator_class:
+            mock_generator = Mock()
+            mock_generator.generate.return_value = {"asyncapi": "3.0.0"}
+            mock_generator_class.return_value = mock_generator
+
+            generate_asyncapi_schema(self.mock_request, self.app, custom_config)
+
+            # Verify camelize is passed as False
+            call_kwargs = mock_generator_class.call_args[1]
+            assert call_kwargs["camelize"] is False
+
 
 class TestAsyncAPISpecJSON:
     """Test JSON spec endpoint."""

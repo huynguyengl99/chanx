@@ -2,6 +2,8 @@
 
 set -e
 
+rm -rf .mypy_cache/
+
 if [ "$1" == "--django" ]; then
     export PYTHONPATH="sandbox_django"
     export MYPYPATH='.'

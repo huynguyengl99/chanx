@@ -65,6 +65,7 @@ def generate_asyncapi_schema(
         description=final_config.get("description"),
         server_url=final_config.get("server_url"),
         server_protocol=final_config.get("server_protocol"),
+        camelize=final_config.get("camelize"),
     )
 
     return generator.generate()

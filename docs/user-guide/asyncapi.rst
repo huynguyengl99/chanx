@@ -79,6 +79,7 @@ Configuring AsyncAPI Settings
         'ASYNCAPI_VERSION': '2.1.0',
         'ASYNCAPI_SERVER_URL': 'wss://api.myapp.com',
         'ASYNCAPI_SERVER_PROTOCOL': 'wss',
+        'ASYNCAPI_CAMELIZE': False,  # Set to True for camelCase naming
     }
 
 **FastAPI/Other Frameworks:**
@@ -93,12 +94,123 @@ Configuring AsyncAPI Settings
         "version": "2.1.0",
         "description": "Real-time communication API",
         "server_url": "wss://api.myapp.com",
-        "server_protocol": "wss"
+        "server_protocol": "wss",
+        "camelize": False  # Set to True for camelCase naming
     }
 
     @app.get("/asyncapi.json")
     async def get_asyncapi_spec(request: Request):
         return await asyncapi_spec_json(request, app, config)
+
+CamelCase Naming Convention
+------------------------------
+
+By default, Chanx uses Python's ``snake_case`` naming convention throughout the generated AsyncAPI specification. However, when building APIs for JavaScript/TypeScript clients, you may prefer ``camelCase`` naming to match frontend conventions.
+
+The ``camelize`` parameter transforms all identifiers in the generated specification from ``snake_case`` to ``camelCase``:
+
+**What Gets Camelized:**
+
+- Channel names: ``user_notifications`` → ``userNotifications``
+- Operation names: ``handle_chat_message`` → ``handleChatMessage``
+- Message names: ``chat_notification_message`` → ``chatNotificationMessage``
+- Schema property names: ``first_name`` → ``firstName``
+- Schema required fields: ``["user_id", "created_at"]`` → ``["userId", "createdAt"]``
+- All ``$ref`` paths to reference the camelized names
+
+**When to Use CamelCase:**
+
+- Building APIs for JavaScript/TypeScript frontend clients
+- Generating client SDKs for languages that prefer camelCase
+- Matching existing frontend naming conventions
+- Creating API documentation that aligns with client-side code
+
+**Example with CamelCase Enabled:**
+
+.. code-block:: python
+
+    # Define your consumer with Python snake_case
+    @channel(name="user_registration_channel")
+    class UserRegistrationConsumer(AsyncJsonWebsocketConsumer):
+        @ws_handler
+        async def handle_user_registration(self, message: UserRegistrationMessage) -> RegistrationCompleteMessage:
+            return RegistrationCompleteMessage(...)
+
+    class UserPayload(BaseModel):
+        first_name: str
+        last_name: str
+        user_id: int
+
+**Generated with** ``camelize=False`` **(default):**
+
+.. code-block:: yaml
+
+    channels:
+      user_registration_channel:
+        messages:
+          user_registration_message:
+            $ref: '#/components/messages/user_registration_message'
+
+    operations:
+      handle_user_registration:
+        action: receive
+        channel:
+          $ref: '#/channels/user_registration_channel'
+
+    components:
+      schemas:
+        UserPayload:
+          type: object
+          properties:
+            first_name:
+              type: string
+            last_name:
+              type: string
+            user_id:
+              type: integer
+          required:
+            - first_name
+            - last_name
+            - user_id
+
+**Generated with** ``camelize=True``:
+
+.. code-block:: yaml
+
+    channels:
+      userRegistrationChannel:
+        messages:
+          userRegistrationMessage:
+            $ref: '#/components/messages/userRegistrationMessage'
+
+    operations:
+      handleUserRegistration:
+        action: receive
+        channel:
+          $ref: '#/channels/userRegistrationChannel'
+
+    components:
+      schemas:
+        UserPayload:
+          type: object
+          properties:
+            firstName:
+              type: string
+            lastName:
+              type: string
+            userId:
+              type: integer
+          required:
+            - firstName
+            - lastName
+            - userId
+
+**Important Notes:**
+
+- Your Python code continues to use ``snake_case`` - only the generated AsyncAPI spec is transformed
+- The actual WebSocket messages sent/received over the wire are **not** affected - you need to handle serialization separately if needed
+- This is purely for documentation and client SDK generation purposes
+- Choose one convention and use it consistently across your API
 
 Adding Documentation to Decorators
 --------------------------------------
@@ -243,7 +355,29 @@ Serving AsyncAPI Documentation
 
 **Django Setup:**
 
-Add to your URLs to serve AsyncAPI documentation:
+**Option 1: Simple Setup (Recommended)**
+
+The easiest way is to include Chanx's pre-configured URLs:
+
+.. code-block:: python
+
+    # urls.py
+    from django.urls import path, include
+
+    urlpatterns = [
+        # Include Chanx AsyncAPI URLs
+        path('asyncapi/', include('chanx.ext.channels.urls')),
+    ]
+
+This provides:
+
+- **JSON spec**: ``http://localhost:8000/asyncapi/schema/``
+- **YAML spec**: ``http://localhost:8000/asyncapi/schema/?format=yaml``
+- **Interactive docs**: ``http://localhost:8000/asyncapi/docs/``
+
+**Option 2: Custom Setup**
+
+If you want to customize the URL paths or view behavior:
 
 .. code-block:: python
 
@@ -263,7 +397,7 @@ Add to your URLs to serve AsyncAPI documentation:
 **Access your documentation:**
 
 - **JSON spec**: ``http://localhost:8000/api/asyncapi.json``
-- **YAML spec**: ``http://localhost:8000/api/asyncapi.json?format=yaml``
+- **YAML spec**: ``http://localhost:8000/api/asyncapi.yaml?format=yaml``
 - **Interactive docs**: ``http://localhost:8000/docs/websocket/``
 
 **FastAPI Setup:**
@@ -307,7 +441,6 @@ Chanx-generated AsyncAPI documentation includes:
 
 - WebSocket connection URLs
 - Protocol information (ws/wss)
-- Authentication requirements
 
 **2. Channels**
 
@@ -410,7 +543,10 @@ Customizing Documentation Generation
         routes=routes,
         title="Custom API Title",
         version="2.0.0",
-        description="Custom description that overrides settings"
+        description="Custom description that overrides settings",
+        server_url="wss://api.example.com",
+        server_protocol="wss",
+        camelize=True  # Enable camelCase naming
     )
 
     schema = generator.generate()
@@ -457,7 +593,24 @@ AsyncAPI documentation integrates with various tools:
 Best Practices
 --------------
 
-**1. Provide meaningful descriptions:**
+**1. Choose a naming convention and stick to it:**
+
+.. code-block:: python
+
+    # For JavaScript/TypeScript clients - use camelCase in docs
+    config = {"camelize": True}
+
+    # For Python clients - use snake_case (default)
+    config = {"camelize": False}
+
+    # Keep your Python code in snake_case regardless of the choice
+    @channel(name="user_notifications")  # Always snake_case in code
+    class UserNotificationConsumer(AsyncJsonWebsocketConsumer):
+        @ws_handler
+        async def handle_subscribe(self, message: SubscribeMessage) -> None:
+            pass
+
+**2. Provide meaningful descriptions:**
 
 .. code-block:: python
 
@@ -466,7 +619,7 @@ Best Practices
         description="Validates, processes, and broadcasts user messages to appropriate channels"  # Detailed
     )
 
-**2. Use consistent naming:**
+**3. Use consistent naming:**
 
 .. code-block:: python
 
@@ -477,7 +630,7 @@ Best Practices
     class DeleteMessageAction(BaseMessage):
         action: Literal["delete_message"] = "delete_message"
 
-**3. Group related operations with tags:**
+**4. Group related operations with tags:**
 
 .. code-block:: python
 
@@ -487,7 +640,7 @@ Best Practices
     @ws_handler(tags=["messaging", "moderation"])
     async def handle_delete(self, message: DeleteMessage) -> None: pass
 
-**4. Document complex payloads thoroughly:**
+**5. Document complex payloads thoroughly:**
 
 .. code-block:: python
 

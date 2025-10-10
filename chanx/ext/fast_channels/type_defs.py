@@ -29,6 +29,7 @@ class AsyncAPIConfig(TypedDict, total=False):
         description: API description text
         server_url: Server URL for WebSocket connections
         server_protocol: Protocol (ws or wss)
+        camelize: Whether to convert all keys to camelCase (default: False)
     """
 
     title: NotRequired[str]
@@ -36,6 +37,7 @@ class AsyncAPIConfig(TypedDict, total=False):
     description: NotRequired[str]
     server_url: NotRequired[str]
     server_protocol: NotRequired[str]
+    camelize: NotRequired[bool]
 
 
 # Default configuration using constants
@@ -45,4 +47,5 @@ DEFAULT_ASYNCAPI_CONFIG: AsyncAPIConfig = {
     "description": DEFAULT_ASYNCAPI_DESCRIPTION,
     "server_url": DEFAULT_SERVER_URL,
     "server_protocol": DEFAULT_SERVER_PROTOCOL,
+    "camelize": False,
 }

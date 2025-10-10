@@ -12,6 +12,7 @@ from chanx.core.decorators import channel, event_handler, ws_handler
 from chanx.core.websocket import AsyncJsonWebsocketConsumer
 from chanx.messages.base import BaseMessage
 from chanx.routing.discovery import RouteInfo
+from pydantic import BaseModel
 
 
 class DummyMessage(BaseMessage):
@@ -385,6 +386,116 @@ class TestAsyncAPIGenerator:
         assert len(tagged_operation["tags"]) == 2
         assert tagged_operation["tags"][0]["name"] == "important"
         assert tagged_operation["tags"][1]["name"] == "api"
+
+    def test_camelization_disabled_by_default(self) -> None:
+        """Test that camelization is disabled by default and keeps snake_case."""
+
+        @channel(name="test_channel")
+        class DefaultConsumer(AsyncJsonWebsocketConsumer):
+            @ws_handler
+            async def handle_test(self, message: DummyMessage) -> None:
+                pass
+
+        route = RouteInfo(
+            path="/ws/test",
+            handler=Mock(),
+            base_url="ws://localhost:8000",
+            consumer=DefaultConsumer,
+        )
+
+        spec = AsyncAPIGenerator([route]).generate()
+
+        # Should keep snake_case when disabled
+        assert "test_channel" in spec["channels"]
+        assert "testChannel" not in spec["channels"]
+
+    def test_camelization_enabled(self) -> None:
+        """Test comprehensive camelization when enabled."""
+
+        # Create schema with snake_case properties
+        class UserPayload(BaseModel):
+            first_name: str
+            last_name: str
+            user_id: int
+
+        class UserRegistrationMessage(BaseMessage):
+            action: Literal["user_registration"] = "user_registration"
+            payload: UserPayload
+
+        class RegistrationCompleteMessage(BaseMessage):
+            action: Literal["registration_complete"] = "registration_complete"
+            payload: dict[str, Any]
+
+        from chanx.core.decorators import channel as channel_decorator
+
+        @channel_decorator(name="user_registration_channel", tags=["user_auth"])
+        class UserRegistrationConsumer(AsyncJsonWebsocketConsumer):
+            @ws_handler
+            async def handle_user_registration(
+                self, message: UserRegistrationMessage
+            ) -> RegistrationCompleteMessage:
+                return RegistrationCompleteMessage(payload={"success": True})
+
+        route = RouteInfo(
+            path="/ws/user_registration",
+            handler=Mock(),
+            base_url="ws://localhost:8000",
+            consumer=UserRegistrationConsumer,
+        )
+
+        spec = AsyncAPIGenerator([route], camelize=True).generate()
+
+        # Channel names camelized
+        assert "userRegistrationChannel" in spec["channels"]
+        assert all("_" not in name for name in spec["channels"].keys())
+
+        # Channel message keys camelized
+        channel_messages = spec["channels"]["userRegistrationChannel"]["messages"]
+        assert all("_" not in key for key in channel_messages.keys())
+
+        # Operation names camelized
+        assert "handleUserRegistration" in spec["operations"]
+        assert all("_" not in name for name in spec["operations"].keys())
+
+        # Component message keys camelized
+        assert all("_" not in key for key in spec["components"]["messages"].keys())
+
+        # Schema properties camelized
+        for schema in spec["components"]["schemas"].values():
+            if "properties" in schema:
+                assert all("_" not in prop for prop in schema["properties"].keys())
+                # Required fields camelized
+                if "required" in schema:
+                    assert all("_" not in field for field in schema["required"])
+
+        # $ref paths camelized
+        for channel_spec in spec["channels"].values():
+            if "messages" in channel_spec:
+                for msg_ref in channel_spec["messages"].values():
+                    # Extract component names from ref (skip keywords)
+                    parts = [
+                        p
+                        for p in msg_ref["$ref"].split("/")
+                        if p
+                        not in [
+                            "#",
+                            "channels",
+                            "messages",
+                            "components",
+                            "schemas",
+                            "",
+                        ]
+                    ]
+                    assert all("_" not in part for part in parts)
+
+        for operation in spec["operations"].values():
+            if "channel" in operation:
+                parts = [
+                    p
+                    for p in operation["channel"]["$ref"].split("/")
+                    if p not in ["#", "channels", ""]
+                ]
+                assert all("_" not in p for p in parts)
 
 
 class TestAsyncAPIGeneratorIntegration:

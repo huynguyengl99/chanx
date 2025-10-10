@@ -16,22 +16,22 @@ channels:
       pk:
         description: 'Path parameter for pk (regex: [0-9a-f-]+)'
     messages:
-      assistant_error_message:
-        $ref: '#/components/messages/assistant_error_message'
-      complete_streaming_message:
-        $ref: '#/components/messages/complete_streaming_message'
-      new_assistant_message:
-        $ref: '#/components/messages/new_assistant_message'
-      ping_message:
-        $ref: '#/components/messages/ping_message'
-      pong_message:
-        $ref: '#/components/messages/pong_message'
-      streaming_message:
-        $ref: '#/components/messages/streaming_message'
+      assistantErrorMessage:
+        $ref: '#/components/messages/assistantErrorMessage'
+      completeStreamingMessage:
+        $ref: '#/components/messages/completeStreamingMessage'
+      newAssistantMessage:
+        $ref: '#/components/messages/newAssistantMessage'
+      pingMessage:
+        $ref: '#/components/messages/pingMessage'
+      pongMessage:
+        $ref: '#/components/messages/pongMessage'
+      streamingMessage:
+        $ref: '#/components/messages/streamingMessage'
     tags:
     - name: ai
     - name: chat
-  discussion_list:
+  discussionList:
     address: ws/discussion/
     title: discussion_list
     description: '
@@ -43,19 +43,19 @@ channels:
 
       '
     messages:
-      answer_accepted_message:
-        $ref: '#/components/messages/answer_accepted_message'
-      answer_unaccepted_message:
-        $ref: '#/components/messages/answer_unaccepted_message'
-      ping_message:
-        $ref: '#/components/messages/ping_message'
-      pong_message:
-        $ref: '#/components/messages/pong_message'
-      topic_created_message:
-        $ref: '#/components/messages/topic_created_message'
-      vote_updated_message:
-        $ref: '#/components/messages/vote_updated_message'
-  discussion_topic:
+      answerAcceptedMessage:
+        $ref: '#/components/messages/answerAcceptedMessage'
+      answerUnacceptedMessage:
+        $ref: '#/components/messages/answerUnacceptedMessage'
+      pingMessage:
+        $ref: '#/components/messages/pingMessage'
+      pongMessage:
+        $ref: '#/components/messages/pongMessage'
+      topicCreatedMessage:
+        $ref: '#/components/messages/topicCreatedMessage'
+      voteUpdatedMessage:
+        $ref: '#/components/messages/voteUpdatedMessage'
+  discussionTopic:
     address: ws/discussion/{pk}/
     title: discussion_topic
     description: '
@@ -71,19 +71,19 @@ channels:
       pk:
         description: Path parameter for pk (int)
     messages:
-      answer_accepted_message:
-        $ref: '#/components/messages/answer_accepted_message'
-      answer_unaccepted_message:
-        $ref: '#/components/messages/answer_unaccepted_message'
-      ping_message:
-        $ref: '#/components/messages/ping_message'
-      pong_message:
-        $ref: '#/components/messages/pong_message'
-      reply_created_message:
-        $ref: '#/components/messages/reply_created_message'
-      vote_updated_message:
-        $ref: '#/components/messages/vote_updated_message'
-  group_chat:
+      answerAcceptedMessage:
+        $ref: '#/components/messages/answerAcceptedMessage'
+      answerUnacceptedMessage:
+        $ref: '#/components/messages/answerUnacceptedMessage'
+      pingMessage:
+        $ref: '#/components/messages/pingMessage'
+      pongMessage:
+        $ref: '#/components/messages/pongMessage'
+      replyCreatedMessage:
+        $ref: '#/components/messages/replyCreatedMessage'
+      voteUpdatedMessage:
+        $ref: '#/components/messages/voteUpdatedMessage'
+  groupChat:
     address: ws/chat/group/
     title: group_chat
     description: '
@@ -92,17 +92,17 @@ channels:
 
       '
     messages:
-      added_to_group_message:
-        $ref: '#/components/messages/added_to_group_message'
-      group_chat_updated_message:
-        $ref: '#/components/messages/group_chat_updated_message'
-      ping_message:
-        $ref: '#/components/messages/ping_message'
-      pong_message:
-        $ref: '#/components/messages/pong_message'
-      removed_from_group_message:
-        $ref: '#/components/messages/removed_from_group_message'
-  chat_detail:
+      addedToGroupMessage:
+        $ref: '#/components/messages/addedToGroupMessage'
+      groupChatUpdatedMessage:
+        $ref: '#/components/messages/groupChatUpdatedMessage'
+      pingMessage:
+        $ref: '#/components/messages/pingMessage'
+      pongMessage:
+        $ref: '#/components/messages/pongMessage'
+      removedFromGroupMessage:
+        $ref: '#/components/messages/removedFromGroupMessage'
+  chatDetail:
     address: ws/chat/{pk}/
     title: chat_detail
     description: WebSocket consumer for group chat details.
@@ -110,287 +110,287 @@ channels:
       pk:
         description: 'Path parameter for pk (regex: \d+)'
     messages:
-      member_added_message:
-        $ref: '#/components/messages/member_added_message'
-      member_message:
-        $ref: '#/components/messages/member_message'
-      member_removed_message:
-        $ref: '#/components/messages/member_removed_message'
-      ping_message:
-        $ref: '#/components/messages/ping_message'
-      pong_message:
-        $ref: '#/components/messages/pong_message'
-      user_removed_from_group_message:
-        $ref: '#/components/messages/user_removed_from_group_message'
+      memberAddedMessage:
+        $ref: '#/components/messages/memberAddedMessage'
+      memberMessage:
+        $ref: '#/components/messages/memberMessage'
+      memberRemovedMessage:
+        $ref: '#/components/messages/memberRemovedMessage'
+      pingMessage:
+        $ref: '#/components/messages/pingMessage'
+      pongMessage:
+        $ref: '#/components/messages/pongMessage'
+      userRemovedFromGroupMessage:
+        $ref: '#/components/messages/userRemovedFromGroupMessage'
 operations:
-  handle_ping:
+  handlePing:
     action: receive
     channel:
       $ref: '#/channels/assistants'
     description: Simple ping-pong for connectivity testing
     summary: Handle ping requests
     messages:
-    - $ref: '#/channels/assistants/messages/ping_message'
+    - $ref: '#/channels/assistants/messages/pingMessage'
     reply:
       channel:
         $ref: '#/channels/assistants'
       messages:
-      - $ref: '#/channels/assistants/messages/pong_message'
-  handle_complete_streaming:
+      - $ref: '#/channels/assistants/messages/pongMessage'
+  handleCompleteStreaming:
     action: send
     channel:
       $ref: '#/channels/assistants'
     description: ''
     summary: ''
     messages:
-    - $ref: '#/channels/assistants/messages/complete_streaming_message'
-  handle_error_assistant_event:
+    - $ref: '#/channels/assistants/messages/completeStreamingMessage'
+  handleErrorAssistantEvent:
     action: send
     channel:
       $ref: '#/channels/assistants'
     description: ''
     summary: ''
     messages:
-    - $ref: '#/channels/assistants/messages/assistant_error_message'
-  handle_new_assistant_message:
+    - $ref: '#/channels/assistants/messages/assistantErrorMessage'
+  handleNewAssistantMessage:
     action: send
     channel:
       $ref: '#/channels/assistants'
     description: ''
     summary: ''
     messages:
-    - $ref: '#/channels/assistants/messages/new_assistant_message'
-  handle_streaming:
+    - $ref: '#/channels/assistants/messages/newAssistantMessage'
+  handleStreaming:
     action: send
     channel:
       $ref: '#/channels/assistants'
     description: ''
     summary: ''
     messages:
-    - $ref: '#/channels/assistants/messages/streaming_message'
-  discussion_list_handle_ping:
+    - $ref: '#/channels/assistants/messages/streamingMessage'
+  discussionListHandlePing:
     action: receive
     channel:
-      $ref: '#/channels/discussion_list'
+      $ref: '#/channels/discussionList'
     description: Simple ping-pong for connectivity testing
     summary: Handle ping requests
     messages:
-    - $ref: '#/channels/discussion_list/messages/ping_message'
+    - $ref: '#/channels/discussionList/messages/pingMessage'
     reply:
       channel:
-        $ref: '#/channels/discussion_list'
+        $ref: '#/channels/discussionList'
       messages:
-      - $ref: '#/channels/discussion_list/messages/pong_message'
-  handle_accept_answer:
+      - $ref: '#/channels/discussionList/messages/pongMessage'
+  handleAcceptAnswer:
     action: send
     channel:
-      $ref: '#/channels/discussion_list'
+      $ref: '#/channels/discussionList'
     description: ''
     summary: ''
     messages:
-    - $ref: '#/channels/discussion_list/messages/answer_accepted_message'
-  handle_new_topic:
+    - $ref: '#/channels/discussionList/messages/answerAcceptedMessage'
+  handleNewTopic:
     action: send
     channel:
-      $ref: '#/channels/discussion_list'
+      $ref: '#/channels/discussionList'
     description: ''
     summary: ''
     messages:
-    - $ref: '#/channels/discussion_list/messages/topic_created_message'
-  handle_unaccept_answer:
+    - $ref: '#/channels/discussionList/messages/topicCreatedMessage'
+  handleUnacceptAnswer:
     action: send
     channel:
-      $ref: '#/channels/discussion_list'
+      $ref: '#/channels/discussionList'
     description: ''
     summary: ''
     messages:
-    - $ref: '#/channels/discussion_list/messages/answer_unaccepted_message'
-  handle_vote_update:
+    - $ref: '#/channels/discussionList/messages/answerUnacceptedMessage'
+  handleVoteUpdate:
     action: send
     channel:
-      $ref: '#/channels/discussion_list'
+      $ref: '#/channels/discussionList'
     description: ''
     summary: ''
     messages:
-    - $ref: '#/channels/discussion_list/messages/vote_updated_message'
-  discussion_topic_handle_ping:
+    - $ref: '#/channels/discussionList/messages/voteUpdatedMessage'
+  discussionTopicHandlePing:
     action: receive
     channel:
-      $ref: '#/channels/discussion_topic'
+      $ref: '#/channels/discussionTopic'
     description: Simple ping-pong for connectivity testing
     summary: Handle ping requests
     messages:
-    - $ref: '#/channels/discussion_topic/messages/ping_message'
+    - $ref: '#/channels/discussionTopic/messages/pingMessage'
     reply:
       channel:
-        $ref: '#/channels/discussion_topic'
+        $ref: '#/channels/discussionTopic'
       messages:
-      - $ref: '#/channels/discussion_topic/messages/pong_message'
-  discussion_topic_handle_accept_answer:
+      - $ref: '#/channels/discussionTopic/messages/pongMessage'
+  discussionTopicHandleAcceptAnswer:
     action: send
     channel:
-      $ref: '#/channels/discussion_topic'
+      $ref: '#/channels/discussionTopic'
     description: ''
     summary: ''
     messages:
-    - $ref: '#/channels/discussion_topic/messages/answer_accepted_message'
-  handle_new_reply:
+    - $ref: '#/channels/discussionTopic/messages/answerAcceptedMessage'
+  handleNewReply:
     action: send
     channel:
-      $ref: '#/channels/discussion_topic'
+      $ref: '#/channels/discussionTopic'
     description: ''
     summary: ''
     messages:
-    - $ref: '#/channels/discussion_topic/messages/reply_created_message'
-  discussion_topic_handle_unaccept_answer:
+    - $ref: '#/channels/discussionTopic/messages/replyCreatedMessage'
+  discussionTopicHandleUnacceptAnswer:
     action: send
     channel:
-      $ref: '#/channels/discussion_topic'
+      $ref: '#/channels/discussionTopic'
     description: ''
     summary: ''
     messages:
-    - $ref: '#/channels/discussion_topic/messages/answer_unaccepted_message'
-  discussion_topic_handle_vote_update:
+    - $ref: '#/channels/discussionTopic/messages/answerUnacceptedMessage'
+  discussionTopicHandleVoteUpdate:
     action: send
     channel:
-      $ref: '#/channels/discussion_topic'
+      $ref: '#/channels/discussionTopic'
     description: ''
     summary: ''
     messages:
-    - $ref: '#/channels/discussion_topic/messages/vote_updated_message'
-  group_chat_handle_ping:
+    - $ref: '#/channels/discussionTopic/messages/voteUpdatedMessage'
+  groupChatHandlePing:
     action: receive
     channel:
-      $ref: '#/channels/group_chat'
+      $ref: '#/channels/groupChat'
     description: Simple ping-pong for connectivity testing
     summary: Handle ping requests
     messages:
-    - $ref: '#/channels/group_chat/messages/ping_message'
+    - $ref: '#/channels/groupChat/messages/pingMessage'
     reply:
       channel:
-        $ref: '#/channels/group_chat'
+        $ref: '#/channels/groupChat'
       messages:
-      - $ref: '#/channels/group_chat/messages/pong_message'
-  handle_group_chat_update:
+      - $ref: '#/channels/groupChat/messages/pongMessage'
+  handleGroupChatUpdate:
     action: send
     channel:
-      $ref: '#/channels/group_chat'
+      $ref: '#/channels/groupChat'
     description: ''
     summary: ''
     messages:
-    - $ref: '#/channels/group_chat/messages/group_chat_updated_message'
-  handle_notify_added_to_group:
+    - $ref: '#/channels/groupChat/messages/groupChatUpdatedMessage'
+  handleNotifyAddedToGroup:
     action: send
     channel:
-      $ref: '#/channels/group_chat'
+      $ref: '#/channels/groupChat'
     description: ''
     summary: ''
     messages:
-    - $ref: '#/channels/group_chat/messages/added_to_group_message'
-  handle_notify_removed_from_group:
+    - $ref: '#/channels/groupChat/messages/addedToGroupMessage'
+  handleNotifyRemovedFromGroup:
     action: send
     channel:
-      $ref: '#/channels/group_chat'
+      $ref: '#/channels/groupChat'
     description: ''
     summary: ''
     messages:
-    - $ref: '#/channels/group_chat/messages/removed_from_group_message'
-  chat_detail_handle_ping:
+    - $ref: '#/channels/groupChat/messages/removedFromGroupMessage'
+  chatDetailHandlePing:
     action: receive
     channel:
-      $ref: '#/channels/chat_detail'
+      $ref: '#/channels/chatDetail'
     description: Simple ping-pong for connectivity testing
     summary: Handle ping requests
     messages:
-    - $ref: '#/channels/chat_detail/messages/ping_message'
+    - $ref: '#/channels/chatDetail/messages/pingMessage'
     reply:
       channel:
-        $ref: '#/channels/chat_detail'
+        $ref: '#/channels/chatDetail'
       messages:
-      - $ref: '#/channels/chat_detail/messages/pong_message'
-  handle_member_added:
+      - $ref: '#/channels/chatDetail/messages/pongMessage'
+  handleMemberAdded:
     action: send
     channel:
-      $ref: '#/channels/chat_detail'
+      $ref: '#/channels/chatDetail'
     description: ''
     summary: ''
     messages:
-    - $ref: '#/channels/chat_detail/messages/member_added_message'
-  handle_member_removed:
+    - $ref: '#/channels/chatDetail/messages/memberAddedMessage'
+  handleMemberRemoved:
     action: send
     channel:
-      $ref: '#/channels/chat_detail'
+      $ref: '#/channels/chatDetail'
     description: ''
     summary: ''
     messages:
-    - $ref: '#/channels/chat_detail/messages/user_removed_from_group_message'
-    - $ref: '#/channels/chat_detail/messages/member_removed_message'
-  handle_new_chat_message:
+    - $ref: '#/channels/chatDetail/messages/userRemovedFromGroupMessage'
+    - $ref: '#/channels/chatDetail/messages/memberRemovedMessage'
+  handleNewChatMessage:
     action: send
     channel:
-      $ref: '#/channels/chat_detail'
+      $ref: '#/channels/chatDetail'
     description: ''
     summary: ''
     messages:
-    - $ref: '#/channels/chat_detail/messages/member_message'
+    - $ref: '#/channels/chatDetail/messages/memberMessage'
 components:
   messages:
-    added_to_group_message:
+    addedToGroupMessage:
       payload:
-        $ref: '#/components/schemas/AddedToGroupMessage'
-    answer_accepted_message:
+        $ref: '#/components/schemas/addedToGroupMessage'
+    answerAcceptedMessage:
       payload:
-        $ref: '#/components/schemas/AnswerAcceptedMessage'
-    answer_unaccepted_message:
+        $ref: '#/components/schemas/answerAcceptedMessage'
+    answerUnacceptedMessage:
       payload:
-        $ref: '#/components/schemas/AnswerUnacceptedMessage'
-    assistant_error_message:
+        $ref: '#/components/schemas/answerUnacceptedMessage'
+    assistantErrorMessage:
       payload:
-        $ref: '#/components/schemas/AssistantErrorMessage'
-    complete_streaming_message:
+        $ref: '#/components/schemas/assistantErrorMessage'
+    completeStreamingMessage:
       payload:
-        $ref: '#/components/schemas/CompleteStreamingMessage'
-    group_chat_updated_message:
+        $ref: '#/components/schemas/completeStreamingMessage'
+    groupChatUpdatedMessage:
       payload:
-        $ref: '#/components/schemas/GroupChatUpdatedMessage'
-    member_added_message:
+        $ref: '#/components/schemas/groupChatUpdatedMessage'
+    memberAddedMessage:
       payload:
-        $ref: '#/components/schemas/MemberAddedMessage'
-    member_message:
+        $ref: '#/components/schemas/memberAddedMessage'
+    memberMessage:
       payload:
-        $ref: '#/components/schemas/MemberMessage'
-    member_removed_message:
+        $ref: '#/components/schemas/memberMessage'
+    memberRemovedMessage:
       payload:
-        $ref: '#/components/schemas/MemberRemovedMessage'
-    new_assistant_message:
+        $ref: '#/components/schemas/memberRemovedMessage'
+    newAssistantMessage:
       payload:
-        $ref: '#/components/schemas/NewAssistantMessage'
-    ping_message:
+        $ref: '#/components/schemas/newAssistantMessage'
+    pingMessage:
       payload:
-        $ref: '#/components/schemas/PingMessage'
-    pong_message:
+        $ref: '#/components/schemas/pingMessage'
+    pongMessage:
       payload:
-        $ref: '#/components/schemas/PongMessage'
-    removed_from_group_message:
+        $ref: '#/components/schemas/pongMessage'
+    removedFromGroupMessage:
       payload:
-        $ref: '#/components/schemas/RemovedFromGroupMessage'
-    reply_created_message:
+        $ref: '#/components/schemas/removedFromGroupMessage'
+    replyCreatedMessage:
       payload:
-        $ref: '#/components/schemas/ReplyCreatedMessage'
-    streaming_message:
+        $ref: '#/components/schemas/replyCreatedMessage'
+    streamingMessage:
       payload:
-        $ref: '#/components/schemas/StreamingMessage'
-    topic_created_message:
+        $ref: '#/components/schemas/streamingMessage'
+    topicCreatedMessage:
       payload:
-        $ref: '#/components/schemas/TopicCreatedMessage'
-    user_removed_from_group_message:
+        $ref: '#/components/schemas/topicCreatedMessage'
+    userRemovedFromGroupMessage:
       payload:
-        $ref: '#/components/schemas/UserRemovedFromGroupMessage'
-    vote_updated_message:
+        $ref: '#/components/schemas/userRemovedFromGroupMessage'
+    voteUpdatedMessage:
       payload:
-        $ref: '#/components/schemas/VoteUpdatedMessage'
+        $ref: '#/components/schemas/voteUpdatedMessage'
   schemas:
-    AddedToGroupMessage:
+    addedToGroupMessage:
       properties:
         action:
           const: added_to_group
@@ -405,29 +405,29 @@ components:
       - payload
       title: AddedToGroupMessage
       type: object
-    AnswerAcceptedEventPayload:
+    answerAcceptedEventPayload:
       description: Payload for answer accepted events.
       properties:
-        topic_id:
+        topicId:
           title: Topic Id
           type: integer
-        topic_title:
+        topicTitle:
           title: Topic Title
           type: string
-        reply_id:
+        replyId:
           title: Reply Id
           type: integer
-        reply_author:
+        replyAuthor:
           title: Reply Author
           type: string
       required:
-      - topic_id
-      - topic_title
-      - reply_id
-      - reply_author
+      - topicId
+      - topicTitle
+      - replyId
+      - replyAuthor
       title: AnswerAcceptedEventPayload
       type: object
-    AnswerAcceptedMessage:
+    answerAcceptedMessage:
       description: Broadcast when an answer is accepted.
       properties:
         action:
@@ -436,34 +436,34 @@ components:
           title: Action
           type: string
         payload:
-          $ref: '#/components/schemas/AnswerAcceptedEventPayload'
+          $ref: '#/components/schemas/answerAcceptedEventPayload'
       required:
       - payload
       title: AnswerAcceptedMessage
       type: object
-    AnswerUnacceptedEventPayload:
+    answerUnacceptedEventPayload:
       description: Payload for answer unaccepted events.
       properties:
-        topic_id:
+        topicId:
           title: Topic Id
           type: integer
-        topic_title:
+        topicTitle:
           title: Topic Title
           type: string
-        reply_id:
+        replyId:
           title: Reply Id
           type: integer
-        reply_author:
+        replyAuthor:
           title: Reply Author
           type: string
       required:
-      - topic_id
-      - topic_title
-      - reply_id
-      - reply_author
+      - topicId
+      - topicTitle
+      - replyId
+      - replyAuthor
       title: AnswerUnacceptedEventPayload
       type: object
-    AnswerUnacceptedMessage:
+    answerUnacceptedMessage:
       description: Broadcast when an answer is unaccepted.
       properties:
         action:
@@ -472,12 +472,12 @@ components:
           title: Action
           type: string
         payload:
-          $ref: '#/components/schemas/AnswerUnacceptedEventPayload'
+          $ref: '#/components/schemas/answerUnacceptedEventPayload'
       required:
       - payload
       title: AnswerUnacceptedMessage
       type: object
-    AssistantErrorMessage:
+    assistantErrorMessage:
       description: Error message from assistant.
       properties:
         action:
@@ -486,12 +486,12 @@ components:
           title: Action
           type: string
         payload:
-          $ref: '#/components/schemas/ErrorPayload'
+          $ref: '#/components/schemas/errorPayload'
       required:
       - payload
       title: AssistantErrorMessage
       type: object
-    CompleteStreamingMessage:
+    completeStreamingMessage:
       description: Streaming message chunk from assistant.
       properties:
         action:
@@ -500,38 +500,38 @@ components:
           title: Action
           type: string
         payload:
-          $ref: '#/components/schemas/StreamingPayload'
+          $ref: '#/components/schemas/streamingPayload'
       required:
       - payload
       title: CompleteStreamingMessage
       type: object
-    ErrorPayload:
+    errorPayload:
       properties:
         content:
           title: Content
           type: string
-        message_id:
+        messageId:
           title: Message Id
           type: string
       required:
       - content
-      - message_id
+      - messageId
       title: ErrorPayload
       type: object
-    GroupChatUpdatePayload:
+    groupChatUpdatePayload:
       properties:
-        group_pk:
+        groupPk:
           title: Group Pk
           type: integer
-        updated_at:
+        updatedAt:
           title: Updated At
           type: string
       required:
-      - group_pk
-      - updated_at
+      - groupPk
+      - updatedAt
       title: GroupChatUpdatePayload
       type: object
-    GroupChatUpdatedMessage:
+    groupChatUpdatedMessage:
       properties:
         action:
           const: group_chat_updated
@@ -539,25 +539,25 @@ components:
           title: Action
           type: string
         payload:
-          $ref: '#/components/schemas/GroupChatUpdatePayload'
+          $ref: '#/components/schemas/groupChatUpdatePayload'
       required:
       - payload
       title: GroupChatUpdatedMessage
       type: object
-    GroupRemovePayload:
+    groupRemovePayload:
       properties:
-        group_pk:
+        groupPk:
           title: Group Pk
           type: integer
-        group_title:
+        groupTitle:
           title: Group Title
           type: string
       required:
-      - group_pk
-      - group_title
+      - groupPk
+      - groupTitle
       title: GroupRemovePayload
       type: object
-    MemberAddedMessage:
+    memberAddedMessage:
       properties:
         action:
           const: member_added
@@ -572,7 +572,7 @@ components:
       - payload
       title: MemberAddedMessage
       type: object
-    MemberMessage:
+    memberMessage:
       properties:
         action:
           const: member_message
@@ -587,7 +587,7 @@ components:
       - payload
       title: MemberMessage
       type: object
-    MemberRemovedMessage:
+    memberRemovedMessage:
       properties:
         action:
           const: member_removed
@@ -595,25 +595,25 @@ components:
           title: Action
           type: string
         payload:
-          $ref: '#/components/schemas/MemberRemovedPayload'
+          $ref: '#/components/schemas/memberRemovedPayload'
       required:
       - payload
       title: MemberRemovedMessage
       type: object
-    MemberRemovedPayload:
+    memberRemovedPayload:
       properties:
-        user_pk:
+        userPk:
           title: User Pk
           type: integer
         email:
           title: Email
           type: string
       required:
-      - user_pk
+      - userPk
       - email
       title: MemberRemovedPayload
       type: object
-    NewAssistantMessage:
+    newAssistantMessage:
       description: New assistant message (user or AI).
       properties:
         action:
@@ -629,7 +629,7 @@ components:
       - payload
       title: NewAssistantMessage
       type: object
-    NewReplyEventPayload:
+    newReplyEventPayload:
       description: Payload for new reply channel events.
       properties:
         id:
@@ -642,37 +642,37 @@ components:
           additionalProperties: true
           title: Author
           type: object
-        vote_count:
+        voteCount:
           title: Vote Count
           type: integer
-        is_accepted:
+        isAccepted:
           title: Is Accepted
           type: boolean
-        created_at:
+        createdAt:
           title: Created At
           type: string
-        formatted_created_at:
+        formattedCreatedAt:
           title: Formatted Created At
           type: string
-        topic_id:
+        topicId:
           title: Topic Id
           type: integer
-        topic_title:
+        topicTitle:
           title: Topic Title
           type: string
       required:
       - id
       - content
       - author
-      - vote_count
-      - is_accepted
-      - created_at
-      - formatted_created_at
-      - topic_id
-      - topic_title
+      - voteCount
+      - isAccepted
+      - createdAt
+      - formattedCreatedAt
+      - topicId
+      - topicTitle
       title: NewReplyEventPayload
       type: object
-    NewTopicEventPayload:
+    newTopicEventPayload:
       description: Payload for new topic channel events.
       properties:
         id:
@@ -685,37 +685,37 @@ components:
           additionalProperties: true
           title: Author
           type: object
-        vote_count:
+        voteCount:
           title: Vote Count
           type: integer
-        reply_count:
+        replyCount:
           title: Reply Count
           type: integer
-        has_accepted_answer:
+        hasAcceptedAnswer:
           title: Has Accepted Answer
           type: boolean
-        view_count:
+        viewCount:
           title: View Count
           type: integer
-        created_at:
+        createdAt:
           title: Created At
           type: string
-        formatted_created_at:
+        formattedCreatedAt:
           title: Formatted Created At
           type: string
       required:
       - id
       - title
       - author
-      - vote_count
-      - reply_count
-      - has_accepted_answer
-      - view_count
-      - created_at
-      - formatted_created_at
+      - voteCount
+      - replyCount
+      - hasAcceptedAnswer
+      - viewCount
+      - createdAt
+      - formattedCreatedAt
       title: NewTopicEventPayload
       type: object
-    Payload:
+    payload:
       properties:
         redirect:
           title: Redirect
@@ -728,7 +728,7 @@ components:
       - message
       title: Payload
       type: object
-    PingMessage:
+    pingMessage:
       description: Simple ping message to check WebSocket connection status.
       properties:
         action:
@@ -742,7 +742,7 @@ components:
           type: 'null'
       title: PingMessage
       type: object
-    PongMessage:
+    pongMessage:
       description: Simple pong message response to ping requests.
       properties:
         action:
@@ -756,7 +756,7 @@ components:
           type: 'null'
       title: PongMessage
       type: object
-    RemovedFromGroupMessage:
+    removedFromGroupMessage:
       properties:
         action:
           const: removed_from_group
@@ -764,12 +764,12 @@ components:
           title: Action
           type: string
         payload:
-          $ref: '#/components/schemas/GroupRemovePayload'
+          $ref: '#/components/schemas/groupRemovePayload'
       required:
       - payload
       title: RemovedFromGroupMessage
       type: object
-    ReplyCreatedMessage:
+    replyCreatedMessage:
       description: Broadcast when a new reply is created.
       properties:
         action:
@@ -778,12 +778,12 @@ components:
           title: Action
           type: string
         payload:
-          $ref: '#/components/schemas/NewReplyEventPayload'
+          $ref: '#/components/schemas/newReplyEventPayload'
       required:
       - payload
       title: ReplyCreatedMessage
       type: object
-    StreamingMessage:
+    streamingMessage:
       description: Streaming message chunk from assistant.
       properties:
         action:
@@ -792,29 +792,29 @@ components:
           title: Action
           type: string
         payload:
-          $ref: '#/components/schemas/StreamingPayload'
+          $ref: '#/components/schemas/streamingPayload'
       required:
       - payload
       title: StreamingMessage
       type: object
-    StreamingPayload:
+    streamingPayload:
       properties:
         content:
           title: Content
           type: string
-        is_complete:
+        isComplete:
           default: false
           title: Is Complete
           type: boolean
-        message_id:
+        messageId:
           title: Message Id
           type: integer
       required:
       - content
-      - message_id
+      - messageId
       title: StreamingPayload
       type: object
-    TopicCreatedMessage:
+    topicCreatedMessage:
       description: Broadcast when a new topic is created.
       properties:
         action:
@@ -823,12 +823,12 @@ components:
           title: Action
           type: string
         payload:
-          $ref: '#/components/schemas/NewTopicEventPayload'
+          $ref: '#/components/schemas/newTopicEventPayload'
       required:
       - payload
       title: TopicCreatedMessage
       type: object
-    UserRemovedFromGroupMessage:
+    userRemovedFromGroupMessage:
       properties:
         action:
           const: user_removed_from_group
@@ -836,33 +836,33 @@ components:
           title: Action
           type: string
         payload:
-          $ref: '#/components/schemas/Payload'
+          $ref: '#/components/schemas/payload'
       required:
       - payload
       title: UserRemovedFromGroupMessage
       type: object
-    VotePayload:
+    votePayload:
       description: Base payload for vote-related operations.
       properties:
-        target_type:
+        targetType:
           enum:
           - topic
           - reply
           title: Target Type
           type: string
-        target_id:
+        targetId:
           title: Target Id
           type: integer
-        vote_count:
+        voteCount:
           title: Vote Count
           type: integer
       required:
-      - target_type
-      - target_id
-      - vote_count
+      - targetType
+      - targetId
+      - voteCount
       title: VotePayload
       type: object
-    VoteUpdatedMessage:
+    voteUpdatedMessage:
       description: Broadcast when votes are updated.
       properties:
         action:
@@ -871,7 +871,7 @@ components:
           title: Action
           type: string
         payload:
-          $ref: '#/components/schemas/VotePayload'
+          $ref: '#/components/schemas/votePayload'
       required:
       - payload
       title: VoteUpdatedMessage

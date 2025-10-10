@@ -385,14 +385,22 @@ class AsyncAPIGenerator:
         """
         Camelize component names in a $ref path.
 
+        Schema names are kept as-is since they represent class names (PascalCase).
+        Other names like channels, messages, and operations are camelized.
+
         Args:
             ref: Reference path like #/channels/channel_name/messages/message_name
 
         Returns:
-            Reference with camelized component names
+            Reference with camelized component names (except schema names)
         """
         parts = ref.split("/")
         camelized_parts: list[str] = []
+
+        # Track if the next part after "schemas" is a schema name
+        schemas_keyword_index = -1
+        if "schemas" in parts:
+            schemas_keyword_index = parts.index("schemas")
 
         for i, part in enumerate(parts):
             # Don't camelize the first parts (#, channels, messages, operations, components, schemas)
@@ -404,8 +412,11 @@ class AsyncAPIGenerator:
                 "schemas",
             ]:
                 camelized_parts.append(part)
+            # If this is the part immediately after "schemas", keep it as-is (schema/class name)
+            elif schemas_keyword_index >= 0 and i == schemas_keyword_index + 1:
+                camelized_parts.append(part)
             else:
-                # Camelize actual names
+                # Camelize other names (channels, messages, operations)
                 camelized_parts.append(humps.camelize(part))
 
         return "/".join(camelized_parts)
@@ -450,10 +461,12 @@ class AsyncAPIGenerator:
         - Channel names
         - Operation names
         - Component message keys
-        - Component schema keys
         - Schema properties (in 'properties' field)
         - Schema required fields
-        - All $ref paths
+        - $ref paths (except schema names which are kept as class names)
+
+        Note: Schema keys themselves are NOT camelized as they represent
+        class names (e.g., "NewUserMessage" stays as-is, not "newUserMessage").
 
         Args:
             spec: The AsyncAPI specification
@@ -497,14 +510,14 @@ class AsyncAPIGenerator:
                 camelized_messages[camel_key] = msg_spec
             result["components"]["messages"] = camelized_messages
 
-        # Camelize component schema keys and their properties
+        # Camelize schema properties but keep schema keys as-is (they're class names in PascalCase)
         if "components" in result and "schemas" in result["components"]:
             camelized_schemas: dict[str, Any] = {}
             for schema_key, schema_spec in result["components"]["schemas"].items():
-                camel_key = humps.camelize(schema_key)
-                # Camelize schema properties and required fields
+                # Keep schema key as-is (it's a class name like "NewUserMessage")
+                # Only camelize the properties within the schema
                 camelized_schema = self._camelize_schema(schema_spec)
-                camelized_schemas[camel_key] = camelized_schema
+                camelized_schemas[schema_key] = camelized_schema
             result["components"]["schemas"] = camelized_schemas
 
         # Camelize all $ref paths

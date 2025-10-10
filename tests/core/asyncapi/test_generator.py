@@ -460,6 +460,12 @@ class TestAsyncAPIGenerator:
         # Component message keys camelized
         assert all("_" not in key for key in spec["components"]["messages"].keys())
 
+        # Schema keys should be preserved (class names in PascalCase)
+        schema_keys = list(spec["components"]["schemas"].keys())
+        assert "UserPayload" in schema_keys
+        assert "UserRegistrationMessage" in schema_keys
+        assert "RegistrationCompleteMessage" in schema_keys
+
         # Schema properties camelized
         for schema in spec["components"]["schemas"].values():
             if "properties" in schema:

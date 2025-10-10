@@ -116,7 +116,11 @@ The ``camelize`` parameter transforms all identifiers in the generated specifica
 - Message names: ``chat_notification_message`` → ``chatNotificationMessage``
 - Schema property names: ``first_name`` → ``firstName``
 - Schema required fields: ``["user_id", "created_at"]`` → ``["userId", "createdAt"]``
-- All ``$ref`` paths to reference the camelized names
+- ``$ref`` paths for channels, messages, and operations
+
+**What Stays as-is:**
+
+- Schema keys (class names) remain in PascalCase: ``UserPayload``, ``ChatMessage`` (not camelized)
 
 **When to Use CamelCase:**
 

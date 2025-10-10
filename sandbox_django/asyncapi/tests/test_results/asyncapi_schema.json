@@ -516,97 +516,97 @@
     "messages": {
       "addedToGroupMessage": {
         "payload": {
-          "$ref": "#/components/schemas/addedToGroupMessage"
+          "$ref": "#/components/schemas/AddedToGroupMessage"
         }
       },
       "answerAcceptedMessage": {
         "payload": {
-          "$ref": "#/components/schemas/answerAcceptedMessage"
+          "$ref": "#/components/schemas/AnswerAcceptedMessage"
         }
       },
       "answerUnacceptedMessage": {
         "payload": {
-          "$ref": "#/components/schemas/answerUnacceptedMessage"
+          "$ref": "#/components/schemas/AnswerUnacceptedMessage"
         }
       },
       "assistantErrorMessage": {
         "payload": {
-          "$ref": "#/components/schemas/assistantErrorMessage"
+          "$ref": "#/components/schemas/AssistantErrorMessage"
         }
       },
       "completeStreamingMessage": {
         "payload": {
-          "$ref": "#/components/schemas/completeStreamingMessage"
+          "$ref": "#/components/schemas/CompleteStreamingMessage"
         }
       },
       "groupChatUpdatedMessage": {
         "payload": {
-          "$ref": "#/components/schemas/groupChatUpdatedMessage"
+          "$ref": "#/components/schemas/GroupChatUpdatedMessage"
         }
       },
       "memberAddedMessage": {
         "payload": {
-          "$ref": "#/components/schemas/memberAddedMessage"
+          "$ref": "#/components/schemas/MemberAddedMessage"
         }
       },
       "memberMessage": {
         "payload": {
-          "$ref": "#/components/schemas/memberMessage"
+          "$ref": "#/components/schemas/MemberMessage"
         }
       },
       "memberRemovedMessage": {
         "payload": {
-          "$ref": "#/components/schemas/memberRemovedMessage"
+          "$ref": "#/components/schemas/MemberRemovedMessage"
         }
       },
       "newAssistantMessage": {
         "payload": {
-          "$ref": "#/components/schemas/newAssistantMessage"
+          "$ref": "#/components/schemas/NewAssistantMessage"
         }
       },
       "pingMessage": {
         "payload": {
-          "$ref": "#/components/schemas/pingMessage"
+          "$ref": "#/components/schemas/PingMessage"
         }
       },
       "pongMessage": {
         "payload": {
-          "$ref": "#/components/schemas/pongMessage"
+          "$ref": "#/components/schemas/PongMessage"
         }
       },
       "removedFromGroupMessage": {
         "payload": {
-          "$ref": "#/components/schemas/removedFromGroupMessage"
+          "$ref": "#/components/schemas/RemovedFromGroupMessage"
         }
       },
       "replyCreatedMessage": {
         "payload": {
-          "$ref": "#/components/schemas/replyCreatedMessage"
+          "$ref": "#/components/schemas/ReplyCreatedMessage"
         }
       },
       "streamingMessage": {
         "payload": {
-          "$ref": "#/components/schemas/streamingMessage"
+          "$ref": "#/components/schemas/StreamingMessage"
         }
       },
       "topicCreatedMessage": {
         "payload": {
-          "$ref": "#/components/schemas/topicCreatedMessage"
+          "$ref": "#/components/schemas/TopicCreatedMessage"
         }
       },
       "userRemovedFromGroupMessage": {
         "payload": {
-          "$ref": "#/components/schemas/userRemovedFromGroupMessage"
+          "$ref": "#/components/schemas/UserRemovedFromGroupMessage"
         }
       },
       "voteUpdatedMessage": {
         "payload": {
-          "$ref": "#/components/schemas/voteUpdatedMessage"
+          "$ref": "#/components/schemas/VoteUpdatedMessage"
         }
       }
     },
     "schemas": {
-      "addedToGroupMessage": {
+      "AddedToGroupMessage": {
         "properties": {
           "action": {
             "const": "added_to_group",
@@ -626,7 +626,7 @@
         "title": "AddedToGroupMessage",
         "type": "object"
       },
-      "answerAcceptedEventPayload": {
+      "AnswerAcceptedEventPayload": {
         "description": "Payload for answer accepted events.",
         "properties": {
           "topicId": {
@@ -655,7 +655,7 @@
         "title": "AnswerAcceptedEventPayload",
         "type": "object"
       },
-      "answerAcceptedMessage": {
+      "AnswerAcceptedMessage": {
         "description": "Broadcast when an answer is accepted.",
         "properties": {
           "action": {
@@ -665,7 +665,7 @@
             "type": "string"
           },
           "payload": {
-            "$ref": "#/components/schemas/answerAcceptedEventPayload"
+            "$ref": "#/components/schemas/AnswerAcceptedEventPayload"
           }
         },
         "required": [
@@ -674,7 +674,7 @@
         "title": "AnswerAcceptedMessage",
         "type": "object"
       },
-      "answerUnacceptedEventPayload": {
+      "AnswerUnacceptedEventPayload": {
         "description": "Payload for answer unaccepted events.",
         "properties": {
           "topicId": {
@@ -703,7 +703,7 @@
         "title": "AnswerUnacceptedEventPayload",
         "type": "object"
       },
-      "answerUnacceptedMessage": {
+      "AnswerUnacceptedMessage": {
         "description": "Broadcast when an answer is unaccepted.",
         "properties": {
           "action": {
@@ -713,7 +713,7 @@
             "type": "string"
           },
           "payload": {
-            "$ref": "#/components/schemas/answerUnacceptedEventPayload"
+            "$ref": "#/components/schemas/AnswerUnacceptedEventPayload"
           }
         },
         "required": [
@@ -722,7 +722,7 @@
         "title": "AnswerUnacceptedMessage",
         "type": "object"
       },
-      "assistantErrorMessage": {
+      "AssistantErrorMessage": {
         "description": "Error message from assistant.",
         "properties": {
           "action": {
@@ -732,7 +732,7 @@
             "type": "string"
           },
           "payload": {
-            "$ref": "#/components/schemas/errorPayload"
+            "$ref": "#/components/schemas/ErrorPayload"
           }
         },
         "required": [
@@ -741,7 +741,7 @@
         "title": "AssistantErrorMessage",
         "type": "object"
       },
-      "completeStreamingMessage": {
+      "CompleteStreamingMessage": {
         "description": "Streaming message chunk from assistant.",
         "properties": {
           "action": {
@@ -751,7 +751,7 @@
             "type": "string"
           },
           "payload": {
-            "$ref": "#/components/schemas/streamingPayload"
+            "$ref": "#/components/schemas/StreamingPayload"
           }
         },
         "required": [
@@ -760,7 +760,7 @@
         "title": "CompleteStreamingMessage",
         "type": "object"
       },
-      "errorPayload": {
+      "ErrorPayload": {
         "properties": {
           "content": {
             "title": "Content",
@@ -778,7 +778,7 @@
         "title": "ErrorPayload",
         "type": "object"
       },
-      "groupChatUpdatePayload": {
+      "GroupChatUpdatePayload": {
         "properties": {
           "groupPk": {
             "title": "Group Pk",
@@ -796,7 +796,7 @@
         "title": "GroupChatUpdatePayload",
         "type": "object"
       },
-      "groupChatUpdatedMessage": {
+      "GroupChatUpdatedMessage": {
         "properties": {
           "action": {
             "const": "group_chat_updated",
@@ -805,7 +805,7 @@
             "type": "string"
           },
           "payload": {
-            "$ref": "#/components/schemas/groupChatUpdatePayload"
+            "$ref": "#/components/schemas/GroupChatUpdatePayload"
           }
         },
         "required": [
@@ -814,7 +814,7 @@
         "title": "GroupChatUpdatedMessage",
         "type": "object"
       },
-      "groupRemovePayload": {
+      "GroupRemovePayload": {
         "properties": {
           "groupPk": {
             "title": "Group Pk",
@@ -832,7 +832,7 @@
         "title": "GroupRemovePayload",
         "type": "object"
       },
-      "memberAddedMessage": {
+      "MemberAddedMessage": {
         "properties": {
           "action": {
             "const": "member_added",
@@ -852,7 +852,7 @@
         "title": "MemberAddedMessage",
         "type": "object"
       },
-      "memberMessage": {
+      "MemberMessage": {
         "properties": {
           "action": {
             "const": "member_message",
@@ -872,7 +872,7 @@
         "title": "MemberMessage",
         "type": "object"
       },
-      "memberRemovedMessage": {
+      "MemberRemovedMessage": {
         "properties": {
           "action": {
             "const": "member_removed",
@@ -881,7 +881,7 @@
             "type": "string"
           },
           "payload": {
-            "$ref": "#/components/schemas/memberRemovedPayload"
+            "$ref": "#/components/schemas/MemberRemovedPayload"
           }
         },
         "required": [
@@ -890,7 +890,7 @@
         "title": "MemberRemovedMessage",
         "type": "object"
       },
-      "memberRemovedPayload": {
+      "MemberRemovedPayload": {
         "properties": {
           "userPk": {
             "title": "User Pk",
@@ -908,7 +908,7 @@
         "title": "MemberRemovedPayload",
         "type": "object"
       },
-      "newAssistantMessage": {
+      "NewAssistantMessage": {
         "description": "New assistant message (user or AI).",
         "properties": {
           "action": {
@@ -929,7 +929,7 @@
         "title": "NewAssistantMessage",
         "type": "object"
       },
-      "newReplyEventPayload": {
+      "NewReplyEventPayload": {
         "description": "Payload for new reply channel events.",
         "properties": {
           "id": {
@@ -984,7 +984,7 @@
         "title": "NewReplyEventPayload",
         "type": "object"
       },
-      "newTopicEventPayload": {
+      "NewTopicEventPayload": {
         "description": "Payload for new topic channel events.",
         "properties": {
           "id": {
@@ -1039,7 +1039,7 @@
         "title": "NewTopicEventPayload",
         "type": "object"
       },
-      "payload": {
+      "Payload": {
         "properties": {
           "redirect": {
             "title": "Redirect",
@@ -1057,7 +1057,7 @@
         "title": "Payload",
         "type": "object"
       },
-      "pingMessage": {
+      "PingMessage": {
         "description": "Simple ping message to check WebSocket connection status.",
         "properties": {
           "action": {
@@ -1075,7 +1075,7 @@
         "title": "PingMessage",
         "type": "object"
       },
-      "pongMessage": {
+      "PongMessage": {
         "description": "Simple pong message response to ping requests.",
         "properties": {
           "action": {
@@ -1093,7 +1093,7 @@
         "title": "PongMessage",
         "type": "object"
       },
-      "removedFromGroupMessage": {
+      "RemovedFromGroupMessage": {
         "properties": {
           "action": {
             "const": "removed_from_group",
@@ -1102,7 +1102,7 @@
             "type": "string"
           },
           "payload": {
-            "$ref": "#/components/schemas/groupRemovePayload"
+            "$ref": "#/components/schemas/GroupRemovePayload"
           }
         },
         "required": [
@@ -1111,7 +1111,7 @@
         "title": "RemovedFromGroupMessage",
         "type": "object"
       },
-      "replyCreatedMessage": {
+      "ReplyCreatedMessage": {
         "description": "Broadcast when a new reply is created.",
         "properties": {
           "action": {
@@ -1121,7 +1121,7 @@
             "type": "string"
           },
           "payload": {
-            "$ref": "#/components/schemas/newReplyEventPayload"
+            "$ref": "#/components/schemas/NewReplyEventPayload"
           }
         },
         "required": [
@@ -1130,7 +1130,7 @@
         "title": "ReplyCreatedMessage",
         "type": "object"
       },
-      "streamingMessage": {
+      "StreamingMessage": {
         "description": "Streaming message chunk from assistant.",
         "properties": {
           "action": {
@@ -1140,7 +1140,7 @@
             "type": "string"
           },
           "payload": {
-            "$ref": "#/components/schemas/streamingPayload"
+            "$ref": "#/components/schemas/StreamingPayload"
           }
         },
         "required": [
@@ -1149,7 +1149,7 @@
         "title": "StreamingMessage",
         "type": "object"
       },
-      "streamingPayload": {
+      "StreamingPayload": {
         "properties": {
           "content": {
             "title": "Content",
@@ -1172,7 +1172,7 @@
         "title": "StreamingPayload",
         "type": "object"
       },
-      "topicCreatedMessage": {
+      "TopicCreatedMessage": {
         "description": "Broadcast when a new topic is created.",
         "properties": {
           "action": {
@@ -1182,7 +1182,7 @@
             "type": "string"
           },
           "payload": {
-            "$ref": "#/components/schemas/newTopicEventPayload"
+            "$ref": "#/components/schemas/NewTopicEventPayload"
           }
         },
         "required": [
@@ -1191,7 +1191,7 @@
         "title": "TopicCreatedMessage",
         "type": "object"
       },
-      "userRemovedFromGroupMessage": {
+      "UserRemovedFromGroupMessage": {
         "properties": {
           "action": {
             "const": "user_removed_from_group",
@@ -1200,7 +1200,7 @@
             "type": "string"
           },
           "payload": {
-            "$ref": "#/components/schemas/payload"
+            "$ref": "#/components/schemas/Payload"
           }
         },
         "required": [
@@ -1209,7 +1209,7 @@
         "title": "UserRemovedFromGroupMessage",
         "type": "object"
       },
-      "votePayload": {
+      "VotePayload": {
         "description": "Base payload for vote-related operations.",
         "properties": {
           "targetType": {
@@ -1237,7 +1237,7 @@
         "title": "VotePayload",
         "type": "object"
       },
-      "voteUpdatedMessage": {
+      "VoteUpdatedMessage": {
         "description": "Broadcast when votes are updated.",
         "properties": {
           "action": {
@@ -1247,7 +1247,7 @@
             "type": "string"
           },
           "payload": {
-            "$ref": "#/components/schemas/votePayload"
+            "$ref": "#/components/schemas/VotePayload"
           }
         },
         "required": [

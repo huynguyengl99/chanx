@@ -1,3 +1,9 @@
+## v1.1.0 (2025-10-10)
+
+### Feat
+
+- **asyncapi**: add camelCase naming convention support
+
 ## v1.0.4 (2025-10-10)
 
 ### Fix

@@ -1,3 +1,9 @@
+## v1.1.1 (2025-10-11)
+
+### Fix
+
+- **asyncapi**: preserve schema keys as PascalCase class names in camelCase mode
+
 ## v1.1.0 (2025-10-10)
 
 ### Feat

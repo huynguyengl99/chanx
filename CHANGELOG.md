@@ -1,3 +1,9 @@
+## v1.1.3 (2025-10-11)
+
+### Fix
+
+- **core**: support list/tuple output types in handlers
+
 ## v1.1.2 (2025-10-11)
 
 ### Fix

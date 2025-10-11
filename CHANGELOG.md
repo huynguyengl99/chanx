@@ -1,3 +1,9 @@
+## v1.1.2 (2025-10-11)
+
+### Fix
+
+- **core**: add missing init file to core
+
 ## v1.1.1 (2025-10-11)
 
 ### Fix

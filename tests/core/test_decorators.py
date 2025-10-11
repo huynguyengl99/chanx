@@ -28,6 +28,16 @@ class DummyEvent(BaseMessage):
     payload: dict[str, Any]
 
 
+class AnotherResponse(BaseMessage):
+    action: Literal["another_response"] = "another_response"
+    payload: int
+
+
+class ThirdResponse(BaseMessage):
+    action: Literal["third_response"] = "third_response"
+    payload: bool
+
+
 class InvalidMessage:
     """Not a BaseMessage subclass for testing validation."""
 
@@ -130,8 +140,42 @@ class TestWsHandler:
         assert original_function.__doc__ == "Original docstring"
         assert inspect.iscoroutinefunction(original_function)
 
+    def test_ws_handler_with_union_output_type(self) -> None:
+        """Test ws_handler decorator with UnionType output."""
 
-class DummyEventHandler:
+        @ws_handler(output_type=DummyResponse | AnotherResponse)
+        async def union_handler(_self: Any, _message: DummyMessage) -> None:
+            pass
+
+        handler_info = getattr(union_handler, "_ws_handler_info")
+        assert handler_info["output_type"] == DummyResponse | AnotherResponse
+
+    def test_ws_handler_with_list_output_type(self) -> None:
+        """Test ws_handler decorator with list of output types."""
+
+        @ws_handler(output_type=[DummyResponse, AnotherResponse])
+        async def list_handler(_self: Any, _message: DummyMessage) -> None:
+            pass
+
+        handler_info = getattr(list_handler, "_ws_handler_info")
+        assert handler_info["output_type"] == [DummyResponse, AnotherResponse]
+
+    def test_ws_handler_with_tuple_output_type(self) -> None:
+        """Test ws_handler decorator with tuple of output types."""
+
+        @ws_handler(output_type=(DummyResponse, AnotherResponse, ThirdResponse))
+        async def tuple_handler(_self: Any, _message: DummyMessage) -> None:
+            pass
+
+        handler_info = getattr(tuple_handler, "_ws_handler_info")
+        assert handler_info["output_type"] == (
+            DummyResponse,
+            AnotherResponse,
+            ThirdResponse,
+        )
+
+
+class TestEventHandler:
     """Test the @event_handler decorator."""
 
     def test_event_handler_basic(self) -> None:
@@ -188,6 +232,40 @@ class DummyEventHandler:
         assert handler_info["description"] == "Event handler description"
         assert handler_info["summary"] == "Event summary"
         assert handler_info["tags"] == ["events"]
+
+    def test_event_handler_with_union_output_type(self) -> None:
+        """Test event_handler decorator with UnionType output."""
+
+        @event_handler(output_type=DummyResponse | AnotherResponse)
+        async def union_event_handler(_self: Any, _event: DummyEvent) -> None:
+            pass
+
+        handler_info = getattr(union_event_handler, "_event_handler_info")
+        assert handler_info["output_type"] == DummyResponse | AnotherResponse
+
+    def test_event_handler_with_list_output_type(self) -> None:
+        """Test event_handler decorator with list of output types."""
+
+        @event_handler(output_type=[DummyResponse, AnotherResponse])
+        async def list_event_handler(_self: Any, _event: DummyEvent) -> None:
+            pass
+
+        handler_info = getattr(list_event_handler, "_event_handler_info")
+        assert handler_info["output_type"] == [DummyResponse, AnotherResponse]
+
+    def test_event_handler_with_tuple_output_type(self) -> None:
+        """Test event_handler decorator with tuple of output types."""
+
+        @event_handler(output_type=(DummyResponse, AnotherResponse, ThirdResponse))
+        async def tuple_event_handler(_self: Any, _event: DummyEvent) -> None:
+            pass
+
+        handler_info = getattr(tuple_event_handler, "_event_handler_info")
+        assert handler_info["output_type"] == (
+            DummyResponse,
+            AnotherResponse,
+            ThirdResponse,
+        )
 
 
 class TestChannelDecorator:

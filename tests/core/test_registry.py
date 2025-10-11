@@ -23,6 +23,11 @@ class OtherDummyMessage(BaseMessage):
     payload: int
 
 
+class ThirdDummyMessage(BaseMessage):
+    action: Literal["third"] = "third"
+    payload: bool
+
+
 class Address(BaseModel):
     street: str
     city: str
@@ -300,3 +305,78 @@ class TestMessageRegistry:
 
         schema_json = json.dumps(registry.schema_objects)
         assert "#/$defs/" not in schema_json, "Found $defs references in nested schema"
+
+    def test_build_messages_with_union_type(self) -> None:
+        """Test adding message types with UnionType to the registry."""
+        registry = MessageRegistry()
+
+        # Test with UnionType
+        union_type = DummyMessage | OtherDummyMessage
+        registry.add(union_type, "TestConsumer")
+
+        # Both message types should be registered
+        assert DummyMessage in registry.messages
+        assert OtherDummyMessage in registry.messages
+        assert registry.messages[DummyMessage] == "#/components/messages/dummy_message"
+        assert (
+            registry.messages[OtherDummyMessage]
+            == "#/components/messages/other_dummy_message"
+        )
+
+        # Both should be in the consumer messages
+        assert DummyMessage in registry.consumer_messages["TestConsumer"]
+        assert OtherDummyMessage in registry.consumer_messages["TestConsumer"]
+
+    def test_build_messages_with_list_type(self) -> None:
+        """Test adding message types as list to the registry."""
+        registry = MessageRegistry()
+
+        # Test with list of types
+        list_types: list[type[BaseMessage]] = [
+            DummyMessage,
+            OtherDummyMessage,
+            ThirdDummyMessage,
+        ]
+        registry.add(list_types, "TestConsumer")
+
+        # All message types should be registered
+        assert DummyMessage in registry.messages
+        assert OtherDummyMessage in registry.messages
+        assert ThirdDummyMessage in registry.messages
+
+        assert registry.messages[DummyMessage] == "#/components/messages/dummy_message"
+        assert (
+            registry.messages[OtherDummyMessage]
+            == "#/components/messages/other_dummy_message"
+        )
+        assert (
+            registry.messages[ThirdDummyMessage]
+            == "#/components/messages/third_dummy_message"
+        )
+
+        # All should be in the consumer messages
+        assert DummyMessage in registry.consumer_messages["TestConsumer"]
+        assert OtherDummyMessage in registry.consumer_messages["TestConsumer"]
+        assert ThirdDummyMessage in registry.consumer_messages["TestConsumer"]
+
+    def test_build_messages_with_tuple_type(self) -> None:
+        """Test adding message types as tuple to the registry."""
+        registry = MessageRegistry()
+
+        # Test with tuple of types
+        tuple_types = (DummyMessage, OtherDummyMessage)
+        registry.add(tuple_types, "TestConsumer")
+
+        # Both message types should be registered
+        assert DummyMessage in registry.messages
+        assert OtherDummyMessage in registry.messages
+
+        assert registry.messages[DummyMessage] == "#/components/messages/dummy_message"
+        assert (
+            registry.messages[OtherDummyMessage]
+            == "#/components/messages/other_dummy_message"
+        )
+
+        # Both should be in the consumer messages
+        assert DummyMessage in registry.consumer_messages["TestConsumer"]
+        assert OtherDummyMessage in registry.consumer_messages["TestConsumer"]

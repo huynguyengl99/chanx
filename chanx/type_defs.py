@@ -18,7 +18,13 @@ class HandlerInfo(TypedDict):
     action: str
     message_action: str
     input_type: type[BaseMessage] | None
-    output_type: type[BaseMessage] | UnionType | None
+    output_type: (
+        type[BaseMessage]
+        | UnionType
+        | list[type[BaseMessage]]
+        | tuple[type[BaseMessage], ...]
+        | None
+    )
     method_name: str
 
 

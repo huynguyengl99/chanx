@@ -10,7 +10,8 @@ import asyncio
 import uuid
 from collections.abc import Collection
 from functools import reduce
-from typing import Annotated, Any, ClassVar, Generic, cast
+from types import UnionType
+from typing import Annotated, Any, ClassVar, Generic, cast, get_args, get_origin
 
 import humps
 import structlog
@@ -165,6 +166,8 @@ class AsyncJsonWebsocketConsumer(Generic[ReceiveEvent], BaseAsyncJsonWebsocketCo
         """
         Extract input and output types from handler info map.
 
+        Handles expansion of list/tuple/union types into individual types.
+
         Args:
             handler_info_map: Map of action -> AsyncAPIHandlerInfo
 
@@ -177,7 +180,20 @@ class AsyncJsonWebsocketConsumer(Generic[ReceiveEvent], BaseAsyncJsonWebsocketCo
             if info["input_type"]:
                 input_types.append(info["input_type"])
             if info["output_type"]:
-                output_types.append(cast(type[BaseMessage], info["output_type"]))
+                output_type = info["output_type"]
+
+                # Handle list/tuple of types - expand them
+                if isinstance(output_type, list | tuple):
+                    for msg_type in output_type:
+                        output_types.append(msg_type)
+                # Handle UnionType - expand into individual types
+                elif get_origin(output_type) in (UnionType, type(None)):
+                    for arg in get_args(output_type):
+                        if isinstance(arg, type) and issubclass(arg, BaseMessage):
+                            output_types.append(arg)
+                # Handle single type
+                else:
+                    output_types.append(cast(type[BaseMessage], output_type))
         return input_types, output_types
 
     @classmethod

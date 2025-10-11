@@ -30,6 +30,16 @@ class DummyEvent(BaseMessage):
     payload: int
 
 
+class SecondResponse(BaseMessage):
+    action: Literal["second_response"] = "second_response"
+    payload: str
+
+
+class ThirdResponse(BaseMessage):
+    action: Literal["third_response"] = "third_response"
+    payload: bool
+
+
 @channel(name="test_channel", description="Test channel for testing")
 class DummyConsumer(AsyncJsonWebsocketConsumer):
     """Test consumer with documentation."""
@@ -386,6 +396,154 @@ class TestAsyncAPIGenerator:
         assert len(tagged_operation["tags"]) == 2
         assert tagged_operation["tags"][0]["name"] == "important"
         assert tagged_operation["tags"][1]["name"] == "api"
+
+    def test_operation_with_union_output_type(self) -> None:
+        """Test operation creation with UnionType output."""
+
+        class UnionMessage(BaseMessage):
+            action: Literal["union_input"] = "union_input"
+            payload: str
+
+        class UnionConsumer(AsyncJsonWebsocketConsumer):
+            @ws_handler(output_type=DummyResponse | SecondResponse)
+            async def handle_union(self, message: UnionMessage) -> None:
+                pass
+
+        route = RouteInfo(
+            path="/ws/union",
+            handler=Mock(),
+            base_url="ws://localhost:8000",
+            consumer=UnionConsumer,
+        )
+
+        generator = AsyncAPIGenerator([route])
+        generator.build_channels()
+        generator.build_operations()
+
+        # Should have operation
+        assert len(generator.operations) > 0
+        operation = list(generator.operations.values())[0]
+
+        # Should have reply with multiple messages for UnionType
+        assert "reply" in operation
+        assert "messages" in operation["reply"]
+        assert len(operation["reply"]["messages"]) == 2
+
+        # Each message should be a $ref
+        for msg in operation["reply"]["messages"]:
+            assert "$ref" in msg
+
+    def test_operation_with_list_output_type(self) -> None:
+        """Test operation creation with list output type."""
+
+        class ListMessage(BaseMessage):
+            action: Literal["list_input"] = "list_input"
+            payload: str
+
+        class ListConsumer(AsyncJsonWebsocketConsumer):
+            @ws_handler(output_type=[DummyResponse, SecondResponse, ThirdResponse])
+            async def handle_list(self, message: ListMessage) -> None:
+                pass
+
+        route = RouteInfo(
+            path="/ws/list",
+            handler=Mock(),
+            base_url="ws://localhost:8000",
+            consumer=ListConsumer,
+        )
+
+        generator = AsyncAPIGenerator([route])
+        generator.build_channels()
+        generator.build_operations()
+
+        # Should have operation
+        assert len(generator.operations) > 0
+        operation = list(generator.operations.values())[0]
+
+        # Should have reply with multiple messages for list output type
+        assert "reply" in operation
+        assert "messages" in operation["reply"]
+        assert len(operation["reply"]["messages"]) == 3
+
+        # Each message should be a $ref
+        for msg in operation["reply"]["messages"]:
+            assert "$ref" in msg
+
+    def test_operation_with_tuple_output_type(self) -> None:
+        """Test operation creation with tuple output type."""
+
+        class TupleMessage(BaseMessage):
+            action: Literal["tuple_input"] = "tuple_input"
+            payload: str
+
+        class TupleConsumer(AsyncJsonWebsocketConsumer):
+            @ws_handler(output_type=(DummyResponse, SecondResponse))
+            async def handle_tuple(self, message: TupleMessage) -> None:
+                pass
+
+        route = RouteInfo(
+            path="/ws/tuple",
+            handler=Mock(),
+            base_url="ws://localhost:8000",
+            consumer=TupleConsumer,
+        )
+
+        generator = AsyncAPIGenerator([route])
+        generator.build_channels()
+        generator.build_operations()
+
+        # Should have operation
+        assert len(generator.operations) > 0
+        operation = list(generator.operations.values())[0]
+
+        # Should have reply with multiple messages for tuple output type
+        assert "reply" in operation
+        assert "messages" in operation["reply"]
+        assert len(operation["reply"]["messages"]) == 2
+
+        # Each message should be a $ref
+        for msg in operation["reply"]["messages"]:
+            assert "$ref" in msg
+
+    def test_event_handler_with_list_output_type(self) -> None:
+        """Test event handler with list output type."""
+
+        class EventConsumerWithList(AsyncJsonWebsocketConsumer):
+            @ws_handler
+            async def handle_test(self, message: DummyMessage) -> None:
+                pass
+
+            @event_handler(output_type=[DummyResponse, SecondResponse])
+            async def handle_event_with_list(self, event: DummyEvent) -> None:
+                pass
+
+        route = RouteInfo(
+            path="/ws/event_list",
+            handler=Mock(),
+            base_url="ws://localhost:8000",
+            consumer=EventConsumerWithList,
+        )
+
+        generator = AsyncAPIGenerator([route])
+        generator.build_channels()
+        generator.build_operations()
+
+        # Find the event handler operation (action: send)
+        event_operation = None
+        for op in generator.operations.values():
+            if op["action"] == "send":
+                event_operation = op
+                break
+
+        assert event_operation is not None
+
+        # Should have messages for event handler with list output type
+        assert "messages" in event_operation
+        assert len(event_operation["messages"]) == 2
+
+        # Each message should be a $ref
+        for msg in event_operation["messages"]:
+            assert "$ref" in msg
 
     def test_camelization_disabled_by_default(self) -> None:
         """Test that camelization is disabled by default and keeps snake_case."""

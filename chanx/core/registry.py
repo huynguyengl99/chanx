@@ -85,6 +85,9 @@ class MessageRegistry:
         """
         Build and register a message type in the registry.
 
+        Note: This method expects a single BaseMessage type, not a union/list/tuple.
+        Union/list/tuple handling is done in the add() method.
+
         Args:
             message_type: The BaseMessage subclass to register
             consumer_name: Name of the consumer using this message type
@@ -105,14 +108,30 @@ class MessageRegistry:
 
             self.messages[message_type] = get_asyncapi_message_ref(message_name)
 
-    def add(self, message_type: type[BaseMessage], consumer_name: str) -> None:
+    def add(
+        self,
+        message_type: (
+            type[BaseMessage]
+            | list[type[BaseMessage]]
+            | tuple[type[BaseMessage], ...]
+            | UnionType
+        ),
+        consumer_name: str,
+    ) -> None:
         """
-        Add a message type to the registry, handling both simple types and unions.
+        Add a message type to the registry, handling simple types, unions, lists, and tuples.
 
         Args:
-            message_type: The BaseMessage type or union to add
+            message_type: The BaseMessage type, union, list, or tuple to add
             consumer_name: Name of the consumer using this message type
         """
+        # Handle list/tuple of message types
+        if isinstance(message_type, list | tuple):
+            for msg_type in message_type:
+                self.build_message_schema(msg_type, consumer_name)
+                self.build_message(msg_type, consumer_name)
+            return
+
         self.build_message_schema(message_type, consumer_name)
 
         orig = get_origin(message_type)
@@ -121,7 +140,8 @@ class MessageRegistry:
                 if isinstance(sub, type) and issubclass(sub, BaseMessage):
                     self.build_message(sub, consumer_name)
         else:
-            self.build_message(message_type, consumer_name)
+            # At this point, message_type is a single type, not a UnionType
+            self.build_message(cast(type[BaseMessage], message_type), consumer_name)
 
     def _handle_union_type(
         self, model_type: type[BaseModel], consumer_name: str
@@ -303,7 +323,7 @@ class MessageRegistry:
                     self.schema_objects[def_name] = def_schema
 
     def build_message_schema(
-        self, model_type: type[BaseModel], consumer_name: str
+        self, model_type: type[BaseModel] | UnionType, consumer_name: str
     ) -> None:
         """
         Build and register a JSON schema for a BaseModel type.
@@ -312,23 +332,29 @@ class MessageRegistry:
         and generates proper schema references for AsyncAPI documentation.
 
         Args:
-            model_type: The BaseModel type to process
+            model_type: The BaseModel type or UnionType to process
             consumer_name: Name of the consumer using this type
         """
-        # Handle Union types first
-        if self._handle_union_type(model_type, consumer_name):
+        # Handle Union types first - if it's a union, process its args and return
+        orig = get_origin(model_type)
+        if orig in UNION_TYPES:
+            # It's a union, handle it and return
+            self._handle_union_type(cast(type[BaseModel], model_type), consumer_name)
             return
 
+        # At this point, model_type is guaranteed to be type[BaseModel], not UnionType
+        concrete_type = cast(type[BaseModel], model_type)
+
         # Skip if already processed
-        if model_type in self.schemas:
+        if concrete_type in self.schemas:
             return
 
         # Generate base schema
-        model_schema = model_type.model_json_schema()
-        self._update_schema_title(model_schema, model_type, consumer_name)
+        model_schema = concrete_type.model_json_schema()
+        self._update_schema_title(model_schema, concrete_type, consumer_name)
 
         # Process field types
-        model_type_fields = get_type_hints(model_type)
+        model_type_fields = get_type_hints(concrete_type)
         ref_fields, union_map = self._process_field_types(
             model_type_fields, consumer_name
         )
@@ -339,9 +365,9 @@ class MessageRegistry:
         )
 
         # Store the schema
-        self.schemas[model_type] = get_asyncapi_schema_ref(model_schema["title"])
+        self.schemas[concrete_type] = get_asyncapi_schema_ref(model_schema["title"])
         self.schema_objects[model_schema["title"]] = model_schema
-        self._schema_names.add(model_type.__name__)
+        self._schema_names.add(concrete_type.__name__)
 
 
 message_registry = MessageRegistry()

@@ -5,10 +5,13 @@ Decorators for Chanx WebSocket handlers.
 import inspect
 from collections.abc import Awaitable, Callable
 from functools import wraps
+from types import UnionType
 from typing import (
     Literal,
     ParamSpec,
+    TypeAlias,
     TypeVar,
+    cast,
     get_type_hints,
     overload,
 )
@@ -21,6 +24,16 @@ _P = ParamSpec("_P")
 _R = TypeVar("_R")
 _T = TypeVar("_T")
 
+# Type alias for output_type parameter
+# Supports: single type, UnionType, list, or tuple of BaseMessage types
+OutputType: TypeAlias = (
+    type[BaseMessage]
+    | UnionType
+    | list[type[BaseMessage]]
+    | tuple[type[BaseMessage], ...]
+    | None
+)
+
 
 @overload
 def _base_handler(
@@ -28,7 +41,7 @@ def _base_handler(
     kind: Literal["ws", "event"] = "ws",
     action: str | None = None,
     input_type: type[BaseMessage] | None = None,
-    output_type: type[BaseMessage] | None = None,
+    output_type: OutputType = None,
     attribute_name: str,
     description: str | None = None,
     summary: str | None = None,
@@ -43,7 +56,7 @@ def _base_handler(
     kind: Literal["ws", "event"] = "ws",
     action: str | None = None,
     input_type: type[BaseMessage] | None = None,
-    output_type: type[BaseMessage] | None = None,
+    output_type: OutputType = None,
     attribute_name: str,
     description: str | None = None,
     summary: str | None = None,
@@ -57,7 +70,7 @@ def _base_handler(  # noqa
     kind: Literal["ws", "event"] = "ws",
     action: str | None = None,
     input_type: type[BaseMessage] | None = None,
-    output_type: type[BaseMessage] | None = None,
+    output_type: OutputType = None,
     attribute_name: str,
     description: str | None = None,
     summary: str | None = None,
@@ -150,7 +163,19 @@ def _base_handler(  # noqa
         if kind == "ws":
             message_registry.add(final_input_type, consumer_name)
         if final_output_type:
-            message_registry.add(final_output_type, consumer_name)
+            # Handle different output_type formats
+            if isinstance(final_output_type, list | tuple):
+                # If it's a list or tuple, register each type
+                # Cast to help type checker understand the element type
+                typed_list = cast(  # type: ignore[redundant-cast]
+                    list[type[BaseMessage]] | tuple[type[BaseMessage], ...],
+                    final_output_type,
+                )
+                for output_msg_type in typed_list:
+                    message_registry.add(output_msg_type, consumer_name)
+            else:
+                # For single types and UnionType, registry.add already handles them
+                message_registry.add(final_output_type, consumer_name)
 
         @wraps(fn)
         async def wrapper(*args: _P.args, **kwargs: _P.kwargs) -> _R:
@@ -174,7 +199,7 @@ def ws_handler(
     *,
     action: str | None = None,
     input_type: type[BaseMessage] | None = None,
-    output_type: type[BaseMessage] | None = None,
+    output_type: OutputType = None,
     description: str | None = None,
     summary: str | None = None,
     tags: list[str] | None = None,
@@ -187,7 +212,7 @@ def ws_handler(
     *,
     action: str | None = None,
     input_type: type[BaseMessage] | None = None,
-    output_type: type[BaseMessage] | None = None,
+    output_type: OutputType = None,
     description: str | None = None,
     summary: str | None = None,
     tags: list[str] | None = None,
@@ -199,7 +224,7 @@ def ws_handler(
     *,
     action: str | None = None,
     input_type: type[BaseMessage] | None = None,
-    output_type: type[BaseMessage] | None = None,
+    output_type: OutputType = None,
     description: str | None = None,
     summary: str | None = None,
     tags: list[str] | None = None,
@@ -252,7 +277,7 @@ def ws_handler(
 def event_handler(
     *,
     input_type: type[BaseMessage] | None = None,
-    output_type: type[BaseMessage] | None = None,
+    output_type: OutputType = None,
     description: str | None = None,
     summary: str | None = None,
     tags: list[str] | None = None,
@@ -264,7 +289,7 @@ def event_handler(
     func: Callable[_P, Awaitable[_R]],
     *,
     input_type: type[BaseMessage] | None = None,
-    output_type: type[BaseMessage] | None = None,
+    output_type: OutputType = None,
     description: str | None = None,
     summary: str | None = None,
     tags: list[str] | None = None,
@@ -275,7 +300,7 @@ def event_handler(
     func: Callable[_P, Awaitable[_R]] | None = None,
     *,
     input_type: type[BaseMessage] | None = None,
-    output_type: type[BaseMessage] | None = None,
+    output_type: OutputType = None,
     description: str | None = None,
     summary: str | None = None,
     tags: list[str] | None = None,

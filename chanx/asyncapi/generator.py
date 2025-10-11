@@ -301,10 +301,16 @@ class AsyncAPIGenerator:
             output_type = handler_info["output_type"]
 
             output_messages: list[dict[str, Any]] = []
-            if isinstance(output_type, UnionType):
+            if isinstance(output_type, list | tuple):
+                # Handle list/tuple of message types
+                for sub in output_type:
+                    output_messages.append(self.build_output(channel_name, sub))
+            elif isinstance(output_type, UnionType):
+                # Handle UnionType
                 for sub in get_args(output_type):
                     output_messages.append(self.build_output(channel_name, sub))
             else:
+                # Handle single message type
                 output_messages.append(self.build_output(channel_name, output_type))
 
             if not is_event:

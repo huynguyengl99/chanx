@@ -11,9 +11,10 @@ from types import UnionType
 from typing import Any, TypeAlias, Union, cast, get_args, get_origin, get_type_hints
 
 import humps
+from pydantic import BaseModel
+
 from chanx.asyncapi.type_defs import SchemaObject
 from chanx.messages.base import BaseMessage
-from pydantic import BaseModel
 
 MessageSchema: TypeAlias = dict[str, Any]
 

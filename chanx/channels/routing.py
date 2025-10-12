@@ -53,6 +53,7 @@ def include(arg: _URLConf) -> URLRouter:
     This allows for modular organization of WebSocket routing configurations.
 
     This function can handle:
+
     - A URLRouter instance (returned as-is)
     - A string path to a module with a 'router' attribute
     - A module object with a 'router' attribute

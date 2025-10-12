@@ -1,18 +1,21 @@
-Extensions
-==========
+Django Channels Integration
+============================
 
-Chanx provides framework-specific extensions for Django Channels and FastAPI.
-
-Django Channels Extension
--------------------------
-
-The Channels extension provides seamless integration with Django Channels,
-including views for AsyncAPI documentation and testing utilities.
+Chanx provides seamless integration with Django Channels, including WebSocket consumers,
+AsyncAPI documentation views, DRF authentication, and testing utilities.
 
 .. module:: chanx.channels
 
+WebSocket Consumer
+------------------
+.. module:: chanx.channels.websocket
+
+.. autoclass:: chanx.channels.websocket.AsyncJsonWebsocketConsumer
+   :members:
+
+
 Views
-~~~~~
+-----
 .. module:: chanx.channels.views
 
 .. autoclass:: chanx.channels.views.AsyncAPISchemaView
@@ -25,7 +28,7 @@ Views
 
 
 Authenticator
-~~~~~~~~~~~~~
+-------------
 .. module:: chanx.channels.authenticator
 
 Django REST Framework integration for WebSocket authentication.
@@ -42,8 +45,11 @@ Django REST Framework integration for WebSocket authentication.
 
 
 Testing
-~~~~~~~
+-------
 .. module:: chanx.channels.testing
+
+.. autoclass:: chanx.channels.testing.WebsocketCommunicator
+   :members:
 
 .. autoclass:: chanx.channels.testing.DjangoWebsocketCommunicator
    :members:
@@ -53,21 +59,21 @@ Testing
 
 
 Utils
-~~~~~
+-----
 .. module:: chanx.channels.utils.asgi
 
 .. autofunction:: chanx.channels.utils.asgi.get_websocket_application
 
 
 Settings
-~~~~~~~~
+--------
 .. module:: chanx.channels.settings
 
-The Django Channels extension provides configuration through Django's settings system.
+The Django Channels integration provides configuration through Django's settings system.
 All Chanx settings are contained within a single ``CHANX`` dictionary in your project's settings file.
 
 Configuration Options
-^^^^^^^^^^^^^^^^^^^^^^
+~~~~~~~~~~~~~~~~~~~~~
 Here's an overview of all available settings and their default values:
 
 .. code-block:: python
@@ -91,7 +97,7 @@ Here's an overview of all available settings and their default values:
     }
 
 Settings Details
-^^^^^^^^^^^^^^^^
+~~~~~~~~~~~~~~~~
 .. list-table::
    :header-rows: 1
    :widths: 25 15 60
@@ -140,7 +146,7 @@ Settings Details
      - Server protocol for AsyncAPI documentation (auto-detected if not set)
 
 Using Settings in Code
-^^^^^^^^^^^^^^^^^^^^^^^
+~~~~~~~~~~~~~~~~~~~~~~
 Chanx's settings are accessible through the ``chanx_settings`` object:
 
 .. code-block:: python
@@ -155,7 +161,7 @@ Chanx's settings are accessible through the ``chanx_settings`` object:
         # Do something
 
 Optional Dependencies
-^^^^^^^^^^^^^^^^^^^^^
+~~~~~~~~~~~~~~~~~~~~~
 Some Chanx features require additional packages. You can install these along with Chanx using extras:
 
 .. code-block:: bash
@@ -165,21 +171,3 @@ Some Chanx features require additional packages. You can install these along wit
 
 This installs the ``pyhumps`` package which is required when using the ``CAMELIZE`` setting. Without this package
 enabling the setting will raise a runtime error.
-
-
-FastAPI Extension
------------------
-
-The FastAPI extension provides integration utilities for FastAPI applications.
-
-.. module:: chanx.fast_channels
-
-Views
-~~~~~
-.. module:: chanx.fast_channels.views
-
-.. autofunction:: chanx.fast_channels.views.asyncapi_docs
-
-.. autofunction:: chanx.fast_channels.views.asyncapi_spec_json
-
-.. autofunction:: chanx.fast_channels.views.asyncapi_spec_yaml

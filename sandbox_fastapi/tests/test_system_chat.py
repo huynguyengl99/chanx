@@ -1,7 +1,7 @@
 from typing import cast
 
 import pytest
-from chanx.fast_channels.testing import FastChannelsWebsocketCommunicator
+from chanx.fast_channels.testing import WebsocketCommunicator
 from chanx.messages.incoming import PingMessage
 from chanx.messages.outgoing import PongMessage
 
@@ -16,7 +16,7 @@ from sandbox_fastapi.main import app
 
 @pytest.mark.asyncio
 async def test_system_socket() -> None:
-    async with FastChannelsWebsocketCommunicator(
+    async with WebsocketCommunicator(
         app, "/ws/system", consumer=SystemMessageConsumer
     ) as comm:
         init_messages = await comm.receive_all_messages(stop_action="system_echo")

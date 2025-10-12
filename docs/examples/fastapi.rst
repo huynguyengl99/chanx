@@ -480,7 +480,7 @@ The FastAPI sandbox uses pytest with comprehensive WebSocket testing:
 
    # From sandbox_fastapi/tests/test_background_jobs.py
    import pytest
-   from chanx.testing import WebsocketCommunicator
+   from chanx.fast_channels.testing import WebsocketCommunicator
    from sandbox_fastapi.apps.background_jobs.consumer import BackgroundJobConsumer
 
    @pytest.mark.asyncio

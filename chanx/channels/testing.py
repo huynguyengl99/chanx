@@ -1,11 +1,10 @@
 """
 Django Channels integration for Chanx WebSocket testing.
 
-This module extends Chanx's core testing utilities with Django-specific features,
-including Django authentication integration, settings-based configuration,
-and Django test framework compatibility. Provides DjangoWebsocketCommunicator
-with authentication message handling and WebsocketTestCase for Django test
-environments with automatic ASGI application discovery and cleanup.
+Provides:
+- WebsocketCommunicator: Base communicator with Chanx features
+- DjangoWebsocketCommunicator: Adds Django authentication and settings
+- WebsocketTestCase: Django test framework integration
 """
 
 import asyncio
@@ -25,30 +24,32 @@ from chanx.core.testing import WebsocketCommunicatorMixin
 from chanx.messages.outgoing import AuthenticationMessage
 
 
-class DjangoWebsocketCommunicator(
-    WebsocketCommunicatorMixin, ChannelsWebsocketCommunicator
-):
+class WebsocketCommunicator(WebsocketCommunicatorMixin, ChannelsWebsocketCommunicator):
     """
-    Django Channels WebSocket communicator for testing Chanx consumers.
+    Base WebSocket communicator for testing Chanx consumers with Django Channels.
 
-    Combines Chanx testing mixin features with Django Channels' WebSocket communicator,
-    providing both framework-agnostic and Django-specific testing capabilities:
+    Combines Chanx testing features (send_message, receive_all_messages, message validation)
+    with Django Channels' WebSocket communicator (connect, disconnect, send_json_to).
 
-    Chanx features (from WebsocketCommunicatorMixin):
-    - Structured message sending/receiving with BaseMessage objects
-    - Automatic message collection until completion signals
-    - Message validation using consumer's type adapters
-    - Async context manager support
-
-    Django-specific features:
-    - wait_for_auth(): Handle Django authentication messages
-    - assert_authenticated_status_ok(): Validate DRF authentication status
-    - Integration with Django settings (SEND_AUTHENTICATION_MESSAGE, CAMELIZE)
-    - Automatic camelCase/snake_case conversion based on Django settings
+    For Django-specific features like authentication, use DjangoWebsocketCommunicator.
     """
 
     application: Any
     consumer: type[AsyncJsonWebsocketConsumer]
+
+
+class DjangoWebsocketCommunicator(WebsocketCommunicator):
+    """
+    Extends WebsocketCommunicator with Django authentication and settings integration.
+
+    Adds Django-specific features:
+
+    - wait_for_auth(): Handle Django authentication messages
+    - assert_authenticated_status_ok(): Validate DRF authentication status
+    - SEND_AUTHENTICATION_MESSAGE and CAMELIZE settings support
+
+    Use this for Django consumers with authentication.
+    """
 
     async def wait_for_auth(
         self,

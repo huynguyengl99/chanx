@@ -6,11 +6,19 @@ Chanx transforms WebSocket development with decorator-based message handlers tha
 The AsyncJsonWebsocketConsumer Base Class
 -----------------------------------------
 
-All Chanx consumers inherit from ``AsyncJsonWebsocketConsumer``, which provides the foundation for decorator-based message handling:
+All Chanx consumers inherit from ``AsyncJsonWebsocketConsumer``, which provides the foundation for decorator-based message handling.
+
+**Framework-Specific Imports:**
 
 .. code-block:: python
 
-    from chanx.core.websocket import AsyncJsonWebsocketConsumer
+    # For Django Channels
+    from chanx.channels.websocket import AsyncJsonWebsocketConsumer
+
+    # For FastAPI / other ASGI frameworks
+    from chanx.fast_channels.websocket import AsyncJsonWebsocketConsumer
+
+    # Decorators are framework-agnostic
     from chanx.core.decorators import ws_handler, event_handler, channel
 
     @channel(name="chat", description="Real-time chat system")
@@ -439,7 +447,7 @@ Here's a complete example that demonstrates all the concepts:
 .. code-block:: python
 
     from chanx.core.decorators import ws_handler, event_handler, channel
-    from chanx.core.websocket import AsyncJsonWebsocketConsumer
+    from chanx.channels.websocket import AsyncJsonWebsocketConsumer
     from chanx.channels.authenticator import DjangoAuthenticator
     from rest_framework.permissions import IsAuthenticated
 

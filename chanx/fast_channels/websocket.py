@@ -39,6 +39,7 @@ class AsyncJsonWebsocketConsumer(  # type: ignore[misc]
     broadcasting capabilities with fast-channels' WebSocket consumer for FastAPI.
 
     Features from Chanx mixin:
+
     - Automatic message type discovery from @ws_handler decorators
     - Type-safe message validation using Pydantic discriminated unions
     - Group broadcasting and channel event system
@@ -46,27 +47,11 @@ class AsyncJsonWebsocketConsumer(  # type: ignore[misc]
     - Optional authentication support
 
     Features from fast-channels:
+
     - FastAPI ASGI integration
     - fast-channels channel layer support (Redis, in-memory, etc.)
     - WebSocket lifecycle management
     - High-performance async operation
-
-    Usage:
-        ```python
-        from chanx.fast_channels.websocket import AsyncJsonWebsocketConsumer
-        from chanx.core.decorators import ws_handler
-
-        class MyChatConsumer(AsyncJsonWebsocketConsumer):
-            @ws_handler
-            async def handle_message(self, message: ChatMessage) -> ChatResponse:
-                # Handle incoming messages
-                return ChatResponse(...)
-        ```
-
-    Note:
-        Unlike Django Channels integration, fast-channels does not have built-in
-        authentication integration. Users should implement authentication in their
-        FastAPI dependency injection or custom authenticator classes.
     """
 
     channel_layer_alias: str

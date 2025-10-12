@@ -28,6 +28,7 @@ class BaseMessage(BaseModel, abc.ABC):
     Base message for all Chanx communications.
 
     Use cases:
+
     - Incoming messages: Client to server WebSocket communication
     - Outgoing messages: Server to client responses and notifications
     - Channel events: Server to server communication via channel layer

@@ -40,6 +40,7 @@ class AsyncJsonWebsocketConsumer(  # type: ignore[misc]
     and group broadcasting capabilities with Django Channels' WebSocket consumer.
 
     Features from Chanx mixin:
+
     - Automatic message type discovery from @ws_handler decorators
     - Type-safe message validation using Pydantic discriminated unions
     - Built-in authentication with Django REST Framework integration
@@ -47,25 +48,11 @@ class AsyncJsonWebsocketConsumer(  # type: ignore[misc]
     - Comprehensive error handling and logging
 
     Features from Django Channels:
+
     - Django ASGI integration
     - Django channel layer support (Redis, in-memory, etc.)
     - Django authentication and session support
     - WebSocket lifecycle management
-
-    Usage:
-        ```python
-        from chanx.channels.websocket import AsyncJsonWebsocketConsumer
-        from chanx.channels.authenticator import DjangoAuthenticator
-        from chanx.core.decorators import ws_handler
-
-        class MyChatConsumer(AsyncJsonWebsocketConsumer):
-            authenticator_class = DjangoAuthenticator
-
-            @ws_handler
-            async def handle_message(self, message: ChatMessage) -> ChatResponse:
-                # Handle incoming messages
-                return ChatResponse(...)
-        ```
     """
 
     get_channel_layer = get_channel_layer  # type: ignore[assignment, unused-ignore]

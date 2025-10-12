@@ -40,7 +40,8 @@ Contents
    reference/messages
    reference/routing
    reference/asyncapi
-   reference/extensions
+   reference/channels
+   reference/fast-channels
    reference/utils
    reference/testing
 

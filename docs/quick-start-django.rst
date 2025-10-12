@@ -59,6 +59,7 @@ Add to your ``settings.py``:
 .. code-block:: python
 
     INSTALLED_APPS = [
+        'daphne',  # Only needed if using 'python manage.py runserver'
         # ... your apps
         'channels',
         'rest_framework',
@@ -145,7 +146,7 @@ Create ``myapp/consumers.py``:
 .. code-block:: python
 
     from chanx.core.decorators import ws_handler, event_handler, channel
-    from chanx.core.websocket import AsyncJsonWebsocketConsumer
+    from chanx.channels.websocket import AsyncJsonWebsocketConsumer
     from chanx.messages.incoming import PingMessage
     from chanx.messages.outgoing import PongMessage
     from .messages import (
@@ -190,13 +191,19 @@ Create ``myapp/consumers.py``:
             """Handle system notifications from background tasks."""
             return NotificationMessage(payload=event.payload)
 
-3. **Test the Consumer**
+3. **Run the Server**
 
-Start your Django development server:
+**Option 1: Using Django's runserver** (requires ``daphne`` in INSTALLED_APPS):
 
 .. code-block:: bash
 
     python manage.py runserver
+
+**Option 2: Using Uvicorn directly** (no ``daphne`` needed in INSTALLED_APPS):
+
+.. code-block:: bash
+
+    uvicorn myproject.asgi:application
 
 Visit ``http://localhost:8000/asyncapi/docs/`` to see the auto-generated documentation.
 

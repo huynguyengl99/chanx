@@ -90,7 +90,7 @@ Framework Setup
 .. code-block:: python
 
     # base_consumer.py
-    from chanx.core.websocket import AsyncJsonWebsocketConsumer
+    from chanx.fast_channels.websocket import AsyncJsonWebsocketConsumer
 
     class BaseConsumer(AsyncJsonWebsocketConsumer):
         # Configure per your needs

@@ -22,6 +22,8 @@ Testing Configuration
 .. code-block:: python
 
     # Configure via base consumer or environment
+    from chanx.fast_channels.websocket import AsyncJsonWebsocketConsumer
+
     class TestBaseConsumer(AsyncJsonWebsocketConsumer):
         send_completion = True  # Enable completion signals for testing
         log_websocket_message = False  # Reduce test noise
@@ -31,7 +33,7 @@ Framework-Specific Testing
 
 **FastAPI and ASGI Frameworks:**
 
-- Use ``WebsocketCommunicator`` from ``chanx.testing``
+- Use ``WebsocketCommunicator`` from ``chanx.fast_channels.testing``
 - Async context manager support for automatic cleanup
 - Direct pytest integration
 
@@ -55,7 +57,7 @@ FastAPI Testing Examples
 .. code-block:: python
 
     import pytest
-    from chanx.testing import WebsocketCommunicator
+    from chanx.fast_channels.testing import WebsocketCommunicator
     from chanx.constants import GROUP_ACTION_COMPLETE
     from chanx.messages.incoming import PingMessage
     from chanx.messages.outgoing import PongMessage

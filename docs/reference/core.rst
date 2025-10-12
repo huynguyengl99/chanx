@@ -19,7 +19,7 @@ WebSocket Consumer
 ------------------
 .. module:: chanx.core.websocket
 
-.. autoclass:: chanx.core.websocket.AsyncJsonWebsocketConsumer
+.. autoclass:: chanx.core.websocket.ChanxWebsocketConsumerMixin
    :members:
 
 

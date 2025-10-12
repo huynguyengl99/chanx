@@ -23,7 +23,7 @@ Create ``base_consumer.py``:
 
 .. code-block:: python
 
-    from chanx.core.websocket import AsyncJsonWebsocketConsumer
+    from chanx.fast_channels.websocket import AsyncJsonWebsocketConsumer
 
     class BaseConsumer(AsyncJsonWebsocketConsumer):
         # Message configuration

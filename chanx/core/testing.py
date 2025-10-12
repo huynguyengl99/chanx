@@ -41,6 +41,7 @@ class WebsocketCommunicatorMixin:
     - Async context manager support for automatic cleanup
 
     Key methods:
+
     - send_message(): Send BaseMessage objects directly
     - receive_all_json(): Collect all messages until timeout
     - receive_all_messages(): Collect and validate messages until stop action

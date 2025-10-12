@@ -10,7 +10,11 @@ Chanx can be configured by creating a base consumer class and setting class attr
 
 .. code-block:: python
 
-    from chanx.core.websocket import AsyncJsonWebsocketConsumer
+    # For Django Channels
+    from chanx.channels.websocket import AsyncJsonWebsocketConsumer
+
+    # For FastAPI / other ASGI frameworks
+    from chanx.fast_channels.websocket import AsyncJsonWebsocketConsumer
 
     class BaseConsumer(AsyncJsonWebsocketConsumer):
         # Message behavior
@@ -122,7 +126,7 @@ You can use CHANX settings for some attributes instead of creating a base consum
 
 .. code-block:: python
 
-    from chanx.core.websocket import AsyncJsonWebsocketConsumer
+    from chanx.channels.websocket import AsyncJsonWebsocketConsumer
 
     class MyConsumer(AsyncJsonWebsocketConsumer):
         # These will use CHANX settings automatically
@@ -131,7 +135,7 @@ You can use CHANX settings for some attributes instead of creating a base consum
         # You can still override specific settings
         log_ignored_actions = ["ping", "pong"]
 
-        # Django automatically sets channel_layer_alias
+        # Django automatically uses 'default' channel layer
         # authenticator_class = MyAuthenticator  # Set if needed
 
 Environment-Specific Configuration Examples
@@ -150,7 +154,9 @@ For testing, it's recommended to enable completion messages:
         'LOG_IGNORED_ACTIONS': [],
     }
 
-    # Or for other frameworks, in base consumer
+    # Or for FastAPI/other frameworks, in base consumer
+    from chanx.fast_channels.websocket import AsyncJsonWebsocketConsumer
+
     class BaseConsumer(AsyncJsonWebsocketConsumer):
         send_completion = True  # Enable for testing
         log_websocket_message = False  # Reduce test noise
@@ -168,7 +174,9 @@ For production, consider performance and logging:
         'LOG_IGNORED_ACTIONS': ['ping', 'pong'],  # Reduce noise from heartbeats
     }
 
-    # Or for other frameworks
+    # Or for FastAPI/other frameworks
+    from chanx.fast_channels.websocket import AsyncJsonWebsocketConsumer
+
     class BaseConsumer(AsyncJsonWebsocketConsumer):
         send_completion = False
         log_websocket_message = True
@@ -180,14 +188,16 @@ For production, consider performance and logging:
 
     # FastAPI example
     import os
-    from chanx.core.websocket import AsyncJsonWebsocketConsumer
+    from chanx.fast_channels.websocket import AsyncJsonWebsocketConsumer
 
     class BaseConsumer(AsyncJsonWebsocketConsumer):
         send_completion = bool(os.environ.get("SEND_COMPLETION", False))
         channel_layer_alias = "default"  # Required for non-Django
 
-    # Django example - no channel_layer_alias needed
-    class DjangoConsumer(AsyncJsonWebsocketConsumer):
+    # Django example - uses CHANX settings automatically
+    from chanx.channels.websocket import AsyncJsonWebsocketConsumer as DjangoAsyncJsonWebsocketConsumer
+
+    class DjangoConsumer(DjangoAsyncJsonWebsocketConsumer):
         # Uses CHANX settings automatically
         authenticator_class = MyDjangoAuthenticator
 

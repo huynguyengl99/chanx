@@ -1,3 +1,13 @@
+## v2.0.0 (2025-10-12)
+
+### BREAKING CHANGE
+
+- Import paths changed from chanx.ext.channels to chanx.channels and chanx.ext.fast_channels to chanx.fast_channels
+
+### Feat
+
+- restructure package and adopt mixin pattern for better static type checking
+
 ## v1.1.3 (2025-10-11)
 
 ### Fix

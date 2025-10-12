@@ -8,8 +8,8 @@ from typing import Any, Literal
 from unittest.mock import Mock
 
 from chanx.asyncapi.generator import AsyncAPIGenerator
+from chanx.channels.websocket import AsyncJsonWebsocketConsumer
 from chanx.core.decorators import channel, event_handler, ws_handler
-from chanx.core.websocket import AsyncJsonWebsocketConsumer
 from chanx.messages.base import BaseMessage
 from chanx.routing.discovery import RouteInfo
 from pydantic import BaseModel

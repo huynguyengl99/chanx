@@ -2,9 +2,9 @@ from typing import Any, cast
 
 import pytest
 from chanx.constants import EVENT_ACTION_COMPLETE
+from chanx.fast_channels.testing import FastChannelsWebsocketCommunicator
 from chanx.messages.incoming import PingMessage
 from chanx.messages.outgoing import PongMessage
-from chanx.testing import WebsocketCommunicator
 
 from sandbox_fastapi.apps.background_jobs.consumer import BackgroundJobConsumer
 from sandbox_fastapi.apps.background_jobs.messages import (
@@ -18,7 +18,7 @@ from sandbox_fastapi.main import app
 @pytest.mark.asyncio
 async def test_connection_established_and_ping_handler() -> None:
     """Test ping-pong functionality."""
-    async with WebsocketCommunicator(
+    async with FastChannelsWebsocketCommunicator(
         app, "/ws/background_jobs", consumer=BackgroundJobConsumer
     ) as comm:
         connection_messages = await comm.receive_all_messages(stop_action="job_status")
@@ -39,7 +39,7 @@ async def test_connection_established_and_ping_handler() -> None:
 @pytest.mark.asyncio
 async def test_job_success(bg_worker: Any) -> None:
     """Test successful job queuing."""
-    async with WebsocketCommunicator(
+    async with FastChannelsWebsocketCommunicator(
         app, "/ws/background_jobs", consumer=BackgroundJobConsumer
     ) as comm:
         # Skip connection message
@@ -81,7 +81,7 @@ async def test_job_success(bg_worker: Any) -> None:
 
 async def send_job_and_process(job_type: str, content: str, bg_worker: Any) -> str:
     """Helper to send job and process with worker."""
-    async with WebsocketCommunicator(
+    async with FastChannelsWebsocketCommunicator(
         app, "/ws/background_jobs", consumer=BackgroundJobConsumer
     ) as comm:
         await comm.receive_all_messages(stop_action="job_status")  # Skip connection
@@ -144,7 +144,7 @@ async def test_invalid_job_type(bg_worker: Any) -> None:
 @pytest.mark.asyncio
 async def test_job_queuing_error() -> None:
     """Test job queuing error handling."""
-    async with WebsocketCommunicator(
+    async with FastChannelsWebsocketCommunicator(
         app, "/ws/background_jobs", consumer=BackgroundJobConsumer
     ) as comm:
         # Skip connection message

@@ -2,9 +2,9 @@ from typing import cast
 
 import pytest
 from chanx.constants import GROUP_ACTION_COMPLETE
+from chanx.fast_channels.testing import FastChannelsWebsocketCommunicator
 from chanx.messages.incoming import PingMessage
 from chanx.messages.outgoing import PongMessage
-from chanx.testing import WebsocketCommunicator
 
 from sandbox_fastapi.apps.showcase.consumer import (
     AnalyticsConsumer,
@@ -38,7 +38,9 @@ from sandbox_fastapi.main import app
 @pytest.mark.asyncio
 async def test_chat_consumer_ping() -> None:
     """Test ping-pong functionality for ChatConsumer."""
-    async with WebsocketCommunicator(app, "/ws/chat", consumer=ChatConsumer) as comm:
+    async with FastChannelsWebsocketCommunicator(
+        app, "/ws/chat", consumer=ChatConsumer
+    ) as comm:
         # Skip join message
         await comm.receive_all_messages(stop_action=GROUP_ACTION_COMPLETE)
 
@@ -52,7 +54,9 @@ async def test_chat_consumer_ping() -> None:
 @pytest.mark.asyncio
 async def test_chat_consumer_messaging() -> None:
     """Test chat messaging and broadcasting."""
-    async with WebsocketCommunicator(app, "/ws/chat", consumer=ChatConsumer) as comm:
+    async with FastChannelsWebsocketCommunicator(
+        app, "/ws/chat", consumer=ChatConsumer
+    ) as comm:
         # Skip join message
         join_messages = await comm.receive_all_messages(
             stop_action=GROUP_ACTION_COMPLETE
@@ -74,7 +78,7 @@ async def test_chat_consumer_messaging() -> None:
 @pytest.mark.asyncio
 async def test_reliable_chat_consumer_ping() -> None:
     """Test ping-pong functionality for ReliableChatConsumer."""
-    async with WebsocketCommunicator(
+    async with FastChannelsWebsocketCommunicator(
         app, "/ws/reliable", consumer=ReliableChatConsumer
     ) as comm:
         # Assert connection message
@@ -97,7 +101,7 @@ async def test_reliable_chat_consumer_ping() -> None:
 @pytest.mark.asyncio
 async def test_reliable_chat_consumer_messaging() -> None:
     """Test reliable chat messaging."""
-    async with WebsocketCommunicator(
+    async with FastChannelsWebsocketCommunicator(
         app, "/ws/reliable", consumer=ReliableChatConsumer
     ) as comm:
         # Assert connection message
@@ -128,7 +132,7 @@ async def test_reliable_chat_consumer_messaging() -> None:
 @pytest.mark.asyncio
 async def test_notification_consumer_ping() -> None:
     """Test ping-pong functionality for NotificationConsumer."""
-    async with WebsocketCommunicator(
+    async with FastChannelsWebsocketCommunicator(
         app, "/ws/notifications", consumer=NotificationConsumer
     ) as comm:
         # Skip connection notification
@@ -144,7 +148,7 @@ async def test_notification_consumer_ping() -> None:
 @pytest.mark.asyncio
 async def test_notification_consumer_messaging() -> None:
     """Test notification broadcasting."""
-    async with WebsocketCommunicator(
+    async with FastChannelsWebsocketCommunicator(
         app, "/ws/notifications", consumer=NotificationConsumer
     ) as comm:
         # assert connection notification
@@ -172,7 +176,7 @@ async def test_notification_consumer_messaging() -> None:
 @pytest.mark.asyncio
 async def test_analytics_consumer_ping() -> None:
     """Test ping-pong functionality for AnalyticsConsumer."""
-    async with WebsocketCommunicator(
+    async with FastChannelsWebsocketCommunicator(
         app, "/ws/analytics", consumer=AnalyticsConsumer
     ) as comm:
         await comm.send_message(PingMessage())
@@ -185,7 +189,7 @@ async def test_analytics_consumer_ping() -> None:
 @pytest.mark.asyncio
 async def test_analytics_consumer_events() -> None:
     """Test analytics event processing."""
-    async with WebsocketCommunicator(
+    async with FastChannelsWebsocketCommunicator(
         app, "/ws/analytics", consumer=AnalyticsConsumer
     ) as comm:
         # Send analytics event
@@ -205,7 +209,7 @@ async def test_analytics_consumer_events() -> None:
 @pytest.mark.asyncio
 async def test_analytics_consumer_events_no_data() -> None:
     """Test analytics event processing without data."""
-    async with WebsocketCommunicator(
+    async with FastChannelsWebsocketCommunicator(
         app, "/ws/analytics", consumer=AnalyticsConsumer
     ) as comm:
         # Send analytics event without data
@@ -226,14 +230,16 @@ async def test_analytics_consumer_events_no_data() -> None:
 async def test_external_sender_broadcast() -> None:
     """Test external sender script broadcasts to all consumers."""
     # Setup all consumers
-    chat_comm = WebsocketCommunicator(app, "/ws/chat", consumer=ChatConsumer)
-    reliable_comm = WebsocketCommunicator(
+    chat_comm = FastChannelsWebsocketCommunicator(
+        app, "/ws/chat", consumer=ChatConsumer
+    )
+    reliable_comm = FastChannelsWebsocketCommunicator(
         app, "/ws/reliable", consumer=ReliableChatConsumer
     )
-    notification_comm = WebsocketCommunicator(
+    notification_comm = FastChannelsWebsocketCommunicator(
         app, "/ws/notifications", consumer=NotificationConsumer
     )
-    analytics_comm = WebsocketCommunicator(
+    analytics_comm = FastChannelsWebsocketCommunicator(
         app, "/ws/analytics", consumer=AnalyticsConsumer
     )
 

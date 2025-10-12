@@ -73,12 +73,12 @@ Create ``main.py``:
     from fastapi import FastAPI
     from fastapi.requests import Request
     from fastapi.responses import HTMLResponse, JSONResponse, Response
-    from chanx.ext.fast_channels import (
+    from chanx.fast_channels import (
         asyncapi_docs,
         asyncapi_spec_json,
         asyncapi_spec_yaml,
     )
-    from chanx.ext.fast_channels.type_defs import AsyncAPIConfig
+    from chanx.fast_channels.type_defs import AsyncAPIConfig
     from layers import setup_channel_layers
     from consumers import ChatConsumer
 

@@ -11,7 +11,7 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from typing import Any
 
-from chanx.core.websocket import AsyncJsonWebsocketConsumer
+from chanx.core.websocket import ChanxWebsocketConsumerMixin
 
 
 @dataclass(frozen=True)
@@ -33,7 +33,7 @@ class RouteInfo:
     path: str
     handler: Any
     base_url: str
-    consumer: type[AsyncJsonWebsocketConsumer]
+    consumer: type[ChanxWebsocketConsumerMixin]
     path_params: dict[str, str] | None = None
 
     @property

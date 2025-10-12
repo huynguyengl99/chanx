@@ -17,7 +17,7 @@ from rest_framework.response import Response
 
 import pytest
 from asgiref.sync import sync_to_async
-from chanx.ext.channels.authenticator import (
+from chanx.channels.authenticator import (
     ChanxAuthView,
     ChanxSerializer,
     DjangoAuthenticator,

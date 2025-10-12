@@ -9,59 +9,59 @@ Django Channels Extension
 The Channels extension provides seamless integration with Django Channels,
 including views for AsyncAPI documentation and testing utilities.
 
-.. module:: chanx.ext.channels
+.. module:: chanx.channels
 
 Views
 ~~~~~
-.. module:: chanx.ext.channels.views
+.. module:: chanx.channels.views
 
-.. autoclass:: chanx.ext.channels.views.AsyncAPISchemaView
+.. autoclass:: chanx.channels.views.AsyncAPISchemaView
    :members:
 
-.. autoclass:: chanx.ext.channels.views.AsyncAPIDocsView
+.. autoclass:: chanx.channels.views.AsyncAPIDocsView
    :members:
 
-.. autofunction:: chanx.ext.channels.views.generate_asyncapi_schema
+.. autofunction:: chanx.channels.views.generate_asyncapi_schema
 
 
 Authenticator
 ~~~~~~~~~~~~~
-.. module:: chanx.ext.channels.authenticator
+.. module:: chanx.channels.authenticator
 
 Django REST Framework integration for WebSocket authentication.
 
-.. autoclass:: chanx.ext.channels.authenticator.DjangoAuthenticator
+.. autoclass:: chanx.channels.authenticator.DjangoAuthenticator
    :members:
    :exclude-members: authenticate
 
    .. automethod:: authenticate(scope: dict[str, Any]) -> bool
       :async:
 
-.. autoclass:: chanx.ext.channels.authenticator.ChanxAuthView
+.. autoclass:: chanx.channels.authenticator.ChanxAuthView
    :members:
 
 
 Testing
 ~~~~~~~
-.. module:: chanx.ext.channels.testing
+.. module:: chanx.channels.testing
 
-.. autoclass:: chanx.ext.channels.testing.DjangoWebsocketCommunicator
+.. autoclass:: chanx.channels.testing.DjangoWebsocketCommunicator
    :members:
 
-.. autoclass:: chanx.ext.channels.testing.WebsocketTestCase
+.. autoclass:: chanx.channels.testing.WebsocketTestCase
    :members:
 
 
 Utils
 ~~~~~
-.. module:: chanx.ext.channels.utils.asgi
+.. module:: chanx.channels.utils.asgi
 
-.. autofunction:: chanx.ext.channels.utils.asgi.get_websocket_application
+.. autofunction:: chanx.channels.utils.asgi.get_websocket_application
 
 
 Settings
 ~~~~~~~~
-.. module:: chanx.ext.channels.settings
+.. module:: chanx.channels.settings
 
 The Django Channels extension provides configuration through Django's settings system.
 All Chanx settings are contained within a single ``CHANX`` dictionary in your project's settings file.
@@ -145,7 +145,7 @@ Chanx's settings are accessible through the ``chanx_settings`` object:
 
 .. code-block:: python
 
-    from chanx.ext.channels.settings import chanx_settings
+    from chanx.channels.settings import chanx_settings
 
     # Access a setting
     action_key = chanx_settings.MESSAGE_ACTION_KEY
@@ -172,14 +172,14 @@ FastAPI Extension
 
 The FastAPI extension provides integration utilities for FastAPI applications.
 
-.. module:: chanx.ext.fast_channels
+.. module:: chanx.fast_channels
 
 Views
 ~~~~~
-.. module:: chanx.ext.fast_channels.views
+.. module:: chanx.fast_channels.views
 
-.. autofunction:: chanx.ext.fast_channels.views.asyncapi_docs
+.. autofunction:: chanx.fast_channels.views.asyncapi_docs
 
-.. autofunction:: chanx.ext.fast_channels.views.asyncapi_spec_json
+.. autofunction:: chanx.fast_channels.views.asyncapi_spec_json
 
-.. autofunction:: chanx.ext.fast_channels.views.asyncapi_spec_yaml
+.. autofunction:: chanx.fast_channels.views.asyncapi_spec_yaml

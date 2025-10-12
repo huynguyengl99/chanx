@@ -86,7 +86,7 @@ Configuring AsyncAPI Settings
 
 .. code-block:: python
 
-    from chanx.ext.fast_channels.views import asyncapi_docs, asyncapi_spec_json
+    from chanx.fast_channels.views import asyncapi_docs, asyncapi_spec_json
 
     # Configure via view parameters
     config = {
@@ -370,7 +370,7 @@ The easiest way is to include Chanx's pre-configured URLs:
 
     urlpatterns = [
         # Include Chanx AsyncAPI URLs
-        path('asyncapi/', include('chanx.ext.channels.urls')),
+        path('asyncapi/', include('chanx.channels.urls')),
     ]
 
 This provides:
@@ -387,7 +387,7 @@ If you want to customize the URL paths or view behavior:
 
     # urls.py
     from django.urls import path
-    from chanx.ext.channels.views import AsyncAPISchemaView, AsyncAPIDocsView
+    from chanx.channels.views import AsyncAPISchemaView, AsyncAPIDocsView
 
     urlpatterns = [
         # AsyncAPI spec endpoints
@@ -409,7 +409,7 @@ If you want to customize the URL paths or view behavior:
 .. code-block:: python
 
     from fastapi import FastAPI, Request
-    from chanx.ext.fast_channels.views import (
+    from chanx.fast_channels.views import (
         asyncapi_spec_json,
         asyncapi_spec_yaml,
         asyncapi_docs

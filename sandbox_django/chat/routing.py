@@ -1,6 +1,6 @@
 from channels.routing import URLRouter
 
-from chanx.ext.channels.routing import path, re_path
+from chanx.channels.routing import path, re_path
 
 from chat.consumers.chat_detail import ChatDetailConsumer
 from chat.consumers.group import GroupChatConsumer

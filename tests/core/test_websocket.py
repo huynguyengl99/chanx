@@ -6,11 +6,11 @@ including message processing, type adapter building, and handler routing.
 """
 
 from typing import Any, Literal
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock
 
 import pytest
+from chanx.channels.websocket import AsyncJsonWebsocketConsumer
 from chanx.core.decorators import event_handler, ws_handler
-from chanx.core.websocket import AsyncJsonWebsocketConsumer
 from chanx.messages.base import BaseMessage
 from chanx.messages.outgoing import CompleteMessage, ErrorMessage
 
@@ -186,27 +186,28 @@ class TestWebsocketEdgeCases:
     @pytest.mark.asyncio
     async def test_broadcast_event_string_groups(self) -> None:
         """Test broadcast_event with string groups parameter."""
+        from unittest.mock import Mock
 
         class TestConsumer(AsyncJsonWebsocketConsumer):
             pass
 
-        from unittest.mock import Mock
+        # Mock the get_channel_layer directly on TestConsumer
+        mock_layer = Mock()
+        mock_layer.group_send = AsyncMock()
 
-        with patch("chanx.core.websocket.get_channel_layer") as mock_get_layer:
-            mock_layer = Mock()
-            mock_layer.group_send = AsyncMock()
-            mock_get_layer.return_value = mock_layer
+        # Replace get_channel_layer on the class with a function that returns mock_layer
+        TestConsumer.get_channel_layer = lambda alias: mock_layer  # type: ignore[misc, assignment]
 
-            event = DummyMessage(payload={"data": "test"})
+        event = DummyMessage(payload={"data": "test"})
 
-            # Test with string group - covers line 618
-            await TestConsumer.broadcast_event(event, "single_group")
+        # Test with string group - covers line 618
+        await TestConsumer.broadcast_event(event, "single_group")
 
-            # Should have called group_send on the channel layer
-            mock_layer.group_send.assert_called_once_with(
-                "single_group",
-                {
-                    "type": "handle_channel_event",
-                    "event_data": event.model_dump(mode="json"),
-                },
-            )
+        # Should have called group_send on the channel layer
+        mock_layer.group_send.assert_called_once_with(
+            "single_group",
+            {
+                "type": "handle_channel_event",
+                "event_data": event.model_dump(mode="json"),
+            },
+        )

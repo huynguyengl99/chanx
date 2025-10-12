@@ -28,7 +28,7 @@ Create ``myproject/asgi.py``:
     from channels.security.websocket import OriginValidator
     from channels.sessions import CookieMiddleware
     from django.core.asgi import get_asgi_application
-    from chanx.ext.channels.routing import include
+    from chanx.channels.routing import include
 
     os.environ.setdefault("DJANGO_SETTINGS_MODULE", "myproject.settings")
     django_asgi_app = get_asgi_application()
@@ -45,7 +45,7 @@ Create ``myproject/routing.py``:
 .. code-block:: python
 
     from channels.routing import URLRouter
-    from chanx.ext.channels.routing import path
+    from chanx.channels.routing import path
     from myapp.consumers import ChatConsumer
 
     router = URLRouter([
@@ -62,7 +62,7 @@ Add to your ``settings.py``:
         # ... your apps
         'channels',
         'rest_framework',
-        'chanx.ext.channels',
+        'chanx.channels',
     ]
 
     # WebSocket settings
@@ -95,7 +95,7 @@ Add to your ``urls.py``:
 
     urlpatterns = [
         # ... your URLs
-        path('asyncapi/', include('chanx.ext.channels.urls')),
+        path('asyncapi/', include('chanx.channels.urls')),
     ]
 
 Create a Simple Consumer

@@ -3,8 +3,8 @@
 from typing import cast
 from unittest.mock import Mock
 
-from chanx.ext.fast_channels.type_defs import AsyncAPIConfig
-from chanx.ext.fast_channels.utils import build_default_config_from_app, merge_configs
+from chanx.fast_channels.type_defs import AsyncAPIConfig
+from chanx.fast_channels.utils import build_default_config_from_app, merge_configs
 from starlette.requests import Request
 
 

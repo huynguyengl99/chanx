@@ -20,7 +20,7 @@ from chanx.asyncapi.constants import (
 )
 from chanx.asyncapi.type_defs import ChannelObject, ParameterObject
 from chanx.core.registry import message_registry
-from chanx.core.websocket import AsyncJsonWebsocketConsumer
+from chanx.core.websocket import ChanxWebsocketConsumerMixin
 from chanx.messages.base import BaseMessage
 from chanx.routing.discovery import RouteInfo
 from chanx.type_defs import AsyncAPIHandlerInfo, ChannelInfo
@@ -199,7 +199,7 @@ class AsyncAPIGenerator:
         return self.channels
 
     def get_channel_messages(
-        self, consumer: type[AsyncJsonWebsocketConsumer]
+        self, consumer: type[ChanxWebsocketConsumerMixin]
     ) -> dict[str, dict[str, Any]]:
         """
         Extract message definitions for a channel from its consumer.
@@ -251,7 +251,7 @@ class AsyncAPIGenerator:
     def _build_single_operation(
         self,
         handler_info: AsyncAPIHandlerInfo,
-        consumer: type[AsyncJsonWebsocketConsumer],
+        consumer: type[ChanxWebsocketConsumerMixin],
         route: RouteInfo,
         is_event: bool = False,
     ) -> None:

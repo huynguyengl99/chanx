@@ -4,7 +4,7 @@ from accounts.factories.user import UserFactory
 from accounts.models import User
 from asgiref.sync import sync_to_async
 from auth_kit.app_settings import auth_kit_settings
-from chanx.ext.channels.testing import WebsocketTestCase as BaseWebsocketTestCase
+from chanx.channels.testing import WebsocketTestCase as BaseWebsocketTestCase
 from rest_framework_simplejwt.tokens import RefreshToken
 
 

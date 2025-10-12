@@ -4,6 +4,7 @@ import pytest
 import pytest_asyncio
 from arq import create_pool
 from arq.worker import Worker
+
 from fast_channels.layers.registry import channel_layers
 
 from .layers import setup_layers

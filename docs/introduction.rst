@@ -146,7 +146,7 @@ Chanx eliminates these pain points with a unified framework that provides:
           assert messages[0].action == "chat_notification"
 
   # Django Channels (enhanced)
-  from chanx.ext.channels.testing import WebsocketTestCase
+  from chanx.channels.testing import WebsocketTestCase
 
   class TestChat(WebsocketTestCase):
       consumer = ChatConsumer

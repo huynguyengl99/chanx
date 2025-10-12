@@ -10,7 +10,7 @@ from typing import TYPE_CHECKING, Any, cast
 from channels.routing import URLRouter
 from django.http import HttpRequest
 
-from chanx.core.websocket import AsyncJsonWebsocketConsumer
+from chanx.channels.websocket import AsyncJsonWebsocketConsumer
 from chanx.routing.discovery import RouteDiscovery, RouteInfo
 from chanx.routing.patterns import get_pattern_string_and_params
 from chanx.routing.traversal import traverse_middleware_stack

@@ -37,7 +37,7 @@ Framework-Specific Testing
 
 **Django Channels:**
 
-- Use ``WebsocketTestCase`` from ``chanx.ext.channels.testing``
+- Use ``WebsocketTestCase`` from ``chanx.channels.testing``
 - Enhanced Django test case with authentication support
 - Automatic ASGI application discovery
 
@@ -109,7 +109,7 @@ Django Testing Examples
 
 .. code-block:: python
 
-    from chanx.ext.channels.testing import WebsocketTestCase
+    from chanx.channels.testing import WebsocketTestCase
     from chanx.constants import EVENT_ACTION_COMPLETE
 
     class TestChatConsumer(WebsocketTestCase):

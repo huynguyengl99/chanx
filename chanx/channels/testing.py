@@ -12,42 +12,43 @@ import asyncio
 from asyncio import CancelledError
 from typing import Any, cast
 
+from channels.testing import WebsocketCommunicator as ChannelsWebsocketCommunicator
 from django.test import TransactionTestCase
 from rest_framework import status
 
 import humps
 from asgiref.sync import async_to_sync
 
-from chanx.core.websocket import AsyncJsonWebsocketConsumer
-from chanx.messages.outgoing import (
-    AuthenticationMessage,
-)
-from chanx.testing import WebsocketCommunicator
-
-from .settings import chanx_settings
+from chanx.channels.settings import chanx_settings
+from chanx.channels.websocket import AsyncJsonWebsocketConsumer
+from chanx.core.testing import WebsocketCommunicatorMixin
+from chanx.messages.outgoing import AuthenticationMessage
 
 
-class DjangoWebsocketCommunicator(WebsocketCommunicator):
+class DjangoWebsocketCommunicator(
+    WebsocketCommunicatorMixin, ChannelsWebsocketCommunicator
+):
     """
-    Django-enhanced WebSocket communicator for Chanx testing.
+    Django Channels WebSocket communicator for testing Chanx consumers.
 
-    Extends the core WebsocketCommunicator with Django-specific features:
+    Combines Chanx testing mixin features with Django Channels' WebSocket communicator,
+    providing both framework-agnostic and Django-specific testing capabilities:
 
-    - Django authentication message handling with wait_for_auth()
-    - Integration with Django settings (SEND_AUTHENTICATION_MESSAGE, CAMELIZE)
-    - REST framework status code validation with assert_authenticated_status_ok()
-    - Automatic camelCase/snake_case conversion based on Django settings
+    Chanx features (from WebsocketCommunicatorMixin):
+    - Structured message sending/receiving with BaseMessage objects
+    - Automatic message collection until completion signals
+    - Message validation using consumer's type adapters
+    - Async context manager support
 
-    Django-specific methods:
+    Django-specific features:
     - wait_for_auth(): Handle Django authentication messages
     - assert_authenticated_status_ok(): Validate DRF authentication status
-
-    Inherits all core functionality from WebsocketCommunicator including structured
-    message handling, completion signals, and message validation.
+    - Integration with Django settings (SEND_AUTHENTICATION_MESSAGE, CAMELIZE)
+    - Automatic camelCase/snake_case conversion based on Django settings
     """
 
     application: Any
-    consumer: type[AsyncJsonWebsocketConsumer[Any]]
+    consumer: type[AsyncJsonWebsocketConsumer]
 
     async def wait_for_auth(
         self,
@@ -96,28 +97,6 @@ class DjangoWebsocketCommunicator(WebsocketCommunicator):
             AuthenticationMessage, await self.wait_for_auth(max_auth_time=max_auth_time)
         )
         assert auth_message.payload.status_code == status.HTTP_200_OK
-
-    async def assert_closed(self) -> None:
-        """Asserts that the WebSocket has been closed."""
-        closed_status = await self.receive_output()
-        assert closed_status == {"type": "websocket.close"}
-
-    async def connect(self, timeout: float = 1) -> tuple[bool, int | str | None]:
-        """
-        Connects to the WebSocket and tracks connection state.
-
-        Args:
-            timeout: Maximum time to wait for connection (in seconds)
-
-        Returns:
-            Tuple of (connected, status_code)
-        """
-        try:
-            res = await super().connect(timeout)
-            self._connected = True
-            return res
-        except:
-            raise
 
 
 class WebsocketTestCase(TransactionTestCase):
@@ -243,7 +222,7 @@ class WebsocketTestCase(TransactionTestCase):
             if self.router is not None:
                 router = self.router
             else:
-                from chanx.ext.channels.utils import get_websocket_application
+                from chanx.channels.utils import get_websocket_application
 
                 ws_app = get_websocket_application()
                 if ws_app:

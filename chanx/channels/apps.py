@@ -22,5 +22,5 @@ class ChanxChannelsConfig(AppConfig):
     """
 
     default_auto_field = "django.db.models.BigAutoField"
-    name = "chanx.ext.channels"
+    name = "chanx.channels"
     label = "chanx_channels"

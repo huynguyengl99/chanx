@@ -5,11 +5,11 @@ Migrated to use chanx framework.
 
 from typing import Any
 
-from chanx.core.adapter import WebSocketDisconnectEvent
 from chanx.core.decorators import channel, ws_handler
 from chanx.messages.incoming import PingMessage
 from chanx.messages.outgoing import PongMessage
 
+from fast_channels.type_defs import WebSocketDisconnectEvent
 from sandbox_fastapi.base_consumer import BaseConsumer
 
 from .messages import RoomChatMessage, RoomMessagePayload, RoomNotificationMessage

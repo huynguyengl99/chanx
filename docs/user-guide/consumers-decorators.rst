@@ -386,7 +386,7 @@ Authentication Integration
 
 .. code-block:: python
 
-    from chanx.ext.channels.authenticator import DjangoAuthenticator
+    from chanx.channels.authenticator import DjangoAuthenticator
     from rest_framework.permissions import IsAuthenticated
 
     class ChatAuthenticator(DjangoAuthenticator):
@@ -440,7 +440,7 @@ Here's a complete example that demonstrates all the concepts:
 
     from chanx.core.decorators import ws_handler, event_handler, channel
     from chanx.core.websocket import AsyncJsonWebsocketConsumer
-    from chanx.ext.channels.authenticator import DjangoAuthenticator
+    from chanx.channels.authenticator import DjangoAuthenticator
     from rest_framework.permissions import IsAuthenticated
 
     # Messages

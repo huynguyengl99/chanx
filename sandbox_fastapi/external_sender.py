@@ -6,7 +6,6 @@ using centralized layer configuration from layers.py.
 import asyncio
 
 from fast_channels.layers.registry import channel_layers
-
 from sandbox_fastapi.apps.showcase.consumer import (
     AnalyticsConsumer,
     ChatConsumer,

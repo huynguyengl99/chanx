@@ -1,6 +1,6 @@
 from channels.routing import URLRouter
 
-from chanx.ext.channels.routing import path
+from chanx.channels.routing import path
 
 from discussion.consumers import DiscussionListConsumer, DiscussionTopicConsumer
 

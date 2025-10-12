@@ -14,7 +14,7 @@ from channels.sessions import CookieMiddleware
 from django.conf import settings
 from django.core.asgi import get_asgi_application
 
-from chanx.ext.channels.routing import include
+from chanx.channels.routing import include
 
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "config.settings.dev")
 django_asgi_app = get_asgi_application()

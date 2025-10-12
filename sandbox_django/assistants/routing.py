@@ -1,6 +1,6 @@
 from channels.routing import URLRouter
 
-from chanx.ext.channels.routing import re_path
+from chanx.channels.routing import re_path
 
 from assistants.consumers import (
     ConversationAssistantConsumer,

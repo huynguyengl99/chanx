@@ -2,7 +2,7 @@ from unittest.mock import Mock, patch
 
 from django.test import TestCase
 
-from chanx.ext.channels.utils import get_websocket_application
+from chanx.channels.utils import get_websocket_application
 
 
 class TestAsgiUtils(TestCase):
@@ -16,7 +16,7 @@ class TestAsgiUtils(TestCase):
         mock_application.application_mapping = {"websocket": mock_ws_app}
 
         with patch(
-            "chanx.ext.channels.utils.asgi.get_default_application",
+            "chanx.channels.utils.asgi.get_default_application",
             return_value=mock_application,
         ):
             result = get_websocket_application()
@@ -28,7 +28,7 @@ class TestAsgiUtils(TestCase):
         mock_application = Mock(spec=[])
 
         with patch(
-            "chanx.ext.channels.utils.asgi.get_default_application",
+            "chanx.channels.utils.asgi.get_default_application",
             return_value=mock_application,
         ):
             result = get_websocket_application()
@@ -41,7 +41,7 @@ class TestAsgiUtils(TestCase):
         mock_application.application_mapping = {"http": Mock()}
 
         with patch(
-            "chanx.ext.channels.utils.asgi.get_default_application",
+            "chanx.channels.utils.asgi.get_default_application",
             return_value=mock_application,
         ):
             result = get_websocket_application()

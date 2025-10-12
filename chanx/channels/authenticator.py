@@ -33,8 +33,8 @@ from rest_framework.response import Response
 import structlog
 from asgiref.sync import sync_to_async
 
+from chanx.channels.utils import request_from_scope
 from chanx.core.authenticator import BaseAuthenticator
-from chanx.ext.channels.utils import request_from_scope
 from chanx.messages.outgoing import AuthenticationMessage, AuthenticationPayload
 from chanx.type_defs import SendMessageFn
 from chanx.utils.logging import logger

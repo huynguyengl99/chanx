@@ -5,8 +5,8 @@ from typing import cast
 from unittest.mock import Mock, patch
 
 import pytest
-from chanx.ext.fast_channels.type_defs import AsyncAPIConfig
-from chanx.ext.fast_channels.views import (
+from chanx.fast_channels.type_defs import AsyncAPIConfig
+from chanx.fast_channels.views import (
     asyncapi_docs,
     asyncapi_spec_json,
     asyncapi_spec_yaml,
@@ -45,7 +45,7 @@ class TestGenerateAsyncAPISchema:
         """Test that config is built correctly and passed to generator."""
         # This tests the view logic: config building and generator invocation
         with patch(
-            "chanx.ext.fast_channels.views.AsyncAPIGenerator"
+            "chanx.fast_channels.views.AsyncAPIGenerator"
         ) as mock_generator_class:
             mock_generator = Mock()
             mock_generator.generate.return_value = {"asyncapi": "3.0.0"}
@@ -72,7 +72,7 @@ class TestGenerateAsyncAPISchema:
         )
 
         with patch(
-            "chanx.ext.fast_channels.views.AsyncAPIGenerator"
+            "chanx.fast_channels.views.AsyncAPIGenerator"
         ) as mock_generator_class:
             mock_generator = Mock()
             mock_generator.generate.return_value = {"asyncapi": "3.0.0"}
@@ -89,7 +89,7 @@ class TestGenerateAsyncAPISchema:
     def test_generate_schema_without_camelize(self) -> None:
         """Test that camelize defaults to False when not specified."""
         with patch(
-            "chanx.ext.fast_channels.views.AsyncAPIGenerator"
+            "chanx.fast_channels.views.AsyncAPIGenerator"
         ) as mock_generator_class:
             mock_generator = Mock()
             mock_generator.generate.return_value = {"asyncapi": "3.0.0"}
@@ -106,7 +106,7 @@ class TestGenerateAsyncAPISchema:
         custom_config = cast(AsyncAPIConfig, {"camelize": True})
 
         with patch(
-            "chanx.ext.fast_channels.views.AsyncAPIGenerator"
+            "chanx.fast_channels.views.AsyncAPIGenerator"
         ) as mock_generator_class:
             mock_generator = Mock()
             mock_generator.generate.return_value = {"asyncapi": "3.0.0"}
@@ -123,7 +123,7 @@ class TestGenerateAsyncAPISchema:
         custom_config = cast(AsyncAPIConfig, {"camelize": False})
 
         with patch(
-            "chanx.ext.fast_channels.views.AsyncAPIGenerator"
+            "chanx.fast_channels.views.AsyncAPIGenerator"
         ) as mock_generator_class:
             mock_generator = Mock()
             mock_generator.generate.return_value = {"asyncapi": "3.0.0"}
@@ -154,7 +154,7 @@ class TestAsyncAPISpecJSON:
         expected_schema = {"asyncapi": "3.0.0", "info": {"title": "Test API"}}
 
         with patch(
-            "chanx.ext.fast_channels.views.generate_asyncapi_schema"
+            "chanx.fast_channels.views.generate_asyncapi_schema"
         ) as mock_generate:
             mock_generate.return_value = expected_schema
 
@@ -173,7 +173,7 @@ class TestAsyncAPISpecJSON:
         expected_schema = {"asyncapi": "3.0.0", "info": {"title": "Custom API Title"}}
 
         with patch(
-            "chanx.ext.fast_channels.views.generate_asyncapi_schema"
+            "chanx.fast_channels.views.generate_asyncapi_schema"
         ) as mock_generate:
             mock_generate.return_value = expected_schema
 
@@ -192,7 +192,7 @@ class TestAsyncAPISpecJSON:
     async def test_json_response_error_handling(self) -> None:
         """Test error handling in JSON spec generation."""
         with patch(
-            "chanx.ext.fast_channels.views.generate_asyncapi_schema"
+            "chanx.fast_channels.views.generate_asyncapi_schema"
         ) as mock_generate:
             mock_generate.side_effect = Exception("Test error")
 
@@ -221,7 +221,7 @@ class TestAsyncAPISpecYAML:
     @pytest.mark.asyncio
     async def test_yaml_not_available(self) -> None:
         """Test YAML response when PyYAML is not available."""
-        with patch("chanx.ext.fast_channels.views.yaml_available", False):
+        with patch("chanx.fast_channels.views.yaml_available", False):
             response = await asyncapi_spec_yaml(self.mock_request, self.app)
 
             assert isinstance(response, JSONResponse)
@@ -237,9 +237,9 @@ class TestAsyncAPISpecYAML:
         expected_schema = {"asyncapi": "3.0.0", "info": {"title": "Test API"}}
 
         with (
-            patch("chanx.ext.fast_channels.views.yaml_available", True),
+            patch("chanx.fast_channels.views.yaml_available", True),
             patch(
-                "chanx.ext.fast_channels.views.generate_asyncapi_schema"
+                "chanx.fast_channels.views.generate_asyncapi_schema"
             ) as mock_generate,
         ):
 
@@ -262,9 +262,9 @@ class TestAsyncAPISpecYAML:
         expected_schema = {"asyncapi": "3.0.0", "info": {"title": "Custom YAML API"}}
 
         with (
-            patch("chanx.ext.fast_channels.views.yaml_available", True),
+            patch("chanx.fast_channels.views.yaml_available", True),
             patch(
-                "chanx.ext.fast_channels.views.generate_asyncapi_schema"
+                "chanx.fast_channels.views.generate_asyncapi_schema"
             ) as mock_generate,
         ):
 
@@ -280,10 +280,10 @@ class TestAsyncAPISpecYAML:
         mock_yaml = Mock()
 
         with (
-            patch("chanx.ext.fast_channels.views.yaml_available", True),
-            patch("chanx.ext.fast_channels.views.yaml", mock_yaml),
+            patch("chanx.fast_channels.views.yaml_available", True),
+            patch("chanx.fast_channels.views.yaml", mock_yaml),
             patch(
-                "chanx.ext.fast_channels.views.generate_asyncapi_schema"
+                "chanx.fast_channels.views.generate_asyncapi_schema"
             ) as mock_generate,
         ):
 
@@ -317,7 +317,7 @@ class TestAsyncAPIDocs:
         expected_schema = {"asyncapi": "3.0.0", "info": {"title": "Test API"}}
 
         with patch(
-            "chanx.ext.fast_channels.views.generate_asyncapi_schema"
+            "chanx.fast_channels.views.generate_asyncapi_schema"
         ) as mock_generate:
             mock_generate.return_value = expected_schema
 
@@ -337,7 +337,7 @@ class TestAsyncAPIDocs:
         expected_schema = {"asyncapi": "3.0.0", "info": {"title": "Custom Docs API"}}
 
         with patch(
-            "chanx.ext.fast_channels.views.generate_asyncapi_schema"
+            "chanx.fast_channels.views.generate_asyncapi_schema"
         ) as mock_generate:
             mock_generate.return_value = expected_schema
 
@@ -350,7 +350,7 @@ class TestAsyncAPIDocs:
     async def test_docs_response_error_handling(self) -> None:
         """Test error handling in docs generation."""
         with patch(
-            "chanx.ext.fast_channels.views.generate_asyncapi_schema"
+            "chanx.fast_channels.views.generate_asyncapi_schema"
         ) as mock_generate:
             mock_generate.side_effect = Exception("Test error")
 
@@ -369,7 +369,7 @@ class TestAsyncAPIDocs:
         expected_schema = {"asyncapi": "3.0.0", "info": {"title": "Test API"}}
 
         with patch(
-            "chanx.ext.fast_channels.views.generate_asyncapi_schema"
+            "chanx.fast_channels.views.generate_asyncapi_schema"
         ) as mock_generate:
             mock_generate.return_value = expected_schema
 

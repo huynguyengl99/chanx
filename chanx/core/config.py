@@ -43,7 +43,7 @@ class Config:
             the default class attribute value.
         """
         if IS_USING_DJANGO:
-            from chanx.ext.channels.settings import chanx_settings
+            from chanx.channels.settings import chanx_settings
 
             return getattr(chanx_settings, item.upper())
 

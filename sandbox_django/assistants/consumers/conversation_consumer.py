@@ -1,6 +1,6 @@
+from chanx.channels.authenticator import DjangoAuthenticator
+from chanx.channels.websocket import AsyncJsonWebsocketConsumer
 from chanx.core.decorators import channel, event_handler, ws_handler
-from chanx.core.websocket import AsyncJsonWebsocketConsumer
-from chanx.ext.channels.authenticator import DjangoAuthenticator
 from chanx.messages.incoming import PingMessage
 from chanx.messages.outgoing import PongMessage
 

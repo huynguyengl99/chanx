@@ -2,15 +2,17 @@
 Core WebSocket testing utilities for Chanx.
 
 This module provides fundamental testing infrastructure for WebSocket consumers,
-including an enhanced WebsocketCommunicator with structured message handling,
+including an enhanced WebsocketCommunicator mixin with structured message handling,
 automatic message collection, completion signal tracking, and message validation.
-These utilities work with any ASGI application and provide the foundation for
-framework-specific testing extensions.
+
+The mixin provides framework-agnostic testing functionality that can be combined
+with framework-specific WebSocket communicator implementations (Django Channels,
+fast-channels, etc.) to create concrete testing utilities.
 """
 
 import asyncio
 from types import TracebackType
-from typing import Any, Self
+from typing import Any, Self, cast
 
 import humps
 from asgiref.timeout import timeout as async_timeout
@@ -20,17 +22,17 @@ from chanx.constants import (
     COMPLETE_ACTIONS_TYPE,
     MESSAGE_ACTION_COMPLETE,
 )
-from chanx.core.adapter import WebsocketCommunicator as BaseWebsocketCommunicator
 from chanx.core.config import config
-from chanx.core.websocket import AsyncJsonWebsocketConsumer
+from chanx.core.websocket import ChanxWebsocketConsumerMixin
 from chanx.messages.base import BaseMessage
 
 
-class WebsocketCommunicator(BaseWebsocketCommunicator):
+class WebsocketCommunicatorMixin:
     """
-    Enhanced WebSocket communicator for testing Chanx consumers.
+    Mixin providing enhanced WebSocket testing functionality for Chanx consumers.
 
-    Extends the base WebSocket communicator with Chanx-specific features:
+    This mixin provides Chanx-specific features that work across different WebSocket
+    frameworks (Django Channels, fast-channels, etc.):
 
     - Structured message sending and receiving with BaseMessage objects
     - Automatic message collection until completion signals
@@ -44,13 +46,58 @@ class WebsocketCommunicator(BaseWebsocketCommunicator):
     - receive_all_messages(): Collect and validate messages until stop action
     - connect()/disconnect(): Enhanced connection management
 
-    The communicator automatically handles message serialization/deserialization
-    and integrates with Chanx's completion signal system for reliable testing.
+    The mixin automatically handles message serialization/deserialization and integrates
+    with Chanx's completion signal system for reliable testing.
+
+    Concrete implementations should inherit from both this mixin and a framework-specific
+    WebSocket communicator class (e.g., channels.testing.WebsocketCommunicator).
     """
 
+    # These will be set by concrete implementations or during initialization
     application: Any
     action_key: str = "action"
-    consumer: type[AsyncJsonWebsocketConsumer[Any]]
+    consumer: type[ChanxWebsocketConsumerMixin]  # Consumer class for message validation
+    _connected: bool
+
+    # Framework-provided methods (redefined for type checking)
+    async def receive_json_from(self, timeout: float = 1) -> Any:
+        """
+        Receive and parse JSON data from the WebSocket.
+
+        Provided by the framework testing communicator (Channels/fast-channels).
+
+        Args:
+            timeout: Maximum time to wait for data (seconds)
+
+        Returns:
+            Parsed JSON data as dictionary
+        """
+        return await super().receive_json_from(timeout)  # type: ignore[misc]
+
+    async def send_json_to(self, data: dict[str, Any]) -> None:
+        """
+        Send JSON data to the WebSocket.
+
+        Provided by the framework testing communicator (Channels/fast-channels).
+
+        Args:
+            data: Dictionary to serialize and send as JSON
+        """
+        await super().send_json_to(data)  # type: ignore[misc]
+
+    async def receive_output(self, timeout: float = 1) -> Any:
+        """
+        Receive raw output from the WebSocket.
+
+        Provided by the framework testing communicator (Channels/fast-channels).
+
+        Args:
+            timeout: Maximum time to wait for output (seconds)
+
+        Returns:
+            Raw output dictionary
+        """
+        return await super().receive_output(timeout)  # type: ignore[misc]
 
     def __init__(
         self,
@@ -60,7 +107,7 @@ class WebsocketCommunicator(BaseWebsocketCommunicator):
         subprotocols: list[str] | None = None,
         spec_version: int | None = None,
         *,
-        consumer: type[AsyncJsonWebsocketConsumer[Any]],
+        consumer: type[ChanxWebsocketConsumerMixin[Any]],
     ) -> None:
         """
         Initialize the WebSocket communicator for testing.
@@ -75,7 +122,7 @@ class WebsocketCommunicator(BaseWebsocketCommunicator):
             subprotocols: Optional WebSocket subprotocols
             spec_version: Optional WebSocket spec version
         """
-        super().__init__(application, path, headers, subprotocols, spec_version)
+        super().__init__(application, path, headers, subprotocols, spec_version)  # type: ignore
         self._connected = False
 
         self.consumer = consumer
@@ -173,9 +220,9 @@ class WebsocketCommunicator(BaseWebsocketCommunicator):
             Tuple of (connected, status_code)
         """
         try:
-            res = await super().connect(timeout)
+            res = await super().connect(timeout)  # type: ignore
             self._connected = True
-            return res
+            return cast(tuple[bool, int | str | None], res)
         except:
             raise
 
@@ -188,7 +235,7 @@ class WebsocketCommunicator(BaseWebsocketCommunicator):
             timeout: Maximum time to wait for connection (in seconds)
         """
         try:
-            await super().disconnect(code, timeout)
+            await super().disconnect(code, timeout)  # type: ignore
         except asyncio.CancelledError:
             pass
 

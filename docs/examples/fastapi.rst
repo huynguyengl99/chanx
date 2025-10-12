@@ -368,10 +368,10 @@ Automatic API documentation generation from decorated consumers:
 
 .. code-block:: python
 
-   from chanx.ext.fast_channels import (
+   from chanx.fast_channels import (
        asyncapi_docs, asyncapi_spec_json, asyncapi_spec_yaml
    )
-   from chanx.ext.fast_channels.type_defs import AsyncAPIConfig
+   from chanx.fast_channels.type_defs import AsyncAPIConfig
 
    # Configure AsyncAPI
    asyncapi_conf = AsyncAPIConfig(

@@ -67,7 +67,7 @@ Framework Setup
         # ...
         'rest_framework',
         'channels',
-        'chanx.ext.channels',
+        'chanx.channels',
         # ...
     ]
 

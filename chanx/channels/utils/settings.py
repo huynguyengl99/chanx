@@ -12,7 +12,7 @@ import inspect
 from collections.abc import Callable, Iterator
 from typing import Any, TypeVar, cast
 
-from chanx.ext.channels.settings import chanx_settings
+from chanx.channels.settings import chanx_settings
 
 T = TypeVar("T", bound=Callable[..., Any])
 

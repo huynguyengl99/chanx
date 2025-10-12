@@ -14,7 +14,7 @@ Django provides built-in views for serving AsyncAPI documentation from your WebS
 
     # urls.py
     from django.urls import path
-    from chanx.ext.channels.views import AsyncAPISchemaView, AsyncAPIDocsView
+    from chanx.channels.views import AsyncAPISchemaView, AsyncAPIDocsView
 
     urlpatterns = [
         # AsyncAPI spec endpoints
@@ -37,7 +37,7 @@ Chanx provides Django REST Framework integration for WebSocket authentication us
 
 .. code-block:: python
 
-    from chanx.ext.channels.authenticator import DjangoAuthenticator
+    from chanx.channels.authenticator import DjangoAuthenticator
     from rest_framework.permissions import IsAuthenticated
     from myapp.models import ChatRoom
 
@@ -141,7 +141,7 @@ FastAPI integration provides simple view functions for AsyncAPI documentation:
 .. code-block:: python
 
     from fastapi import FastAPI, Request
-    from chanx.ext.fast_channels.views import (
+    from chanx.fast_channels.views import (
         asyncapi_spec_json,
         asyncapi_spec_yaml,
         asyncapi_docs

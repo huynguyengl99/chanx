@@ -8,10 +8,18 @@ authentication, group broadcasting, and channel event handling capabilities.
 
 import asyncio
 import uuid
-from collections.abc import Collection
+from collections.abc import Callable, Collection
 from functools import reduce
 from types import UnionType
-from typing import Annotated, Any, ClassVar, Generic, cast, get_args, get_origin
+from typing import (
+    Annotated,
+    Any,
+    ClassVar,
+    Generic,
+    cast,
+    get_args,
+    get_origin,
+)
 
 import humps
 import structlog
@@ -20,15 +28,6 @@ from pydantic import Field, TypeAdapter, ValidationError
 from typing_extensions import TypeVar
 
 from chanx.constants import COMPLETE_ACTIONS
-from chanx.core.adapter import (
-    AsyncJsonWebsocketConsumer as BaseAsyncJsonWebsocketConsumer,
-)
-from chanx.core.adapter import (
-    BaseChannelLayer,
-    WebSocketConnectEvent,
-    WebSocketDisconnectEvent,
-    get_channel_layer,
-)
 from chanx.core.authenticator import BaseAuthenticator
 from chanx.core.config import config
 from chanx.messages.base import BaseMessage
@@ -45,9 +44,9 @@ from chanx.utils.logging import logger
 ReceiveEvent = TypeVar("ReceiveEvent", bound=BaseMessage, default=BaseMessage)
 
 
-class AsyncJsonWebsocketConsumer(Generic[ReceiveEvent], BaseAsyncJsonWebsocketConsumer):
+class ChanxWebsocketConsumerMixin(Generic[ReceiveEvent]):
     """
-    Enhanced WebSocket consumer with automatic message type generation and routing.
+    Mixin providing enhanced WebSocket consumer functionality with automatic message routing.
 
     Provides automatic message type discovery from @ws_handler and @event_handler decorators,
     type-safe message validation using Pydantic discriminated unions, built-in authentication,
@@ -81,11 +80,13 @@ class AsyncJsonWebsocketConsumer(Generic[ReceiveEvent], BaseAsyncJsonWebsocketCo
     )
 
     # Framework attributes (set by channels/fast-channels)
-    scope: dict[str, Any]  # type: ignore[assignment]
+    scope: dict[str, Any]
     groups: list[str]  # Channel groups this consumer belongs to
-    channel_layer: BaseChannelLayer  # Channel layer instance for group operations
+    channel_layer: (
+        Any  # Channel layer instance for group operations (framework-provided)
+    )
     channel_name: str  # Unique channel name for this consumer instance
-    channel_layer_alias: ClassVar[str]
+    channel_layer_alias: str
 
     # Auto-generated type adapters (built by metaclass)
     incoming_message_adapter: ClassVar[
@@ -101,6 +102,8 @@ class AsyncJsonWebsocketConsumer(Generic[ReceiveEvent], BaseAsyncJsonWebsocketCo
     # Consumer identification (auto-generated from class name)
     name: ClassVar[str]  # Consumer name without "Consumer" suffix
     snake_name: ClassVar[str]  # Snake case version of consumer name
+
+    get_channel_layer: Callable[[Any], Any]
 
     def __init_subclass__(cls, **kwargs: Any) -> None:
         """
@@ -341,7 +344,7 @@ class AsyncJsonWebsocketConsumer(Generic[ReceiveEvent], BaseAsyncJsonWebsocketCo
         """
         return set(self.log_ignored_actions) | COMPLETE_ACTIONS
 
-    async def websocket_connect(self, message: WebSocketConnectEvent) -> None:
+    async def websocket_connect(self, message: Any) -> None:
         """
         Handle WebSocket connection request with authentication.
 
@@ -349,21 +352,23 @@ class AsyncJsonWebsocketConsumer(Generic[ReceiveEvent], BaseAsyncJsonWebsocketCo
         adds the user to appropriate groups or closes the connection.
 
         Args:
-            message: The connection message from Channels
+            message: The connection message from the framework
         """
-        await self.accept()
+        await self.accept()  # type: ignore
 
         # Authenticate the connection
         if self.authenticator:
             auth_result = await self.authenticator.authenticate(self.scope)
 
             if not auth_result:
-                await self.close()
+                await self.close()  # type: ignore
                 return
 
         try:
             for group in self.groups:
-                channel_layer = get_channel_layer(self.channel_layer_alias)
+                channel_layer = self.__class__.get_channel_layer(
+                    self.channel_layer_alias
+                )
                 if channel_layer:
                     await channel_layer.group_add(group, self.channel_name)
         except AttributeError:
@@ -373,18 +378,18 @@ class AsyncJsonWebsocketConsumer(Generic[ReceiveEvent], BaseAsyncJsonWebsocketCo
 
         await self.post_authentication()
 
-    async def websocket_disconnect(self, message: WebSocketDisconnectEvent) -> None:
+    async def websocket_disconnect(self, message: Any) -> None:
         """
         Handle WebSocket disconnection.
 
         Cleans up context variables and logs the disconnection.
 
         Args:
-            message: The disconnection message from Channels
+            message: The disconnection message from the framework
         """
         await logger.ainfo("Disconnecting websocket")
         structlog.contextvars.clear_contextvars()
-        await super().websocket_disconnect(message)
+        await super().websocket_disconnect(message)  # type: ignore
 
     async def post_authentication(self) -> None:
         """
@@ -524,7 +529,7 @@ class AsyncJsonWebsocketConsumer(Generic[ReceiveEvent], BaseAsyncJsonWebsocketCo
             content: The JSON data to send
             close: Whether to close the connection after sending
         """
-        await super().send_json(content, close)
+        await super().send_json(content, close)  # type: ignore
 
         message_action = content.get(self.discriminator_field)
         if (
@@ -574,7 +579,7 @@ class AsyncJsonWebsocketConsumer(Generic[ReceiveEvent], BaseAsyncJsonWebsocketCo
             exclude_current: Whether to exclude the sending consumer from receiving
                             the broadcast (prevents echo effects)
         """
-        channel_layer = get_channel_layer(self.channel_layer_alias)
+        channel_layer = self.__class__.get_channel_layer(self.channel_layer_alias)
         assert channel_layer
 
         if groups is None:
@@ -630,7 +635,7 @@ class AsyncJsonWebsocketConsumer(Generic[ReceiveEvent], BaseAsyncJsonWebsocketCo
             event: The typed event to send (BaseMessage subclass)
             channel_name: Channel name to send the event to
         """
-        channel_layer = get_channel_layer(cls.channel_layer_alias)
+        channel_layer = cls.get_channel_layer(cls.channel_layer_alias)
         assert channel_layer is not None
 
         await channel_layer.send(
@@ -669,7 +674,7 @@ class AsyncJsonWebsocketConsumer(Generic[ReceiveEvent], BaseAsyncJsonWebsocketCo
             event: The typed event to broadcast (BaseMessage subclass)
             groups: Groups to broadcast the event to
         """
-        channel_layer = get_channel_layer(cls.channel_layer_alias)
+        channel_layer = cls.get_channel_layer(cls.channel_layer_alias)
         assert channel_layer is not None
         group_list: list[str]
         if groups is None:

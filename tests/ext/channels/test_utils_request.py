@@ -1,6 +1,6 @@
 from django.test import TestCase
 
-from chanx.ext.channels.utils import request_from_scope
+from chanx.channels.utils import request_from_scope
 
 
 class TestRequestUtils(TestCase):

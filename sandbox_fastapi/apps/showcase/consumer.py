@@ -3,11 +3,11 @@ Layers Combo Consumers - Different channel layer types working together.
 Migrated to use chanx framework for unified API.
 """
 
-from chanx.core.adapter import WebSocketDisconnectEvent
 from chanx.core.decorators import channel, event_handler, ws_handler
 from chanx.messages.incoming import PingMessage
 from chanx.messages.outgoing import PongMessage
 
+from fast_channels.type_defs import WebSocketDisconnectEvent
 from sandbox_fastapi.base_consumer import BaseConsumer
 
 from .messages import (

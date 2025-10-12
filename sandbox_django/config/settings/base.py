@@ -83,7 +83,7 @@ THIRD_PARTY_APPS = [
     "allauth.socialaccount",
     "auth_kit",
     "channels",
-    "chanx.ext.channels",
+    "chanx.channels",
 ]
 
 LOCAL_APPS = ["accounts", "assistants", "chat", "core", "discussion"]

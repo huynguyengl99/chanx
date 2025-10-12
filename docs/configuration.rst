@@ -51,7 +51,7 @@ Chanx can be configured by creating a base consumer class and setting class attr
 
 .. code-block:: python
 
-    from chanx.ext.channels.authenticator import DjangoAuthenticator
+    from chanx.channels.authenticator import DjangoAuthenticator
     from rest_framework.permissions import IsAuthenticated
 
     class MyAuthenticator(DjangoAuthenticator):

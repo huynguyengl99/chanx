@@ -9,12 +9,12 @@ from typing import Any, Literal
 
 from channels.routing import URLRouter
 
+from chanx.channels.routing import path
+from chanx.channels.testing import WebsocketTestCase
+from chanx.channels.utils.settings import override_chanx_settings
+from chanx.channels.websocket import AsyncJsonWebsocketConsumer
 from chanx.constants import GROUP_ACTION_COMPLETE
 from chanx.core.decorators import event_handler, ws_handler
-from chanx.core.websocket import AsyncJsonWebsocketConsumer
-from chanx.ext.channels.routing import path
-from chanx.ext.channels.testing import WebsocketTestCase
-from chanx.ext.channels.utils.settings import override_chanx_settings
 from chanx.messages.base import BaseMessage
 from chanx.messages.incoming import PingMessage
 from chanx.messages.outgoing import PongMessage

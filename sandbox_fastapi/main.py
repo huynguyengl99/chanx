@@ -6,12 +6,12 @@ See tutorial/ directory for step-by-step learning files.
 """
 
 # Setup chanx FastAPI integration
-from chanx.ext.fast_channels import (
+from chanx.fast_channels import (
     asyncapi_docs,
     asyncapi_spec_json,
     asyncapi_spec_yaml,
 )
-from chanx.ext.fast_channels.type_defs import AsyncAPIConfig
+from chanx.fast_channels.type_defs import AsyncAPIConfig
 from fastapi import APIRouter, FastAPI, Response
 from fastapi.requests import Request
 from fastapi.responses import HTMLResponse, JSONResponse
@@ -157,24 +157,24 @@ app.include_router(home_router)
 ws_router = FastAPI()
 
 # WebSocket routes for different consumer types
-ws_router.add_websocket_route("/chat", ChatConsumer.as_asgi())  # type: ignore[arg-type]
+ws_router.add_websocket_route("/chat", ChatConsumer.as_asgi())
 ws_router.add_websocket_route(
-    "/reliable", ReliableChatConsumer.as_asgi()  # type: ignore[arg-type]
+    "/reliable", ReliableChatConsumer.as_asgi()
 )  # Queue-based reliable messaging
 ws_router.add_websocket_route(
-    "/notifications", NotificationConsumer.as_asgi()  # type: ignore[arg-type]
+    "/notifications", NotificationConsumer.as_asgi()
 )  # Real-time notifications
 ws_router.add_websocket_route(
-    "/analytics", AnalyticsConsumer.as_asgi()  # type: ignore[arg-type]
+    "/analytics", AnalyticsConsumer.as_asgi()
 )  # Analytics events
 ws_router.add_websocket_route(
-    "/system", SystemMessageConsumer.as_asgi()  # type: ignore[arg-type]
+    "/system", SystemMessageConsumer.as_asgi()
 )  # Direct WebSocket (no layers)
 ws_router.add_websocket_route(
-    "/background_jobs", BackgroundJobConsumer.as_asgi()  # type: ignore[arg-type]
+    "/background_jobs", BackgroundJobConsumer.as_asgi()
 )  # RQ background job processing
 ws_router.add_websocket_route(
-    "/room/{room_name}", RoomChatConsumer.as_asgi()  # type: ignore[arg-type]
+    "/room/{room_name}", RoomChatConsumer.as_asgi()
 )  # Dynamic room connections (now using chanx!)
 
 app.mount("/ws", ws_router)

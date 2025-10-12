@@ -2,9 +2,9 @@ from typing import cast
 
 import pytest
 from chanx.constants import GROUP_ACTION_COMPLETE
+from chanx.fast_channels.testing import FastChannelsWebsocketCommunicator
 from chanx.messages.incoming import PingMessage
 from chanx.messages.outgoing import PongMessage
-from chanx.testing import WebsocketCommunicator
 
 from sandbox_fastapi.apps.room_chat.consumer import RoomChatConsumer
 from sandbox_fastapi.apps.room_chat.messages import (
@@ -18,7 +18,7 @@ from sandbox_fastapi.main import app
 @pytest.mark.asyncio
 async def test_room_chat_ping() -> None:
     room_name = "my-room"
-    async with WebsocketCommunicator(
+    async with FastChannelsWebsocketCommunicator(
         app, f"/ws/room/{room_name}", consumer=RoomChatConsumer
     ) as comm:
         await comm.send_message(PingMessage())
@@ -30,10 +30,10 @@ async def test_room_chat_ping() -> None:
 @pytest.mark.asyncio
 async def test_room_chat_broadcast_messaging() -> None:
     room_name = "my-room"
-    first_comm = WebsocketCommunicator(
+    first_comm = FastChannelsWebsocketCommunicator(
         app, f"/ws/room/{room_name}", consumer=RoomChatConsumer
     )
-    second_comm = WebsocketCommunicator(
+    second_comm = FastChannelsWebsocketCommunicator(
         app, f"/ws/room/{room_name}", consumer=RoomChatConsumer
     )
 

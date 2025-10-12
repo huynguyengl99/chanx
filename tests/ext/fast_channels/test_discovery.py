@@ -2,7 +2,7 @@
 
 from unittest.mock import Mock
 
-from chanx.ext.fast_channels.discovery import FastAPIRouteDiscovery
+from chanx.fast_channels.discovery import FastAPIRouteDiscovery
 from chanx.routing.discovery import RouteInfo
 from starlette.applications import Starlette
 from starlette.requests import Request

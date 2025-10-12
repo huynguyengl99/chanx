@@ -14,8 +14,8 @@ from django.shortcuts import render
 from django.views import View
 
 from chanx.asyncapi.generator import AsyncAPIGenerator
-from chanx.ext.channels.discovery import get_websocket_routes
-from chanx.ext.channels.settings import chanx_settings
+from chanx.channels.discovery import get_websocket_routes
+from chanx.channels.settings import chanx_settings
 
 try:
     import yaml

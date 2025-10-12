@@ -267,7 +267,7 @@ Configuration
        'drf_standardized_errors',
        'django_structlog',
        'channels',
-       'chanx.ext.channels',
+       'chanx.channels',
        # Local apps
        'accounts', 'assistants', 'chat', 'discussion',
    ]
@@ -305,7 +305,7 @@ WebSocket Routing
 .. code-block:: python
 
    # assistants/routing.py
-   from chanx.ext.channels.routing import re_path
+   from chanx.channels.routing import re_path
 
    router = URLRouter([
        # UUID-based conversation routing
@@ -405,7 +405,7 @@ The Django sandbox uses pytest for comprehensive test coverage:
 .. code-block:: python
 
    # From chat/tests/consumers/test_chat_detail_consumer.py
-   from chanx.ext.channels.testing import WebsocketTestCase
+   from chanx.channels.testing import WebsocketTestCase
    from chanx.constants import EVENT_ACTION_COMPLETE
 
    class TestChatDetailConsumer(WebsocketTestCase):

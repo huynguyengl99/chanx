@@ -153,7 +153,7 @@ The framework automatically discovers your handlers, validates messages with Pyd
 Key Features & Components
 ~~~~~~~~~~~~~~~~~~~~~~~~~
 
-- **Multi-Framework Support**: Works with Django Channels, FastAPI, and any ASGI-compatible framework via ``chanx.ext.channels`` and ``chanx.ext.fast_channels``
+- **Multi-Framework Support**: Works with Django Channels, FastAPI, and any ASGI-compatible framework via ``chanx.channels`` and ``chanx.fast_channels``
 - **Decorator-Based Architecture**: Use ``@ws_handler``, ``@event_handler``, and ``@channel`` decorators with automatic message routing and validation
 - **AsyncAPI Documentation**: Generate AsyncAPI 3.0 specifications automatically from decorated handlers and message types
 - **Type-Safe Messaging**: Pydantic-based validation with automatic discriminated unions and full mypy/pyright support

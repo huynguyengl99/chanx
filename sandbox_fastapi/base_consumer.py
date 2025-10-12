@@ -1,6 +1,6 @@
 import os
 
-from chanx.core.websocket import AsyncJsonWebsocketConsumer, ReceiveEvent
+from chanx.fast_channels.websocket import AsyncJsonWebsocketConsumer, ReceiveEvent
 
 
 class BaseConsumer(AsyncJsonWebsocketConsumer[ReceiveEvent]):

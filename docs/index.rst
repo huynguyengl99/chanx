@@ -39,6 +39,17 @@ Contents
 
 .. toctree::
    :maxdepth: 1
+   :caption: FastAPI Tutorial
+
+   tutorial-fastapi/prerequisites
+   tutorial-fastapi/cp1-system-echo
+   tutorial-fastapi/cp2-room-chat
+   tutorial-fastapi/cp3-background-jobs
+   tutorial-fastapi/cp4-multi-layer
+   tutorial-fastapi/cp5-testing
+
+.. toctree::
+   :maxdepth: 1
    :caption: Examples
 
    examples/django

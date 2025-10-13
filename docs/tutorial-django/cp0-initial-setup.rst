@@ -127,7 +127,7 @@ We need to make several changes to integrate Chanx into the Django project.
 
 **1. Add Chanx to Installed Apps**
 
-Edit ``config/settings/base.py`` and add ``"chanx.channels"`` to ``INSTALLED_APPS``:
+Edit ``chanx_django/config/settings/base.py`` and add ``"chanx.channels"`` to ``INSTALLED_APPS``:
 
 .. code-block:: python
 
@@ -154,7 +154,7 @@ This registers Chanx's Django app, which enables the AsyncAPI documentation URLs
 
 **2. Create WebSocket Routing Configuration**
 
-Create a new file ``config/routing.py`` to manage WebSocket routing:
+Create a new file ``chanx_django/config/routing.py`` to manage WebSocket routing:
 
 .. code-block:: python
 
@@ -192,7 +192,7 @@ This creates a hierarchical routing structure:
 
 **3. Update ASGI Configuration**
 
-Edit ``config/asgi.py`` to use Chanx routing:
+Edit ``chanx_django/config/asgi.py`` to use Chanx routing:
 
 .. code-block:: python
 
@@ -230,7 +230,7 @@ Key changes:
 
 **4. Add AsyncAPI Documentation URL**
 
-Edit ``config/urls.py`` to include Chanx's AsyncAPI documentation:
+Edit ``chanx_django/config/urls.py`` to include Chanx's AsyncAPI documentation:
 
 .. code-block:: python
 

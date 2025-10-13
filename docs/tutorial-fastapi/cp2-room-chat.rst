@@ -9,6 +9,16 @@ In this part, you'll build a room-based chat system using channel layers. This d
 - Room isolation
 - Join/leave notifications
 
+Starting Point
+--------------
+
+Make sure you've completed Part 1. If you want to start fresh from checkpoint 1:
+
+.. code-block:: bash
+
+   git checkout cp1
+   git reset --hard
+
 Understanding Room Chat
 -----------------------
 
@@ -108,11 +118,12 @@ Channel layers enable broadcasting messages between WebSocket connections. We'll
 Step 2: Define Message Types
 -----------------------------
 
-**Create** ``src/apps/room_chat/__init__.py``:
+**Create the app directory and init file:**
 
-.. code-block:: python
+.. code-block:: bash
 
-   # Room Chat App - Room-based chat with dynamic connections
+   mkdir -p src/apps/room_chat
+   touch src/apps/room_chat/__init__.py
 
 **Create** ``src/apps/room_chat/messages.py``:
 

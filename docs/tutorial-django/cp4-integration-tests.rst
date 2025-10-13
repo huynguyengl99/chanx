@@ -86,7 +86,7 @@ This sets up Celery for testing:
 Step 3: Create Test Settings
 -----------------------------
 
-**Create** ``config/settings/test.py``:
+**Create** ``chanx_django/config/settings/test.py``:
 
 .. code-block:: python
 
@@ -103,10 +103,10 @@ Step 4: Test Chat Consumer
 
 .. code-block:: bash
 
-   mkdir -p chat/tests
-   touch chat/tests/__init__.py
+   mkdir -p chanx_django/chat/tests
+   touch chanx_django/chat/tests/__init__.py
 
-**Create** ``chat/tests/test_chat_consumer.py``:
+**Create** ``chanx_django/chat/tests/test_chat_consumer.py``:
 
 .. code-block:: python
 
@@ -224,10 +224,10 @@ Step 5: Test Assistants Consumer
 
 .. code-block:: bash
 
-   mkdir -p assistants/tests
-   touch assistants/tests/__init__.py
+   mkdir -p chanx_django/assistants/tests
+   touch chanx_django/assistants/tests/__init__.py
 
-**Create** ``assistants/tests/test_assistant_consumer.py``:
+**Create** ``chanx_django/assistants/tests/test_assistant_consumer.py``:
 
 .. code-block:: python
 
@@ -379,10 +379,10 @@ Step 6: Test System Consumer
 
 .. code-block:: bash
 
-   mkdir -p system/tests
-   touch system/tests/__init__.py
+   mkdir -p chanx_django/system/tests
+   touch chanx_django/system/tests/__init__.py
 
-**Create** ``system/tests/test_system_consumer.py``:
+**Create** ``chanx_django/system/tests/test_system_consumer.py``:
 
 .. code-block:: python
 
@@ -518,39 +518,39 @@ Step 7: Run Tests
 
 .. code-block:: bash
 
-   cd chanx_django
-   pytest
+   pytest chanx_django
 
 **Run specific test file:**
 
 .. code-block:: bash
 
-   pytest chat/tests/test_chat_consumer.py
+   pytest chanx_django/chat/tests/test_chat_consumer.py
 
 **Run with verbose output:**
 
 .. code-block:: bash
 
-   pytest -v
+   pytest chanx_django -v
 
 **Run specific test:**
 
 .. code-block:: bash
 
-   pytest system/tests/test_system_consumer.py::TestSystemConsumer::test_translate_task_end_to_end
+   pytest chanx_django/system/tests/test_system_consumer.py::TestSystemConsumer::test_translate_task_end_to_end
 
 You should see output like:
 
 .. code-block:: text
 
-   ========================= test session starts =========================
-   collected 16 items
+   configfile: pytest.ini
+   plugins: anyio-4.11.0, django-4.11.1, langsmith-0.4.34
+   collected 9 items
 
-   assistants/tests/test_assistant_consumer.py .....              [ 31%]
-   chat/tests/test_chat_consumer.py .....                         [ 62%]
-   system/tests/test_system_consumer.py ......                    [100%]
+   chanx_django/assistants/tests/test_assistant_consumer.py ...     [ 33%]
+   chanx_django/chat/tests/test_chat_consumer.py ...                [ 66%]
+   chanx_django/system/tests/test_system_consumer.py ...            [100%]
 
-   ========================= 16 passed in 48.09s =========================
+   ========================= 9 passed in 20.47s =========================
 
 Testing Summary
 ---------------

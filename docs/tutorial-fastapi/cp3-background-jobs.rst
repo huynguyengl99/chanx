@@ -9,6 +9,16 @@ In this part, you'll build a background job processing system using ARQ (Async R
 - Sending results to specific clients
 - Running multiple services together
 
+Starting Point
+--------------
+
+Make sure you've completed Part 2. If you want to start fresh from checkpoint 2:
+
+.. code-block:: bash
+
+   git checkout cp2
+   git reset --hard
+
 Understanding Background Jobs
 ------------------------------
 
@@ -25,11 +35,12 @@ This architecture offloads heavy work from WebSocket connections while keeping u
 Step 1: Define Message Types
 -----------------------------
 
-**Create** ``src/apps/background_jobs/__init__.py``:
+**Create the app directory and init file:**
 
-.. code-block:: python
+.. code-block:: bash
 
-   # Background Jobs App - RQ-based async job processing
+   mkdir -p src/apps/background_jobs
+   touch src/apps/background_jobs/__init__.py
 
 **Create** ``src/apps/background_jobs/messages.py``:
 

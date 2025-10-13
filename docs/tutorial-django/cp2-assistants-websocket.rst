@@ -55,7 +55,7 @@ Before writing code, let's set up the OpenAI API key as a prerequisite.
 
 **1. Add Django Settings:**
 
-**Edit** ``config/settings/base.py`` and add at the end:
+**Edit** ``chanx_django/config/settings/base.py`` and add at the end:
 
 .. code-block:: python
 
@@ -106,7 +106,7 @@ Step 3: Define Message Types
 
 We need four message types: one incoming and three outgoing.
 
-**Create** ``assistants/messages.py``:
+**Create** ``chanx_django/assistants/messages.py``:
 
 .. code-block:: python
 
@@ -166,10 +166,10 @@ Now let's create the service that communicates with OpenAI.
 
 .. code-block:: bash
 
-   mkdir -p assistants/services
-   touch assistants/services/__init__.py
+   mkdir -p chanx_django/assistants/services
+   touch chanx_django/assistants/services/__init__.py
 
-**Create** ``assistants/services/ai_service.py``:
+**Create** ``chanx_django/assistants/services/ai_service.py``:
 
 .. code-block:: python
 
@@ -270,7 +270,7 @@ Step 5: Create the WebSocket Consumer
 
 Now create the consumer that uses the AI service and handles streaming.
 
-**Create** ``assistants/conversation_consumer.py``:
+**Create** ``chanx_django/assistants/conversation_consumer.py``:
 
 .. code-block:: python
 
@@ -442,7 +442,7 @@ The flow:
 Step 6: Create Routing
 ----------------------
 
-**Create** ``assistants/routing.py``:
+**Create** ``chanx_django/assistants/routing.py``:
 
 .. code-block:: python
 
@@ -462,7 +462,7 @@ Unlike the chat app, we don't need URL parameters. The URL is simply ``/ws/assis
 Step 7: Enable Assistants Routing
 ----------------------------------
 
-**Edit** ``config/routing.py`` and uncomment the assistants line:
+**Edit** ``chanx_django/config/routing.py`` and uncomment the assistants line:
 
 .. code-block:: python
 

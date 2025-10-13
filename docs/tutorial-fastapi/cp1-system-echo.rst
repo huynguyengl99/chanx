@@ -9,6 +9,16 @@ In this part, you'll build your first WebSocket consumer using Chanx. This simpl
 - Sending server-initiated messages
 - Direct WebSocket communication (no channel layers)
 
+Starting Point
+--------------
+
+Make sure you've completed the Prerequisites and have the project set up. If you want to start fresh from checkpoint 0:
+
+.. code-block:: bash
+
+   git checkout cp0
+   git reset --hard
+
 Understanding the Echo Flow
 ----------------------------
 
@@ -26,11 +36,12 @@ Step 1: Define Message Types
 
 Create the message structure using Pydantic models for validation and type safety.
 
-**Create** ``src/apps/system_chat/__init__.py``:
+**Create the app directory and init file:**
 
-.. code-block:: python
+.. code-block:: bash
 
-   # System Chat App - Direct WebSocket communication without channel layers
+   mkdir -p src/apps/system_chat
+   touch src/apps/system_chat/__init__.py
 
 **Create** ``src/apps/system_chat/messages.py``:
 

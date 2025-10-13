@@ -39,7 +39,7 @@ Step 1: Define Message Types
 
 First, create a file to define your message structure. This uses Pydantic models for validation and type safety.
 
-**Create** ``chat/messages.py``:
+**Create** ``chanx_django/chat/messages.py``:
 
 .. code-block:: python
 
@@ -80,10 +80,10 @@ Now let's create the consumer that handles WebSocket connections and messages.
 
 .. code-block:: bash
 
-   mkdir -p chat/consumers
-   touch chat/consumers/__init__.py
+   mkdir -p chanx_django/chat/consumers
+   touch chanx_django/chat/consumers/__init__.py
 
-**Create** ``chat/consumers/chat_consumer.py``:
+**Create** ``chanx_django/chat/consumers/chat_consumer.py``:
 
 .. code-block:: python
 
@@ -219,7 +219,7 @@ Step 3: Create WebSocket Routing
 
 Now we need to set up routing so WebSocket connections reach our consumer.
 
-**Create** ``chat/routing.py``:
+**Create** ``chanx_django/chat/routing.py``:
 
 .. code-block:: python
 
@@ -247,7 +247,7 @@ Step 4: Enable Chat Routing
 
 Finally, we need to include the chat routing in the main WebSocket router.
 
-**Edit** ``config/routing.py`` and uncomment the chat line:
+**Edit** ``chanx_django/config/routing.py`` and uncomment the chat line:
 
 .. code-block:: python
 

@@ -67,7 +67,7 @@ Step 2: Configure Celery
 
 **1. Create Celery App:**
 
-**Create** ``config/celery.py``:
+**Create** ``chanx_django/config/celery.py``:
 
 .. code-block:: python
 
@@ -95,7 +95,7 @@ Step 2: Configure Celery
 
 **2. Initialize Celery in Config:**
 
-**Edit** ``config/__init__.py``:
+**Edit** ``chanx_django/config/__init__.py``:
 
 .. code-block:: python
 
@@ -110,7 +110,7 @@ Step 2: Configure Celery
 
 **3. Add Celery Settings:**
 
-**Edit** ``config/settings/base.py`` and add at the end:
+**Edit** ``chanx_django/config/settings/base.py`` and add at the end:
 
 .. code-block:: python
 
@@ -129,7 +129,7 @@ Step 3: Define Message Types
 
 We need four message types for the system app.
 
-**Create** ``system/messages.py``:
+**Create** ``chanx_django/system/messages.py``:
 
 .. code-block:: python
 
@@ -187,7 +187,7 @@ Step 4: Create Celery Tasks
 
 Now let's create the background tasks that Celery will execute.
 
-**Create** ``system/tasks.py``:
+**Create** ``chanx_django/system/tasks.py``:
 
 .. code-block:: python
 
@@ -341,10 +341,10 @@ Now let's create the consumer that coordinates everything.
 
 .. code-block:: bash
 
-   mkdir -p system/consumers
-   touch system/consumers/__init__.py
+   mkdir -p chanx_django/system/consumers
+   touch chanx_django/system/consumers/__init__.py
 
-**Create** ``system/consumers/system_consumer.py``:
+**Create** ``chanx_django/system/consumers/system_consumer.py``:
 
 .. code-block:: python
 
@@ -596,7 +596,7 @@ The ``@event_handler`` decorator generates AsyncAPI **SEND** actions (server-ini
 Step 6: Create Routing
 ----------------------
 
-**Create** ``system/routing.py``:
+**Create** ``chanx_django/system/routing.py``:
 
 .. code-block:: python
 
@@ -614,7 +614,7 @@ Step 6: Create Routing
 Step 7: Enable System Routing
 ------------------------------
 
-**Edit** ``config/routing.py`` and uncomment the system line:
+**Edit** ``chanx_django/config/routing.py`` and uncomment the system line:
 
 .. code-block:: python
 
@@ -769,11 +769,11 @@ Let's create a Django management command that can send system-wide notifications
 
 .. code-block:: bash
 
-   mkdir -p system/management/commands
-   touch system/management/__init__.py
-   touch system/management/commands/__init__.py
+   mkdir -p chanx_django/system/management/commands
+   touch chanx_django/system/management/__init__.py
+   touch chanx_django/system/management/commands/__init__.py
 
-**Create** ``system/management/commands/send_notification.py``:
+**Create** ``chanx_django/system/management/commands/send_notification.py``:
 
 .. code-block:: python
 

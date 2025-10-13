@@ -8,6 +8,16 @@ In this part, you'll explore how multiple channel layer types work together in o
 - Broadcasting to multiple consumer groups
 - Choosing the right layer for your use case
 
+Starting Point
+--------------
+
+Make sure you've completed Part 3. If you want to start fresh from checkpoint 3:
+
+.. code-block:: bash
+
+   git checkout cp3
+   git reset --hard
+
 Understanding Multi-Layer Architecture
 ---------------------------------------
 
@@ -35,11 +45,12 @@ We configured five channel layers in Part 2 (``src/layers.py``). Now we'll use f
 Step 1: Define Message Types
 -----------------------------
 
-**Create** ``src/apps/showcase/__init__.py``:
+**Create the app directory and init file:**
 
-.. code-block:: python
+.. code-block:: bash
 
-   # Showcase App - Demonstrates all channel layer types working together
+   mkdir -p src/apps/showcase
+   touch src/apps/showcase/__init__.py
 
 **Create** ``src/apps/showcase/messages.py``:
 

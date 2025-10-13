@@ -9,6 +9,16 @@ In this final part, you'll learn how to test WebSocket consumers comprehensively
 - Testing ARQ worker integration
 - Testing external messaging
 
+Starting Point
+--------------
+
+Make sure you've completed Part 4. If you want to start fresh from checkpoint 4:
+
+.. code-block:: bash
+
+   git checkout cp4
+   git reset --hard
+
 Test Setup
 ----------
 
@@ -86,6 +96,16 @@ In tests, you use these constants with ``stop_action``:
 - ``bg_worker`` fixture creates a real ARQ worker for testing
 - ``burst=True`` - Worker processes all jobs and exits (perfect for tests)
 - ``poll_delay=0.1`` - Fast polling for quicker tests
+
+Create Tests Directory
+----------------------
+
+**Create the tests directory and init file:**
+
+.. code-block:: bash
+
+   mkdir -p src/tests
+   touch src/tests/__init__.py
 
 Testing System Chat Consumer
 -----------------------------
@@ -370,11 +390,16 @@ Testing AsyncAPI Schema
 
 .. code-block:: python
 
+   import json
+   from pathlib import Path
+
    from fastapi.testclient import TestClient
 
    from src.main import app
 
    client = TestClient(app)
+
+   results_dir = Path(__file__).parent / "test_results"
 
 
    def test_asyncapi_schema_html_doc() -> None:
@@ -389,12 +414,52 @@ Testing AsyncAPI Schema
        assert response.status_code == 200
        data = response.json()
 
-       # Verify structure
-       assert "asyncapi" in data
-       assert "channels" in data
-       assert "operations" in data
+       with open(results_dir / "asyncapi_schema_res.json", "w") as f:
+           json.dump(data, f, indent=2)
 
-Tests that AsyncAPI documentation is generated correctly.
+       with open(results_dir / "asyncapi_schema.json") as f:
+           expected_data = json.load(f)
+
+       assert data == expected_data
+
+
+   def test_asyncapi_schema_yaml() -> None:
+       response = client.get("/asyncapi.yaml")
+       assert response.status_code == 200
+       data = response.text
+
+       with open(results_dir / "asyncapi_schema_res.yaml", "w") as f:
+           f.write(data)
+
+       with open(results_dir / "asyncapi_schema.yaml") as f:
+           expected_data = f.read()
+
+       assert data == expected_data
+
+**Understanding the tests:**
+
+- **test_asyncapi_schema_html_doc**: Verifies the HTML documentation page renders correctly
+- **test_asyncapi_schema_json**: Compares the generated JSON schema against an expected baseline
+- **test_asyncapi_schema_yaml**: Compares the generated YAML schema against an expected baseline
+
+The JSON and YAML tests write the actual results to ``*_res`` files, which allows you to:
+
+1. See what was actually generated during the test run
+2. Compare against expected baseline files (``asyncapi_schema.json`` and ``asyncapi_schema.yaml``)
+3. Update baselines when you intentionally change your API
+
+.. note::
+
+   You'll need to create the ``src/tests/test_results/`` directory and baseline files. On first run, the test will fail. Copy the generated ``*_res`` files to create your baselines:
+
+   .. code-block:: bash
+
+      mkdir -p src/tests/test_results
+      # Run tests once to generate the _res files
+      pytest src/tests/test_asyncapi_schema.py || true
+      # Copy generated files as baselines
+      cp src/tests/test_results/asyncapi_schema_res.json src/tests/test_results/asyncapi_schema.json
+      cp src/tests/test_results/asyncapi_schema_res.yaml src/tests/test_results/asyncapi_schema.yaml
 
 Running Tests
 -------------
@@ -403,7 +468,7 @@ Running Tests
 
 .. code-block:: bash
 
-   pytest
+   pytest src
 
 **Run specific test file:**
 
@@ -415,13 +480,13 @@ Running Tests
 
 .. code-block:: bash
 
-   pytest -v
+   pytest src -v
 
 **Run with coverage:**
 
 .. code-block:: bash
 
-   pytest --cov=src --cov-report=html
+   pytest src --cov=src --cov-report=html
 
 **Run specific test:**
 

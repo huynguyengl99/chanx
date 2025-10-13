@@ -376,7 +376,6 @@ dependencies = [
 [package.optional-dependencies]
 channels = [
     { name = "channels" },
-    { name = "channels-redis" },
     { name = "django" },
     { name = "djangorestframework" },
 ]
@@ -404,6 +403,7 @@ dev = [
     { name = "uvicorn", extra = ["standard"] },
 ]
 dev-django = [
+    { name = "channels-redis" },
     { name = "commitizen" },
     { name = "coveralls" },
     { name = "daphne" },
@@ -444,6 +444,7 @@ dev-fastapi = [
     { name = "arq" },
     { name = "commitizen" },
     { name = "coveralls" },
+    { name = "fast-channels", extra = ["redis"] },
     { name = "freezegun" },
     { name = "interrogate" },
     { name = "mock" },
@@ -481,7 +482,6 @@ test = [
 [package.metadata]
 requires-dist = [
     { name = "channels", marker = "extra == 'channels'", specifier = ">=4,<5" },
-    { name = "channels-redis", marker = "extra == 'channels'", specifier = ">=4,<5" },
     { name = "django", marker = "extra == 'channels'", specifier = ">=5,<6" },
     { name = "djangorestframework", marker = "extra == 'channels'", specifier = ">=3,<4" },
     { name = "fast-channels", marker = "extra == 'fast-channels'", specifier = ">=1.0.2" },
@@ -512,6 +512,7 @@ dev = [
     { name = "uvicorn", extras = ["standard"], specifier = ">=0.35.0" },
 ]
 dev-django = [
+    { name = "channels-redis", specifier = ">=4,<5" },
     { name = "commitizen", specifier = ">=4.5.0,<5" },
     { name = "coveralls", specifier = ">=4.0.1,<5" },
     { name = "daphne", specifier = ">=4.1.2,<5" },
@@ -552,6 +553,7 @@ dev-fastapi = [
     { name = "arq", specifier = ">=0.26.3" },
     { name = "commitizen", specifier = ">=4.5.0,<5" },
     { name = "coveralls", specifier = ">=4.0.1,<5" },
+    { name = "fast-channels", extras = ["redis"], specifier = ">=1.0.2" },
     { name = "freezegun", specifier = ">=1.5.1,<2" },
     { name = "interrogate", specifier = ">=1.7.0" },
     { name = "mock", specifier = ">=5.2.0,<6" },
@@ -1185,6 +1187,13 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/46/28/34aeef4dcba2480ddc91dfe7a2e170483df403089117afbcdbc42d1c56dc/fast_channels-1.0.2.tar.gz", hash = "sha256:eb86a3780c3c695c28c175925dc9c1168846eed003cd17dfd2a0c0de92f912bc", size = 34698 }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/99/c2/e65af175fc19eab6f8063cdb4e5ec81841ae7cbef0071eb6fede608cb822/fast_channels-1.0.2-py3-none-any.whl", hash = "sha256:8f24d675b9aa2f41d0fc8d17ee1945004a6bee6ed0248f21ae0952e83edf1c5c", size = 45602 },
+]
+
+[package.optional-dependencies]
+redis = [
+    { name = "cryptography" },
+    { name = "msgpack" },
+    { name = "redis" },
 ]
 
 [[package]]

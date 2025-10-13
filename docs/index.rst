@@ -24,6 +24,18 @@ Contents
    user-guide/asyncapi
    user-guide/testing
    user-guide/framework-integration
+   comparison
+
+.. toctree::
+   :maxdepth: 1
+   :caption: Django Tutorial
+
+   tutorial-django/prerequisites
+   tutorial-django/cp0-initial-setup
+   tutorial-django/cp1-chat-websocket
+   tutorial-django/cp2-assistants-websocket
+   tutorial-django/cp3-system-websocket
+   tutorial-django/cp4-integration-tests
 
 .. toctree::
    :maxdepth: 1

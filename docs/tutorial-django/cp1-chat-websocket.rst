@@ -169,6 +169,51 @@ This is the core chat functionality:
 - ``broadcast_message()`` sends the message to all clients in the same group
 - ``exclude_current=True`` means the sender won't receive their own message back
 
+How Message Handlers Send Messages
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Understanding how messages are sent back to clients is important.
+
+**Pattern 1: Return value sends to sender only**
+
+.. code-block:: python
+
+    @ws_handler
+    async def handle_ping(self, message: PingMessage) -> PongMessage:
+        # What you return goes back to the sender only
+        return PongMessage()
+
+The ``handle_ping`` method demonstrates this - it returns ``PongMessage`` which is automatically sent to the client who sent the ping.
+
+**Pattern 2: Broadcasting to multiple users**
+
+.. code-block:: python
+
+    @ws_handler(output_type=NewChatMessage)
+    async def handle_new_chat_message(self, message: NewChatMessage) -> None:
+        # Explicitly broadcast to send to multiple users
+        await self.broadcast_message(message, exclude_current=True)
+
+The ``handle_new_chat_message`` method demonstrates this:
+
+- Return type is ``None`` (not sending directly to sender)
+- Use ``output_type`` parameter in ``@ws_handler`` for API documentation
+- Call ``broadcast_message()`` explicitly to send to all group members
+- ``exclude_current=True`` means the sender won't receive their own message
+
+.. note::
+
+   You'll see more advanced messaging patterns, including server-to-server communication with event handlers, in Part 4.
+
+AsyncAPI Documentation Mapping
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The ``@ws_handler`` decorator generates AsyncAPI **RECEIVE** actions (documenting what messages clients can send). When handlers have a return type or ``output_type`` parameter, the RECEIVE action includes a **reply field** describing the response message.
+
+.. seealso::
+
+   For detailed information about AsyncAPI mapping, see :doc:`../user-guide/consumers-decorators` → AsyncAPI Documentation Mapping section.
+
 Step 3: Create WebSocket Routing
 ---------------------------------
 

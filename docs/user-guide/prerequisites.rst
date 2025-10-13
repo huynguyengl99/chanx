@@ -109,12 +109,14 @@ WebSocket vs HTTP: Key Differences
 Understanding these differences helps you design better real-time applications:
 
 **HTTP Characteristics:**
+
 - Request-response cycle
 - Stateless connections
 - One response per request
 - Client always initiates
 
 **WebSocket Characteristics:**
+
 - Persistent bi-directional connections
 - Stateful - connection remains open
 - Multiple messages in both directions

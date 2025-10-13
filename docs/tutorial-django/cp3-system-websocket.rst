@@ -463,6 +463,102 @@ The ``@event_handler`` decorator marks this method as a channel layer event hand
 
 Similarly for ``handle_system_notification`` - handles broadcast notifications.
 
+Understanding Event Handlers
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+This is the first time we're using ``@event_handler``, so let's understand what it does and how it differs from ``@ws_handler``.
+
+**@ws_handler vs @event_handler:**
+
+.. code-block:: python
+
+    # Receives messages from WebSocket clients
+    @ws_handler
+    async def handle_user_message(self, message: UserMessage) -> Response:
+        ...
+
+    # Receives messages from channel layer (server-to-server)
+    @event_handler
+    async def handle_job_result(self, event: JobResult) -> Response:
+        ...
+
+**Key differences:**
+
++------------------+------------------------------------+--------------------------------------------+
+|                  | @ws_handler                        | @event_handler                             |
++==================+====================================+============================================+
+| **Source**       | WebSocket clients                  | Channel layer (server-side)                |
++------------------+------------------------------------+--------------------------------------------+
+| **Triggered by** | Client sends JSON message          | ``send_event()`` or ``broadcast_event()``  |
++------------------+------------------------------------+--------------------------------------------+
+| **Use case**     | Handle user interactions           | Handle background job results, external    |
+|                  |                                    | triggers, cross-consumer messages          |
++------------------+------------------------------------+--------------------------------------------+
+
+**How event handlers work:**
+
+**Pattern 1: Return value sends to WebSocket client**
+
+.. code-block:: python
+
+    @event_handler
+    async def handle_job_result(self, event: JobResult) -> JobResult:
+        # What you return is sent to the WebSocket client
+        return event
+
+Where the message goes depends on how the event was sent:
+
+- ``send_event(message, channel_name)`` → goes to **one specific client**
+- ``broadcast_event(message, groups=[...])`` → goes to **all clients in those groups**
+
+In our system example:
+
+.. code-block:: python
+
+    # Celery task sends to specific client
+    SystemConsumer.send_event_sync(JobResult(payload=result), channel_name)
+
+    # Event handler receives it and forwards to that client
+    @event_handler
+    async def handle_job_result(self, event: JobResult) -> JobResult:
+        return event
+
+**Pattern 2: Send multiple messages or complex logic**
+
+.. code-block:: python
+
+    @event_handler(output_type=Notification)
+    async def handle_complex_event(self, event: ComplexEvent) -> None:
+        # Send multiple messages
+        await self.send_message(Notification(payload="Processing..."))
+        await self.send_message(Notification(payload="Complete!"))
+
+When using complex logic:
+
+- Return type is ``None``
+- Use ``output_type`` parameter for API documentation
+- Call ``send_message()`` or ``broadcast_message()`` explicitly
+
+**Why use event handlers?**
+
+Event handlers enable server-to-server communication:
+
+- **Background workers** (Celery) can send results back to WebSocket clients
+- **External scripts** can trigger WebSocket notifications
+- **HTTP endpoints** can push messages to WebSocket connections
+- **Different consumers** can send messages to each other
+
+This is more powerful than ``@ws_handler`` which only handles client messages.
+
+AsyncAPI Documentation Mapping for Event Handlers
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The ``@event_handler`` decorator generates AsyncAPI **SEND** actions (server-initiated messages). Only the output type (message sent to client) is documented. The input event type is NOT documented in AsyncAPI since it comes from internal sources (Celery, management commands, etc.), not from WebSocket clients.
+
+.. seealso::
+
+   For detailed information about AsyncAPI mapping, see :doc:`../user-guide/consumers-decorators` → AsyncAPI Documentation Mapping section.
+
 .. tip::
 
    **Optional: Generic Type Parameter for Better Type Hints**
@@ -496,13 +592,6 @@ Similarly for ``handle_system_notification`` - handles broadcast notifications.
         expected "JobResult | SystemNotification"  [arg-type]
 
    This catches bugs during development before runtime, providing better IDE autocomplete and static analysis. The generic type doesn't affect runtime behavior.
-
-.. important::
-
-   **Key Difference:**
-
-   - ``@ws_handler`` - Handles messages from **WebSocket clients**
-   - ``@event_handler`` - Handles messages from **channel layer** (server-to-server)
 
 Step 6: Create Routing
 ----------------------

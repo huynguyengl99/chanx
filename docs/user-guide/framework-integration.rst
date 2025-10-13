@@ -8,7 +8,30 @@ Django Channels Integration
 
 **AsyncAPI Documentation Views**
 
-Django provides built-in views for serving AsyncAPI documentation from your WebSocket consumers:
+Django provides built-in views for serving AsyncAPI documentation from your WebSocket consumers.
+
+**Quick Setup - Include Pre-configured URLs:**
+
+The simplest way to add AsyncAPI endpoints is to include the pre-configured URL patterns:
+
+.. code-block:: python
+
+    # urls.py
+    from django.urls import path, include
+
+    urlpatterns = [
+        # Include Chanx AsyncAPI endpoints
+        path('asyncapi/', include('chanx.channels.urls')),
+    ]
+
+This provides:
+
+- ``/asyncapi/schema/`` - AsyncAPI schema (JSON by default, use ``?format=yaml`` for YAML)
+- ``/asyncapi/docs/`` - Interactive AsyncAPI documentation
+
+**Custom Setup - Manual URL Configuration:**
+
+For custom paths, configure the views manually:
 
 .. code-block:: python
 
@@ -17,19 +40,17 @@ Django provides built-in views for serving AsyncAPI documentation from your WebS
     from chanx.channels.views import AsyncAPISchemaView, AsyncAPIDocsView
 
     urlpatterns = [
-        # AsyncAPI spec endpoints
-        path('api/asyncapi.json', AsyncAPISchemaView.as_view(), name='asyncapi-schema'),
-        path('api/asyncapi.yaml', AsyncAPISchemaView.as_view(), {'format': 'yaml'}),
+        # AsyncAPI spec endpoint (supports ?format=json or ?format=yaml)
+        path('api/asyncapi/schema/', AsyncAPISchemaView.as_view(), name='asyncapi-schema'),
 
         # Interactive documentation
         path('docs/websocket/', AsyncAPIDocsView.as_view(), name='asyncapi-docs'),
     ]
 
-**Available endpoints:**
+**Available formats for schema endpoint:**
 
-- ``/api/asyncapi.json`` - JSON format AsyncAPI spec
-- ``/api/asyncapi.json?format=yaml`` - YAML format AsyncAPI spec
-- ``/docs/websocket/`` - Interactive AsyncAPI documentation
+- ``/api/asyncapi/schema/`` or ``/api/asyncapi/schema/?format=json`` - JSON format (default)
+- ``/api/asyncapi/schema/?format=yaml`` - YAML format
 
 **Django Authenticators**
 

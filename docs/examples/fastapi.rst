@@ -574,18 +574,22 @@ Production Deployment
 Key considerations for production deployment:
 
 **1. Channel Layer Scaling**
+
 - Use Redis Cluster or RabbitMQ for high-availability channel layers
 - Configure appropriate connection pools and timeouts
 
 **2. Background Job Processing**
+
 - Deploy ARQ workers as separate processes/containers
 - Use Redis Sentinel for worker queue high availability
 
 **3. WebSocket Load Balancing**
+
 - Configure sticky sessions or use Redis for session storage
 - Consider using a WebSocket-aware load balancer
 
 **4. Monitoring and Observability**
+
 - Enable structured logging with correlation IDs
 - Monitor WebSocket connection counts and message rates
 - Set up health checks for both HTTP and WebSocket endpoints

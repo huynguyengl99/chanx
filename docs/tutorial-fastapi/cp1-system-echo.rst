@@ -245,6 +245,15 @@ When broadcasting:
 
    You'll see more advanced messaging patterns, including server-to-server communication with event handlers, in Part 3.
 
+AsyncAPI Documentation Mapping
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The ``@ws_handler`` decorator generates AsyncAPI **RECEIVE** actions (documenting what messages clients can send). When handlers have a return type or ``output_type`` parameter, the RECEIVE action includes a **reply field** describing the response message.
+
+.. seealso::
+
+   For detailed information about AsyncAPI mapping, see :doc:`../user-guide/consumers-decorators` → AsyncAPI Documentation Mapping section.
+
 Key Concepts Review
 -------------------
 

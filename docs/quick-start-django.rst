@@ -265,6 +265,12 @@ Next Steps
 
 Now that you have a working Django WebSocket consumer with Chanx:
 
+**Tutorial:**
+
+* :doc:`tutorial-django/prerequisites` - **Follow the comprehensive Django tutorial** to build a complete real-time application with chat, AI assistants, background tasks, and testing
+
+**Documentation:**
+
 * :doc:`user-guide/consumers-decorators` - Learn more about consumers and decorators
 * :doc:`user-guide/framework-integration` - Explore Django-specific features
 * :doc:`user-guide/asyncapi` - Learn about AsyncAPI documentation generation

@@ -513,6 +513,15 @@ Event handlers enable server-to-server communication:
 
 This is more powerful than ``@ws_handler`` which only handles client messages.
 
+AsyncAPI Documentation Mapping for Event Handlers
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The ``@event_handler`` decorator generates AsyncAPI **SEND** actions (server-initiated messages). Only the output type (message sent to client) is documented. The input event type is NOT documented in AsyncAPI since it comes from internal sources (ARQ workers, HTTP endpoints, etc.), not from WebSocket clients.
+
+.. seealso::
+
+   For detailed information about AsyncAPI mapping, see :doc:`../user-guide/consumers-decorators` → AsyncAPI Documentation Mapping section.
+
 Step 4: Register the WebSocket Route
 -------------------------------------
 

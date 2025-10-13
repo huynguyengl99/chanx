@@ -271,6 +271,12 @@ Next Steps
 
 Now that you have a working FastAPI WebSocket consumer with Chanx:
 
+**Tutorial:**
+
+* :doc:`tutorial-fastapi/prerequisites` - **Follow the comprehensive FastAPI tutorial** to build a complete real-time application with system echo, room chat, background jobs, and multi-layer messaging
+
+**Documentation:**
+
 * :doc:`user-guide/consumers-decorators` - Learn more about consumers and decorators
 * :doc:`user-guide/framework-integration` - Explore FastAPI-specific features
 * :doc:`user-guide/asyncapi` - Learn about AsyncAPI documentation generation

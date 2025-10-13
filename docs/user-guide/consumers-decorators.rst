@@ -110,27 +110,41 @@ The ``@ws_handler`` decorator handles messages sent directly from WebSocket clie
                 )
             )
 
-**Handler patterns:**
+**How Message Handlers Send Messages**
 
-**1. Direct Response (return message):**
+Understanding how messages are sent back to clients is important.
+
+**Pattern 1: Return value sends to sender only**
 
 .. code-block:: python
 
     @ws_handler
-    async def handle_ping(self, message: PingMessage) -> PongMessage:
-        return PongMessage()  # Sent directly back to client
+    async def handle_user_message(self, message: UserMessage) -> SystemEchoMessage:
+        # What you return goes back to the sender only
+        return SystemEchoMessage(payload=...)
 
-**2. Broadcast Response (return None):**
+The returned message is automatically sent to the client who sent the original message.
+
+**Pattern 2: Broadcasting to multiple users**
 
 .. code-block:: python
 
-    @ws_handler(output_type=NotificationMessage)
-    async def handle_broadcast(self, message: BroadcastMessage) -> None:
+    @ws_handler(output_type=RoomNotificationMessage)
+    async def handle_chat(self, message: ChatMessage) -> None:
+        # Explicitly broadcast to send to multiple users
         await self.broadcast_message(
-            NotificationMessage(payload="Broadcasted to all")
+            RoomNotificationMessage(payload=...),
+            groups=["room_general"]  # Can be omitted if groups defined as class attribute
         )
 
-**3. No Response:**
+When broadcasting:
+
+- Return type is ``None`` (not sending directly to sender)
+- Use ``output_type`` parameter in ``@ws_handler`` for API documentation
+- Call ``broadcast_message()`` explicitly
+- ``groups`` parameter can be omitted if already defined as class attribute
+
+**Pattern 3: No Response**
 
 .. code-block:: python
 
@@ -152,28 +166,77 @@ The ``@ws_handler`` decorator handles messages sent directly from WebSocket clie
 The @event_handler Decorator
 ----------------------------
 
-The ``@event_handler`` decorator handles events sent through the channel layer from other parts of your application (HTTP views, background tasks, management scripts, etc.):
+The ``@event_handler`` decorator handles events sent through the channel layer from other parts of your application (HTTP views, background tasks, management scripts, etc.). It enables server-to-server communication patterns.
+
+**@ws_handler vs @event_handler:**
 
 .. code-block:: python
 
-    @event_handler(output_type=StreamingMessage)
-    async def handle_streaming(self, event: StreamingEvent) -> StreamingMessage:
-        """Handle streaming events from background tasks."""
-        return StreamingMessage(payload=event.payload)
+    # Receives messages from WebSocket clients
+    @ws_handler
+    async def handle_user_message(self, message: UserMessage) -> Response:
+        ...
+
+    # Receives messages from channel layer (server-to-server)
+    @event_handler
+    async def handle_job_result(self, event: JobResult) -> Response:
+        ...
+
+**Key differences:**
+
++------------------+------------------------------------+--------------------------------------------+
+|                  | @ws_handler                        | @event_handler                             |
++==================+====================================+============================================+
+| **Source**       | WebSocket clients                  | Channel layer (server-side)                |
++------------------+------------------------------------+--------------------------------------------+
+| **Triggered by** | Client sends JSON message          | ``send_event()`` or ``broadcast_event()``  |
++------------------+------------------------------------+--------------------------------------------+
+| **Use case**     | Handle user interactions           | Handle background job results, external    |
+|                  |                                    | triggers, cross-consumer messages          |
++------------------+------------------------------------+--------------------------------------------+
+
+**How event handlers work:**
+
+**Pattern 1: Return value sends to WebSocket client**
+
+.. code-block:: python
 
     @event_handler
-    async def user_joined_room(self, event: UserJoinedEvent) -> None:
-        """Handle user join events without direct response."""
-        await self.broadcast_message(
-            SystemMessage(payload=f"{event.payload.username} joined")
-        )
+    async def handle_job_result(self, event: JobResult) -> JobStatusMessage:
+        # What you return is sent to the WebSocket client
+        return JobStatusMessage(payload={"status": "result", "message": event.payload})
 
-**@event_handler return patterns:**
+Where the message goes depends on how the event was sent:
 
-- **Return message**:
-  - If triggered by ``send_event()`` → sends to the specific channel (WebSocket connection)
-  - If triggered by ``broadcast_event()`` → broadcasts the message to all channels in the target groups
-- **Return None**: Use for custom behavior - you can manually broadcast, send to specific channels, or perform side effects
+- ``send_event(message, channel_name)`` → goes to **one specific client**
+- ``broadcast_event(message, groups=[...])`` → goes to **all clients in those groups**
+
+**Pattern 2: Send multiple messages or complex logic**
+
+.. code-block:: python
+
+    @event_handler(output_type=Notification)
+    async def handle_complex_event(self, event: ComplexEvent) -> None:
+        # Send multiple messages
+        await self.send_message(Notification(payload="Processing..."))
+        await self.send_message(Notification(payload="Complete!"))
+
+When using complex logic:
+
+- Return type is ``None``
+- Use ``output_type`` parameter for API documentation
+- Call ``send_message()`` or ``broadcast_message()`` explicitly
+
+**Why use event handlers?**
+
+Event handlers enable server-to-server communication:
+
+- **Background workers** can send results back to WebSocket clients
+- **External scripts** can trigger WebSocket notifications
+- **HTTP endpoints** can push messages to WebSocket connections
+- **Different consumers** can send messages to each other
+
+This is more powerful than ``@ws_handler`` which only handles client messages.
 
 **@event_handler parameters:**
 
@@ -183,6 +246,79 @@ The ``@event_handler`` decorator handles events sent through the channel layer f
 - **summary** (str, optional): Brief description for AsyncAPI
 - **description** (str, optional): Detailed description for AsyncAPI
 - **tags** (list[str], optional): Tags for AsyncAPI grouping
+
+AsyncAPI Documentation Mapping
+-------------------------------
+
+Understanding how Chanx decorators map to AsyncAPI operations helps you write better documentation and understand the generated API specs.
+
+**@ws_handler AsyncAPI Mapping:**
+
+The ``@ws_handler`` decorator always generates documentation for the **input message** (from client) and optionally for the **output message** (to client):
+
+.. code-block:: python
+
+    # Generates: RECEIVE action with reply field
+    @ws_handler
+    async def handle_ping(self, message: PingMessage) -> PongMessage:
+        return PongMessage()
+    # AsyncAPI: "ping" action - receive (input_type=PingMessage) with reply field (output_type=PongMessage)
+
+    # Generates: RECEIVE action with reply field
+    @ws_handler(output_type=ChatNotificationMessage)
+    async def handle_chat(self, message: ChatMessage) -> None:
+        await self.broadcast_message(ChatNotificationMessage(...))
+    # AsyncAPI: "chat" action - receive (input_type=ChatMessage) with reply field (output_type=ChatNotificationMessage)
+
+    # Generates: RECEIVE action (no reply field)
+    @ws_handler
+    async def handle_log(self, message: LogMessage) -> None:
+        logger.info(message.payload)
+        # No response sent
+    # AsyncAPI: "log" action - receive (input_type=LogMessage) with no reply
+
+**AsyncAPI operation kinds for @ws_handler:**
+
+- **RECEIVE with reply**: When handler has return type or ``output_type`` parameter (receive action has reply field describing response)
+- **RECEIVE without reply**: When handler returns ``None`` and has no ``output_type``
+
+**@event_handler AsyncAPI Mapping:**
+
+The ``@event_handler`` decorator only generates documentation for the **output message** (sent to WebSocket client). The input event type is NOT documented because events come from internal sources (background workers, HTTP views, etc.), not from WebSocket clients:
+
+.. code-block:: python
+
+    # Generates: SEND operation (send only)
+    @event_handler
+    async def handle_job_result(self, event: JobResult) -> JobResult:
+        return event
+    # AsyncAPI: "job_result" action - send (output_type=JobResult)
+    # Note: input_type (event parameter) is NOT in AsyncAPI docs
+
+    # Generates: SEND operation (send only)
+    @event_handler(output_type=SystemNotification)
+    async def handle_system_notify(self, event: SystemNotifyEvent) -> None:
+        await self.send_message(SystemNotification(...))
+    # AsyncAPI: "system_notification" action - send (output_type=SystemNotification)
+    # Note: SystemNotifyEvent is NOT in AsyncAPI docs (internal event)
+
+**AsyncAPI operation kind for @event_handler:**
+
+- **SEND** (send with no reply): Server-initiated message to WebSocket client
+
+**Summary:**
+
++-------------------+-------------------------+---------------------------+--------------------------------+
+|                   | Input Type              | Output Type               | AsyncAPI Operation             |
++===================+=========================+===========================+================================+
+| ``@ws_handler``   | Always documented       | Documented if present     | RECEIVE (with or without       |
+|                   | (from WebSocket client) | (reply field)             | reply field)                   |
++-------------------+-------------------------+---------------------------+--------------------------------+
+| ``@event_handler``| NOT documented          | Always documented         | SEND                           |
+|                   | (internal event)        | (to WebSocket client)     |                                |
++-------------------+-------------------------+---------------------------+--------------------------------+
+
+This mapping ensures your AsyncAPI documentation accurately reflects the WebSocket protocol from the **client's perspective**, showing what messages clients can send and receive.
 
 Message Types and Automatic Routing
 -----------------------------------
@@ -219,12 +355,14 @@ Chanx uses **discriminated unions** to automatically route both WebSocket messag
 **How routing works:**
 
 **For WebSocket messages:**
+
 1. Client sends: ``{"action": "chat", "payload": {"message": "Hello"}}``
 2. Framework validates against discriminated union of all input messages
 3. Routes to ``@ws_handler`` method based on message type
 4. Handler receives properly typed message object
 
 **For events:**
+
 1. Application sends: ``Consumer.send_event(UserJoinedEvent(...))``
 2. Framework validates against discriminated union of all event types
 3. Routes to ``@event_handler`` method based on event type

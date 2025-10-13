@@ -1,3 +1,13 @@
+## v2.0.1 (2025-10-13)
+
+### Fix
+
+- **docs**: minor fix for tutorial docs
+- **docs**: add AsyncAPI mapping explanations and improve navigation
+- **docs**: add comprehensive FastAPI Chanx WebSocket tutorial
+- **packages**: correct package dependencies
+- **docs**: add comprehensive Django WebSocket tutorial and framework comparison
+
 ## v2.0.0 (2025-10-12)
 
 ### BREAKING CHANGE

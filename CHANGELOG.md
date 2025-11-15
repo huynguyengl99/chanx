@@ -1,3 +1,10 @@
+## v2.0.2 (2025-11-15)
+
+### Fix
+
+- suppress mypy override warning for EmailUserField.to_representation
+- use aexception for channel event ValidationError to capture full traceback
+
 ## v2.0.1 (2025-10-13)
 
 ### Fix

@@ -729,7 +729,7 @@ class ChanxWebsocketConsumerMixin(Generic[ReceiveEvent]):
 
         except ValidationError as e:
             # Log validation error for channel events
-            await logger.aerror(f"Channel event validation failed: {e}")
+            await logger.aexception(f"Channel event validation failed: {e}")
         except Exception:
             await logger.aexception("Failed to process channel event")
 

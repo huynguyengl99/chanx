@@ -13,7 +13,7 @@ from accounts.models import User
 class EmailUserField(serializers.RelatedField[User, User, str]):
     queryset = User.objects.get_queryset()
 
-    def to_representation(self, value: User) -> str:
+    def to_representation(self, value: User) -> str:  # type: ignore[override,unused-ignore]
         return value.email
 
     def to_internal_value(self, data: User) -> User:

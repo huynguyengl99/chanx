@@ -1,17 +1,16 @@
 """
-AsyncAPI 3.0 data models for specification generation.
+AsyncAPI 3.0 data models for specification generation with $ref resolution.
 
 This module contains Pydantic models representing all AsyncAPI 3.0 specification
 objects including schemas, messages, operations, channels, and the root document.
-These models are used to generate valid AsyncAPI documentation from Chanx WebSocket
-consumers.
+These models support automatic resolution of $ref pointers to actual instances.
 """
 
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, cast
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 
 # -------------------------
@@ -128,7 +127,6 @@ class ServerVariableObject(BaseModel):
 class ServerObject(BaseModel):
     """AsyncAPI Server Object describing a server where the API is hosted."""
 
-    # AsyncAPI allows different ways to express address; include common fields
     url: str | None = None
     host: str | None = None
     protocol: str | None = None
@@ -137,11 +135,9 @@ class ServerObject(BaseModel):
     description: str | None = None
     title: str | None = None
     summary: str | None = None
-    # e.g. [{"oauth2": ["scope1"]}]
     security: list[dict[str, list[str]]] | None = None
     tags: list[TagObject] | None = None
     externalDocs: ExternalDocumentationObject | None = None
-    # protocol-specific server bindings (kept generic)
     bindings: dict[str, dict[str, Any]] | None = None
     variables: dict[str, ServerVariableObject] | None = None
 
@@ -171,7 +167,6 @@ class MessageTraitObject(BaseModel):
 class MessageObject(BaseModel):
     """AsyncAPI Message Object describing a message payload and metadata."""
 
-    # support $ref alias for message references
     ref: str | None = Field(default=None, alias="$ref")
 
     name: str | None = None
@@ -208,7 +203,6 @@ class OperationReplyObject(BaseModel):
     """AsyncAPI Operation Reply Object for defining operation responses."""
 
     address: ReplyAddressObject | None = None
-    # channel may be a $ref pointer or inline channel object
     channel: dict[str, Any] | None = None
     messages: list[MessageObject] | None = None
 
@@ -229,8 +223,7 @@ class OperationTraitObject(BaseModel):
 class OperationObject(BaseModel):
     """AsyncAPI Operation Object describing send/receive operations on channels."""
 
-    action: str | None = None  # "send" | "receive"
-    # channel may be $ref or inline
+    action: str | None = None
     channel: dict[str, Any] | None = None
     title: str | None = None
     summary: str | None = None
@@ -239,9 +232,7 @@ class OperationObject(BaseModel):
     tags: list[TagObject] | None = None
     externalDocs: ExternalDocumentationObject | None = None
     bindings: dict[str, dict[str, Any]] | None = None
-    # traits may be inline or $ref (dict)
     traits: list[OperationTraitObject | dict[str, Any]] | None = None
-    # messages may be list of MessageObject or $ref dicts
     messages: list[MessageObject | dict[str, Any]] | None = None
     reply: OperationReplyObject | None = None
 
@@ -267,15 +258,12 @@ class ParameterObject(BaseModel):
 class ChannelObject(BaseModel):
     """AsyncAPI Channel Object describing a communication channel."""
 
-    # channel address, e.g. 'users.{userId}'
     address: str | None = None
-    title: str | None = None
+    title: str
     summary: str | None = None
     description: str | None = None
-    # servers may be $ref pointers like ["#/servers/production"]
     servers: list[str] | None = None
     parameters: dict[str, ParameterObject] | None = None
-    # messages map name -> MessageObject or $ref-dict
     messages: dict[str, MessageObject | dict[str, Any]] | None = None
     bindings: dict[str, dict[str, Any]] | None = None
     subscribe: OperationObject | None = None
@@ -327,17 +315,282 @@ class InfoObject(BaseModel):
     externalDocs: ExternalDocumentationObject | None = None
 
 
+# -------------------------
+# Reference Resolver
+# -------------------------
+class ReferenceResolver:
+    """
+    Handles resolution of $ref pointers in an AsyncAPI document.
+
+    This class is responsible for traversing the document tree and
+    replacing $ref references with their actual target objects.
+    """
+
+    def __init__(self, document: AsyncAPIDocument) -> None:
+        """
+        Initialize the resolver with a document.
+
+        Args:
+            document: The AsyncAPI document to resolve references in.
+        """
+        self._document = document
+        self._visited: set[int] = set()
+
+    def resolve_all(self) -> None:
+        """Resolve all $ref references in the document."""
+        self._visited.clear()
+        self._resolve_recursive(self._document)
+
+    def _resolve_recursive(self, obj: Any) -> Any:
+        """
+        Recursively resolve $ref references in the object tree.
+
+        Args:
+            obj: The object to process (BaseModel, dict, list, or primitive)
+
+        Returns:
+            The object with all $ref references resolved, or a replacement object
+        """
+        # Skip None and primitives
+        if obj is None or isinstance(obj, str | int | float | bool):
+            return obj
+
+        # Prevent infinite loops with circular references
+        obj_id = id(obj)
+        if obj_id in self._visited:
+            return obj
+        self._visited.add(obj_id)
+
+        if isinstance(obj, BaseModel):
+            return self._resolve_model(obj)
+        elif isinstance(obj, dict):
+            return self._resolve_dict(cast(dict[str, Any], obj))
+        elif isinstance(obj, list):
+            return self._resolve_list(cast(list[Any], obj))  # type: ignore[redundant-cast]
+
+        return obj
+
+    def _resolve_model(self, model: BaseModel) -> BaseModel | Any:
+        """
+        Resolve references within a Pydantic model.
+
+        Args:
+            model: The Pydantic model to process
+
+        Returns:
+            The model with references resolved, or a replacement object if the
+            model itself was a reference
+        """
+        # Check if this model has a $ref field that needs resolution
+        ref_value = getattr(model, "ref", None)
+        if ref_value is not None:
+            resolved = self._lookup_reference(ref_value)
+            if resolved is not None and resolved is not model:
+                return resolved
+
+        # Recursively process all model fields (access via class, not instance)
+        for field_name in model.__class__.model_fields:
+            current_value = getattr(model, field_name)
+            if current_value is not None:
+                resolved_value = self._resolve_recursive(current_value)
+                if resolved_value is not current_value:
+                    setattr(model, field_name, resolved_value)
+
+        return model
+
+    def _resolve_dict(self, data: dict[str, Any]) -> dict[str, Any] | Any:
+        """
+        Resolve references within a dictionary.
+
+        Args:
+            data: The dictionary to process
+
+        Returns:
+            The dictionary with references resolved, or a replacement object if
+            the dictionary was a reference
+        """
+        # Check for $ref key in dictionary
+        if "$ref" in data:
+            ref_value = data["$ref"]
+            if isinstance(ref_value, str):
+                resolved = self._lookup_reference(ref_value)
+                if resolved is not None:
+                    return resolved
+
+        # Recursively resolve all dictionary values
+        for key, value in data.items():
+            resolved_value = self._resolve_recursive(value)
+            if resolved_value is not value:
+                data[key] = resolved_value
+
+        return data
+
+    def _resolve_list(self, items: list[Any]) -> list[Any]:
+        """
+        Resolve references within a list.
+
+        Args:
+            items: The list to process
+
+        Returns:
+            The list with all items' references resolved
+        """
+        for i, item in enumerate(items):
+            resolved_item = self._resolve_recursive(item)
+            if resolved_item is not item:
+                items[i] = resolved_item
+
+        return items
+
+    def _lookup_reference(self, ref: str) -> Any | None:
+        """
+        Look up a JSON reference pointer and return the target object.
+
+        Args:
+            ref: A JSON reference string like '#/components/schemas/User'
+
+        Returns:
+            The resolved object, or None if the reference cannot be resolved
+        """
+        # Only handle internal references (starting with #/)
+        if not ref.startswith("#/"):
+            return None
+
+        # Parse the reference path
+        path_parts = ref[2:].split("/")
+
+        return self._navigate_path(path_parts)
+
+    def _navigate_path(self, path_parts: list[str]) -> Any:
+        """
+        Navigate through the document following a path.
+
+        Args:
+            path_parts: List of path segments to follow
+
+        Returns:
+            The object at the path, or None if not found
+        """
+        current: Any = self._document
+
+        for part in path_parts:
+            if current is None:
+                return None
+
+            # Handle URL-encoded characters in JSON pointers
+            decoded_part = part.replace("~1", "/").replace("~0", "~")
+
+            if isinstance(current, BaseModel):
+                current = getattr(current, decoded_part, None)
+            elif isinstance(current, dict):
+                current = cast(dict[str, Any], current).get(decoded_part)
+            else:
+                return None
+
+        return current
+
+
 class AsyncAPIDocument(BaseModel):
-    """Root AsyncAPI 3.0 document containing the complete API specification."""
+    """
+    Root AsyncAPI 3.0 document containing the complete API specification.
+
+    This model automatically resolves all $ref references to actual instances
+    after validation, replacing reference objects with their targets.
+    """
 
     asyncapi: str = "3.0.0"
     info: InfoObject
     servers: dict[str, ServerObject] | None = None
-    channels: dict[str, ChannelObject] | None = None
+    channels: dict[str, ChannelObject]
     operations: dict[str, OperationObject] | None = None
     components: ComponentsObject | None = None
     tags: list[TagObject] | None = None
     externalDocs: ExternalDocumentationObject | None = None
+
+    @model_validator(mode="after")
+    def resolve_all_refs(self) -> AsyncAPIDocument:
+        """
+        Resolve all $ref pointers to actual component instances.
+
+        This validator runs after the model is constructed and uses the
+        ReferenceResolver to traverse and resolve all references.
+
+        Returns:
+            Self with all references resolved.
+        """
+        resolver = ReferenceResolver(self)
+        resolver.resolve_all()
+        return self
+
+    def get_schema(self, name: str) -> SchemaObject | None:
+        """
+        Get a schema by name from components.
+
+        Args:
+            name: The name of the schema
+
+        Returns:
+            The SchemaObject if found, None otherwise
+        """
+        if self.components and self.components.schemas:
+            return self.components.schemas.get(name)
+        return None
+
+    def get_message(self, name: str) -> MessageObject | None:
+        """
+        Get a message by name from components.
+
+        Args:
+            name: The name of the message
+
+        Returns:
+            The MessageObject if found, None otherwise
+        """
+        if self.components and self.components.messages:
+            return self.components.messages.get(name)
+        return None
+
+    def get_channel(self, name: str) -> ChannelObject | None:
+        """
+        Get a channel by name from the channels section.
+
+        Args:
+            name: The name of the channel
+
+        Returns:
+            The ChannelObject if found, None otherwise
+        """
+        if self.channels:
+            return self.channels.get(name)
+        return None
+
+    def get_operation(self, name: str) -> OperationObject | None:
+        """
+        Get an operation by name from the operations section.
+
+        Args:
+            name: The name of the operation
+
+        Returns:
+            The OperationObject if found, None otherwise
+        """
+        if self.operations:
+            return self.operations.get(name)
+        return None
+
+    def get_server(self, name: str) -> ServerObject | None:
+        """
+        Get a server by name from the servers section.
+
+        Args:
+            name: The name of the server
+
+        Returns:
+            The ServerObject if found, None otherwise
+        """
+        if self.servers:
+            return self.servers.get(name)
+        return None
 
 
 # -------------------------

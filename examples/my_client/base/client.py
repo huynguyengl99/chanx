@@ -1,0 +1,181 @@
+"""Base WebSocket client for AsyncAPI."""
+
+import json
+from typing import Annotated, Any
+
+from pydantic import BaseModel, Field, TypeAdapter
+from websockets.asyncio.client import ClientConnection, connect
+
+
+class BaseClient:
+    """Base WebSocket client class."""
+
+    path: str
+    websocket: ClientConnection
+    incoming_message: BaseModel
+    discriminator_field: str = "action"
+
+    def __init__(
+        self,
+        base_url: str,
+        /,
+        protocol: str = "ws",
+        headers: dict[str, str] | None = None,
+        path_params: dict[str, Any] | None = None,
+    ):
+        """
+        Initialize the base client.
+
+        Args:
+            base_url: WebSocket server URL (host:port or full URL)
+            protocol: Protocol (ws or wss)
+            headers: Optional headers for WebSocket connection
+            path_params: Path parameters to replace in URL (e.g., {"room_id": 123, "room_name": "lobby"})
+        """
+        # Handle both full URLs and host:port
+        if not base_url.startswith(("ws://", "wss://")):
+            base_url = f"{protocol}://{base_url}"
+
+        self.headers = headers or {}
+
+        # Replace path parameters in the path
+        path = self.path
+        if path_params:
+            for param_name, param_value in path_params.items():
+                path = path.replace(f"{{{param_name}}}", str(param_value))
+
+        self.url = base_url + path
+
+        self.incoming_message_adapter = TypeAdapter[BaseModel](
+            Annotated[
+                self.incoming_message,
+                Field(discriminator=self.discriminator_field),
+            ]
+        )
+
+    async def send_init_message(self) -> None:
+        """Send initial message after connection is established."""
+        pass
+
+    async def handle(self) -> None:  # noqa
+        """
+        Connect to WebSocket server and handle incoming messages.
+
+        This method establishes a WebSocket connection and continuously listens
+        for incoming messages, dispatching them to the appropriate handlers.
+        """
+
+        try:
+            # Create new WebSocket connection for this request
+            async with connect(self.url) as websocket:
+                self.websocket = websocket
+                # Send initial message with full config
+                await self.send_init_message()
+
+                # Stream responses back to channel layer
+                async for data in websocket:
+                    try:
+                        decoded_data = (
+                            data.decode("utf-8") if isinstance(data, bytes) else data
+                        )
+                        py_object = json.loads(decoded_data)
+                        message = self.incoming_message_adapter.validate_python(
+                            py_object
+                        )
+
+                        await self.handle_message(message)
+                    except (json.JSONDecodeError, UnicodeDecodeError):
+                        # Not JSON, handle as raw
+                        await self.handle_raw_data(data)
+                    except Exception as e:
+                        # Log and continue processing other messages
+                        await self.handle_error(e)
+                        print(f"Error processing message event: {e}")
+                        continue
+
+        except Exception as e:
+            await self.handle_websocket_connection_error(e)
+
+    async def disconnect(self, code: int = 1000, reason: str = "") -> None:
+        """
+        Disconnect from the WebSocket server.
+
+        Args:
+            code: WebSocket close code (default: 1000 for normal closure)
+            reason: Optional reason for closing the connection
+        """
+        await self.websocket.close(code, reason)
+
+    async def send_raw(self, data: str | bytes) -> None:
+        """
+        Send raw data to the server.
+
+        Args:
+            data: Raw data to send
+        """
+        if not self.websocket:
+            raise RuntimeError("Not connected to WebSocket server")
+
+        await self.websocket.send(data)
+
+    async def send_json(self, data: dict[str, Any]) -> None:
+        """
+        Send JSON data to the server.
+
+        Args:
+            data: Dictionary to serialize and send as JSON
+        """
+        await self.send_raw(json.dumps(data))
+
+    async def send_message(self, message: BaseModel) -> None:
+        """
+        Send a Pydantic message model to the server.
+
+        Args:
+            message: Pydantic BaseModel instance to serialize and send
+        """
+        await self.send_json(message.model_dump())
+
+    async def handle_message(self, message: BaseModel) -> None:
+        """
+        Handle incoming messages from the server.
+
+        Override this method in subclasses to process messages.
+
+        Args:
+            message: Validated Pydantic message model
+        """
+        pass
+
+    async def handle_raw_data(self, message: str | bytes) -> None:
+        """
+        Handle raw non-JSON data from the server.
+
+        Override this method to process binary or non-JSON text data.
+
+        Args:
+            message: Raw data received from the server
+        """
+        pass
+
+    async def handle_error(self, error: Exception) -> None:
+        """
+        Handle errors that occur during message processing.
+
+        Override this method to implement custom error handling.
+
+        Args:
+            error: Exception that occurred during message processing
+        """
+        pass
+
+    async def handle_websocket_connection_error(self, e: Exception) -> None:
+        """
+        Handle WebSocket connection errors.
+
+        Override this method to implement custom error handling for connection issues.
+
+        Args:
+            e: Exception that occurred during WebSocket connection
+        """
+        pass

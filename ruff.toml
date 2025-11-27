@@ -1,4 +1,4 @@
-src = ["chanx", "tests"]
+src = ["chanx", "examples", "tests"]
 target-version = "py310"
 
 [lint]
@@ -28,7 +28,9 @@ section-order = ["future", "standard-library", "django", "third-party", "first-p
 django = ["channels", "django", "rest_framework"]
 
 [lint.per-file-ignores]
-"chanx/asyncapi/type_defs.py" = ["N815"]
+"chanx/asyncapi/type_defs.py" = ["C901", "N815", "PLR0912"]
+"chanx/client_generator/analyzer.py" = ["C901", "PLR0912"]
+"chanx/client_generator/codegen.py" = ["C901", "PLR0911", "PLR0912"]
 "ext/*" = ["PLR2004"]
 "sandbox_*/*/test_*.py" = ["B009", "C901", "N806", "PLR0911", "PLR2004"]
 "tests/*" = ["B009", "C901", "N806", "PLR0911", "PLR2004"]

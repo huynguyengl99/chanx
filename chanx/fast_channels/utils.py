@@ -51,7 +51,7 @@ def build_default_config_from_app(
         config["description"] = description
 
     # Try to extract server info from FastAPI app
-    config["server_url"] = request.url.hostname
+    config["server_url"] = request.url.netloc
 
     # Determine protocol - assume ws for now, could be enhanced
     # to detect if the app is configured for TLS

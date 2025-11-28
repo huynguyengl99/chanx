@@ -490,11 +490,13 @@ lint = [
     { name = "toml-sort" },
 ]
 test = [
+    { name = "black" },
     { name = "coverage", extra = ["toml"] },
     { name = "pytest" },
     { name = "pytest-cov" },
     { name = "pytest-mock" },
     { name = "pytest-xdist" },
+    { name = "ruff" },
 ]
 
 [package.metadata]
@@ -607,11 +609,13 @@ lint = [
     { name = "toml-sort", specifier = ">=0.24.2,<0.25" },
 ]
 test = [
+    { name = "black", specifier = ">=25.9.0,<26" },
     { name = "coverage", extras = ["toml"], specifier = ">=7.8.0,<8" },
     { name = "pytest", specifier = ">=8.3.5,<9" },
     { name = "pytest-cov", specifier = ">=6.1.0,<7" },
     { name = "pytest-mock", specifier = ">=3.14.0,<4" },
     { name = "pytest-xdist", specifier = ">=3.6.1,<4" },
+    { name = "ruff", specifier = ">=0.11.3,<0.12" },
 ]
 
 [[package]]

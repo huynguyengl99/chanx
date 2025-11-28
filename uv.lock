@@ -368,9 +368,6 @@ version = "2.0.2"
 source = { editable = "." }
 dependencies = [
     { name = "pydantic" },
-    { name = "pyhumps" },
-    { name = "structlog" },
-    { name = "typing-extensions" },
 ]
 
 [package.optional-dependencies]
@@ -378,16 +375,31 @@ channels = [
     { name = "channels" },
     { name = "django" },
     { name = "djangorestframework" },
+    { name = "pyhumps" },
+    { name = "structlog" },
+    { name = "typing-extensions" },
 ]
 cli = [
     { name = "click" },
     { name = "httpx" },
     { name = "jinja2" },
     { name = "pyyaml" },
+    { name = "websockets" },
+]
+client = [
+    { name = "websockets" },
+]
+core = [
+    { name = "pyhumps" },
+    { name = "structlog" },
+    { name = "typing-extensions" },
 ]
 fast-channels = [
     { name = "fast-channels" },
     { name = "fastapi" },
+    { name = "pyhumps" },
+    { name = "structlog" },
+    { name = "typing-extensions" },
 ]
 
 [package.dev-dependencies]
@@ -488,6 +500,8 @@ test = [
 [package.metadata]
 requires-dist = [
     { name = "channels", marker = "extra == 'channels'", specifier = ">=4,<5" },
+    { name = "chanx", extras = ["core"], marker = "extra == 'channels'" },
+    { name = "chanx", extras = ["core"], marker = "extra == 'fast-channels'" },
     { name = "click", marker = "extra == 'cli'", specifier = ">=8.1.0,<9" },
     { name = "django", marker = "extra == 'channels'", specifier = ">=5,<6" },
     { name = "djangorestframework", marker = "extra == 'channels'", specifier = ">=3,<4" },
@@ -496,12 +510,14 @@ requires-dist = [
     { name = "httpx", marker = "extra == 'cli'", specifier = ">=0.27.0,<1" },
     { name = "jinja2", marker = "extra == 'cli'", specifier = ">=3.1.0,<4" },
     { name = "pydantic", specifier = ">=2,<3" },
-    { name = "pyhumps", specifier = ">=3.8.0" },
+    { name = "pyhumps", marker = "extra == 'core'", specifier = ">=3.8.0" },
     { name = "pyyaml", marker = "extra == 'cli'", specifier = ">=6.0.0,<7" },
-    { name = "structlog" },
-    { name = "typing-extensions" },
+    { name = "structlog", marker = "extra == 'core'" },
+    { name = "typing-extensions", marker = "extra == 'core'" },
+    { name = "websockets", marker = "extra == 'cli'" },
+    { name = "websockets", marker = "extra == 'client'" },
 ]
-provides-extras = ["channels", "cli", "fast-channels"]
+provides-extras = ["channels", "cli", "client", "core", "fast-channels"]
 
 [package.metadata.requires-dev]
 build = [

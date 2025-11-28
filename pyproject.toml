@@ -97,10 +97,7 @@ classifiers = [
   "Topic :: Software Development"
 ]
 dependencies = [
-  "pydantic>=2,<3",
-  "pyhumps>=3.8.0",
-  "structlog",
-  "typing-extensions"
+  "pydantic>=2,<3"
 ]
 description = "The missing toolkit for Channels — auth, logging, consumers, and more."
 license = {file = "LICENSE"}
@@ -113,15 +110,26 @@ version = "2.0.2"
 channels = [
   "Django>=5,<6",
   "channels>=4,<5",
+  "chanx[core]",
   "djangorestframework>=3,<4"
 ]
 cli = [
   "click>=8.1.0,<9",
   "httpx>=0.27.0,<1",
   "jinja2>=3.1.0,<4",
-  "pyyaml>=6.0.0,<7"
+  "pyyaml>=6.0.0,<7",
+  "websockets"
+]
+client = [
+  "websockets"
+]
+core = [
+  "pyhumps>=3.8.0",
+  "structlog",
+  "typing-extensions"
 ]
 fast_channels = [
+  "chanx[core]",
   "fast-channels>=1.0.2",
   "fastapi>=0.117.1"
 ]

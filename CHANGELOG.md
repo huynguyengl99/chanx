@@ -1,3 +1,20 @@
+## v2.1.0 (2025-11-28)
+
+### Feat
+
+- client generator
+
+### Fix
+
+- update docs for client generation
+- improve code gen for dict and add some hooks, error handling for base client
+- add tests for the client generation feature
+- use netloc instead of hostname for fastapi autodoc
+
+### Refactor
+
+- restructure optional dependencies into focused extras
+
 ## v2.0.2 (2025-11-15)
 
 ### Fix

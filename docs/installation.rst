@@ -14,11 +14,6 @@ Framework-specific dependencies are installed automatically based on which extra
 
 Installing Chanx
 ----------------
-**Basic Installation (Core Only)**
-
-.. code-block:: bash
-
-    pip install chanx
 
 **For Django Channels Projects**
 
@@ -28,10 +23,11 @@ Installing Chanx
 
 This installs:
 
+- Pydantic 2.0+ (validation)
 - Django 5.0+
 - Django Channels 4.0+
 - Django REST Framework 3.0+
-- Channels Redis 4.0+
+- Core dependencies (pyhumps, structlog, typing-extensions)
 
 **For FastAPI and Other ASGI Frameworks**
 
@@ -41,8 +37,47 @@ This installs:
 
 This installs:
 
+- Pydantic 2.0+ (validation)
 - FastAPI 0.117+
 - fast-channels 1.0+
+- Core dependencies (pyhumps, structlog, typing-extensions)
+
+**For Client Generator CLI + Generated Clients**
+
+If you need both the CLI tool (for generating clients) and the ability to use generated clients:
+
+.. code-block:: bash
+
+    # Using pip
+    pip install "chanx[cli,client]"
+
+    # Using uv (recommended approach)
+    uv add chanx[client]           # Runtime dependency
+    uv add --group dev chanx[cli]  # Development dependency
+
+This installs:
+
+- **Runtime (client)**: Pydantic 2.0+, websockets
+- **Development (cli)**: click, httpx, jinja2, pyyaml (for code generation)
+
+**For Using Generated Clients Only**
+
+If you only need to use a generated client (not generate new ones):
+
+.. code-block:: bash
+
+    # Using pip
+    pip install "chanx[client]"
+
+    # Using uv
+    uv add chanx[client]
+
+This installs only:
+
+- Pydantic 2.0+ (for message validation)
+- websockets (for WebSocket connectivity)
+
+No CLI tools, no server dependencies - just what's needed to run the generated client code.
 
 **Install from Source**
 
@@ -130,12 +165,33 @@ Chanx includes automatic camelCase conversion. Enable it in your configuration:
         camelize = True
 
 
+CLI Usage
+---------
+
+Once installed, you can use the client generator CLI with local files or URLs:
+
+.. code-block:: bash
+
+    # Generate from local file (JSON or YAML)
+    chanx generate-client --schema asyncapi.json --output ./my_client
+    chanx generate-client --schema asyncapi.yaml --output ./my_client
+
+    # Generate directly from URL (no download needed)
+    chanx generate-client --schema http://localhost:8000/asyncapi.json --output ./my_client
+    chanx generate-client --schema https://api.example.com/asyncapi.yaml --output ./my_client
+
+    # With custom formatter
+    chanx generate-client --schema asyncapi.json --output ./my_client --formatter "black"
+
+See :doc:`user-guide/client-generator` for complete CLI documentation.
+
 Next Steps
 ----------
 Now that you have Chanx installed, proceed to:
 
 * :doc:`quick-start-django` - Create your first Django WebSocket consumer
 * :doc:`quick-start-fastapi` - Create your first FastAPI WebSocket consumer
+* :doc:`user-guide/client-generator` - Generate type-safe Python clients
 * :doc:`user-guide/prerequisites` - Start with the user guide prerequisites
 * :doc:`examples/django` - See Django implementation examples
 * :doc:`examples/fastapi` - See FastAPI implementation examples

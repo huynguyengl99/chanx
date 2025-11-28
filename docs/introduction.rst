@@ -119,7 +119,7 @@ How Chanx Solves This
     # ✅ Pydantic validates at runtime
     # ✅ Framework auto-generates discriminated unions
 
-**3. Auto-Generated Documentation - Always Up-to-Date**
+**3. Auto-Generated Documentation & Type-Safe Clients**
 
 .. code-block:: python
 
@@ -136,6 +136,26 @@ How Chanx Solves This
 .. image:: _static/asyncapi-info.png
    :alt: AsyncAPI Documentation automatically generated from Chanx decorators
    :align: center
+
+**Generate Type-Safe Python Clients**
+
+.. code-block:: bash
+
+    # Generate from local file or URL (JSON/YAML supported)
+    chanx generate-client --schema asyncapi.json --output ./my_client
+    chanx generate-client --schema http://localhost:8000/asyncapi.json --output ./my_client
+
+.. code-block:: python
+
+    # Use generated client with full type safety
+    from my_client.chat import ChatClient, ChatMessage, ChatPayload
+
+    client = ChatClient("localhost:8000")
+    await client.send_message(
+        ChatMessage(payload=ChatPayload(message="Hello!"))
+    )
+
+See :doc:`user-guide/client-generator` for complete client generation guide.
 
 **4. Multi-Framework Support - Works Everywhere**
 

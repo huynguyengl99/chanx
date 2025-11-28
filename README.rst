@@ -106,12 +106,6 @@ Built on years of real-world WebSocket development experience, Chanx provides pr
 Installation
 ------------
 
-**Basic Installation (Core Only)**
-
-.. code-block:: bash
-
-    pip install chanx
-
 **For Django Channels Projects**
 
 .. code-block:: bash
@@ -123,6 +117,18 @@ Installation
 .. code-block:: bash
 
     pip install "chanx[fast_channels]"
+
+**For Client Generator CLI**
+
+.. code-block:: bash
+
+    pip install "chanx[cli]"
+
+**For Using Generated Clients**
+
+.. code-block:: bash
+
+    pip install "chanx[client]"
 
 
 Prerequisites
@@ -381,6 +387,9 @@ Key Features
 **AsyncAPI 3.0 Generation**
   Auto-generate interactive documentation and OpenAPI-style specs from decorated handlers
 
+**Type-Safe Client Generator**
+  Generate Python WebSocket clients from AsyncAPI schemas with full type safety and IDE support
+
 **Authentication System**
   Built-in ``DjangoAuthenticator`` with DRF permission support, extensible ``BaseAuthenticator`` for custom flows
 
@@ -396,6 +405,31 @@ Key Features
 **Configuration Management**
   Django settings integration via ``CHANX`` dict, class-level config for FastAPI consumers
 
+Client Generator
+----------------
+
+Generate type-safe Python clients from your AsyncAPI schema:
+
+.. code-block:: bash
+
+    # Generate from local file (JSON or YAML)
+    chanx generate-client --schema asyncapi.json --output ./my_client
+    chanx generate-client --schema asyncapi.yaml --output ./my_client
+
+    # Generate directly from URL (no need to download)
+    chanx generate-client --schema http://localhost:8000/asyncapi.json --output ./my_client
+
+.. code-block:: python
+
+    # Use generated client with full type safety
+    from my_client.chat import ChatClient, ChatMessage, ChatPayload
+
+    client = ChatClient("localhost:8000")
+
+    await client.send_message(
+        ChatMessage(payload=ChatPayload(message="Hello!"))
+    )
+
 Learn More
 ----------
 
@@ -403,4 +437,5 @@ Learn More
 * `Django Quick Start <https://chanx.readthedocs.io/en/latest/quick-start-django.html>`_ - Django-specific setup
 * `FastAPI Quick Start <https://chanx.readthedocs.io/en/latest/quick-start-fastapi.html>`_ - FastAPI-specific setup
 * `User Guide <https://chanx.readthedocs.io/en/latest/user-guide/prerequisites.html>`_ - In-depth features and patterns
+* `Client Generator Guide <https://chanx.readthedocs.io/en/latest/user-guide/client-generator.html>`_ - Generate type-safe clients
 * `Examples <https://chanx.readthedocs.io/en/latest/examples/django.html>`_ - Real-world implementation examples

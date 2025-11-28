@@ -24,6 +24,7 @@ Contents
    user-guide/asyncapi
    user-guide/testing
    user-guide/framework-integration
+   user-guide/client-generator
    comparison
 
 .. toctree::

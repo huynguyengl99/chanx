@@ -196,8 +196,8 @@ class TestClientGenerator(TestCase):
         exclude = exclude or []
 
         # Get all files in both directories
-        files1 = set()
-        files2 = set()
+        files1: set[Path] = set()
+        files2: set[Path] = set()
 
         for f in dir1.rglob("*"):
             # Skip __pycache__ directories and excluded files
@@ -219,11 +219,12 @@ class TestClientGenerator(TestCase):
         ), f"File mismatch:\nOnly in {dir1}: {files1 - files2}\nOnly in {dir2}: {files2 - files1}"
 
         # Compare file contents
+        file_path: Path
         for file_path in files1:
-            file1 = dir1 / file_path
-            file2 = dir2 / file_path
+            file1: Path = dir1 / file_path
+            file2: Path = dir2 / file_path
 
-            content1 = file1.read_text(encoding="utf-8")
-            content2 = file2.read_text(encoding="utf-8")
+            content1: str = file1.read_text(encoding="utf-8")
+            content2: str = file2.read_text(encoding="utf-8")
 
             assert content1 == content2, f"Content mismatch in {file_path}"

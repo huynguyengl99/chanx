@@ -1,6 +1,6 @@
 """Simple tests for BaseClient initialization."""
 
-from typing import Literal
+from typing import Any, Literal
 
 from chanx.client_generator.base.client import BaseClient
 from pydantic import BaseModel
@@ -10,7 +10,7 @@ class SimpleTestMessage(BaseModel):
     """Test message model."""
 
     action: Literal["test"] = "test"
-    payload: dict
+    payload: dict[str, Any]
 
 
 def test_init_with_host_port() -> None:

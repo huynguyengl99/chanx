@@ -222,11 +222,14 @@ info:
     def test_load_from_url_http_error(self) -> None:
         """Test that HTTPStatusError is converted to ValueError."""
         import sys
+        from typing import Any
         from unittest.mock import MagicMock
 
         # Create mock exception classes that inherit from BaseException
         class MockHTTPStatusError(BaseException):
-            def __init__(self, message, request=None, response=None):
+            def __init__(
+                self, message: str, request: Any = None, response: Any = None
+            ) -> None:
                 super().__init__(message)
                 self.request = request
                 self.response = response

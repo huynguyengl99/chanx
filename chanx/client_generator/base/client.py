@@ -14,7 +14,7 @@ class BaseClient:
 
     path: str
     websocket: ClientConnection
-    incoming_message: UnionType | BaseModel
+    incoming_message: type[BaseModel] | UnionType
     discriminator_field: str = "action"
 
     def __init__(

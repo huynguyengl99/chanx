@@ -170,13 +170,13 @@ def _get_python_type(schema: SchemaObject | None) -> str:
         return "Any"
 
     # Check for anyOf first (common in AsyncAPI for nullable types)
-    any_of = getattr(schema, "anyOf", None)
-    if any_of and isinstance(any_of, list):
+    any_of: list[SchemaObject] | None = getattr(schema, "anyOf", None)
+    if any_of:
         # Extract types from anyOf, filtering out null
-        types = []
+        types: list[str] = []
         has_null = False
         for option in any_of:
-            option_type = _get_python_type(option)
+            option_type: str = _get_python_type(option)
             if option_type == "None":
                 has_null = True
             else:

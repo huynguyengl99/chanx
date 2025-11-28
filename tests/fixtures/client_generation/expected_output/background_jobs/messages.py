@@ -1,4 +1,4 @@
-from typing import Literal
+from typing import Any, Literal
 
 from pydantic import BaseModel
 
@@ -23,7 +23,7 @@ class JobStatusMessage(BaseModel):
     """Job status message."""
 
     action: Literal["job_status"] = "job_status"
-    payload: dict
+    payload: dict[str, Any]
 
 
 IncomingMessage = JobStatusMessage | PongMessage

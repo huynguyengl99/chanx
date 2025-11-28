@@ -80,14 +80,15 @@ def _schema_needs_any(schema: SchemaObject) -> bool:
         schema: SchemaObject to check
 
     Returns:
-        True if the schema has any field with type Any
+        True if the schema has any field with type Any or dict[str, Any]
     """
     properties: dict[str, SchemaObject] = getattr(schema, "properties", {})
     if not properties:
         return False
 
     for field_schema in properties.values():
-        if _get_python_type(field_schema) == "Any":
+        python_type = _get_python_type(field_schema)
+        if "Any" in python_type:
             return True
     return False
 
@@ -168,6 +169,29 @@ def _get_python_type(schema: SchemaObject | None) -> str:
     if not schema:
         return "Any"
 
+    # Check for anyOf first (common in AsyncAPI for nullable types)
+    any_of = getattr(schema, "anyOf", None)
+    if any_of and isinstance(any_of, list):
+        # Extract types from anyOf, filtering out null
+        types = []
+        has_null = False
+        for option in any_of:
+            option_type = _get_python_type(option)
+            if option_type == "None":
+                has_null = True
+            else:
+                types.append(option_type)
+
+        # If we have exactly one non-null type and a null, return "type | None"
+        if len(types) == 1 and has_null:
+            return types[0]
+        # If we have multiple non-null types, join them with |
+        elif types:
+            return " | ".join(types)
+        # If only null, return None
+        elif has_null:
+            return "None"
+
     # First check schema type (actual type)
     schema_type = getattr(schema, "type", None)
 
@@ -196,7 +220,7 @@ def _get_python_type(schema: SchemaObject | None) -> str:
             if properties and isinstance(properties, dict):
                 # It's a reference to another schema class
                 return str(title)
-        return "dict"
+        return "dict[str, Any]"
 
     # If no type, check if it has properties (is a schema class reference)
     properties = getattr(schema, "properties", None)

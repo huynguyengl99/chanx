@@ -1,9 +1,11 @@
 """Base WebSocket client for AsyncAPI."""
 
 import json
+from traceback import print_exc
+from types import UnionType
 from typing import Annotated, Any
 
-from pydantic import BaseModel, Field, TypeAdapter
+from pydantic import BaseModel, Field, TypeAdapter, ValidationError
 from websockets.asyncio.client import ClientConnection, connect
 
 
@@ -12,7 +14,7 @@ class BaseClient:
 
     path: str
     websocket: ClientConnection
-    incoming_message: BaseModel
+    incoming_message: UnionType | BaseModel
     discriminator_field: str = "action"
 
     def __init__(
@@ -57,6 +59,15 @@ class BaseClient:
         """Send initial message after connection is established."""
         pass
 
+    async def before_handle(self) -> None:
+        """
+        Hook called before establishing WebSocket connection.
+
+        Override this method to perform setup operations before connecting,
+        such as authentication, validation, or resource initialization.
+        """
+        pass
+
     async def handle(self) -> None:  # noqa
         """
         Connect to WebSocket server and handle incoming messages.
@@ -64,6 +75,8 @@ class BaseClient:
         This method establishes a WebSocket connection and continuously listens
         for incoming messages, dispatching them to the appropriate handlers.
         """
+
+        await self.before_handle()
 
         try:
             # Create new WebSocket connection for this request
@@ -79,11 +92,14 @@ class BaseClient:
                             data.decode("utf-8") if isinstance(data, bytes) else data
                         )
                         py_object = json.loads(decoded_data)
-                        message = self.incoming_message_adapter.validate_python(
-                            py_object
-                        )
-
-                        await self.handle_message(message)
+                        try:
+                            message = self.incoming_message_adapter.validate_python(
+                                py_object
+                            )
+                            await self.handle_message(message)
+                        except ValidationError:
+                            # Valid JSON but doesn't match schema
+                            await self.handle_invalid_message(py_object)
                     except (json.JSONDecodeError, UnicodeDecodeError):
                         # Not JSON, handle as raw
                         await self.handle_raw_data(data)
@@ -95,6 +111,9 @@ class BaseClient:
 
         except Exception as e:
             await self.handle_websocket_connection_error(e)
+            return
+
+        await self.after_handle()
 
     async def disconnect(self, code: int = 1000, reason: str = "") -> None:
         """
@@ -127,23 +146,33 @@ class BaseClient:
         """
         await self.send_raw(json.dumps(data))
 
-    async def send_message(self, message: BaseModel) -> None:
+    async def send_message(self, message: Any) -> None:
         """
         Send a Pydantic message model to the server.
 
+        Note:
+            In concrete client implementations, the message parameter type will be
+            overridden with a specific union type of outgoing messages for that channel.
+
         Args:
-            message: Pydantic BaseModel instance to serialize and send
+            message: Pydantic BaseModel instance to serialize and send.
+                     In subclasses, this will be a typed union of valid outgoing messages.
         """
         await self.send_json(message.model_dump())
 
-    async def handle_message(self, message: BaseModel) -> None:
+    async def handle_message(self, message: Any) -> None:
         """
         Handle incoming messages from the server.
 
         Override this method in subclasses to process messages.
 
+        Note:
+            In concrete client implementations, the message parameter type will be
+            overridden with a specific union type of incoming messages for that channel.
+
         Args:
-            message: Validated Pydantic message model
+            message: Validated Pydantic message model received from the server.
+                     In subclasses, this will be a typed union of valid incoming messages.
         """
         pass
 
@@ -179,3 +208,24 @@ class BaseClient:
             e: Exception that occurred during WebSocket connection
         """
         pass
+
+    async def after_handle(self) -> None:
+        """
+        Hook called after WebSocket connection closes.
+
+        Override this method to perform cleanup operations after disconnection,
+        such as releasing resources, logging, or state cleanup.
+        """
+        pass
+
+    async def handle_invalid_message(self, invalid_message: Any) -> None:
+        """
+        Handle messages that fail Pydantic validation.
+
+        Override this method to implement custom validation error handling.
+
+        Args:
+            invalid_message: The parsed JSON object that failed validation
+        """
+        print(f"Received invalid message that failed validation: {invalid_message}")
+        print_exc()

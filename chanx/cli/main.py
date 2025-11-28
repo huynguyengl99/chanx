@@ -76,12 +76,6 @@ def cli() -> None:
     help="Output directory for generated client code",
 )
 @click.option(
-    "--decamelize",
-    is_flag=True,
-    default=False,
-    help="Convert camelCase names to snake_case (channels, operations)",
-)
-@click.option(
     "--formatter",
     "-f",
     default=None,
@@ -102,7 +96,6 @@ def cli() -> None:
 def generate_client(
     schema: str,
     output: Path,
-    decamelize: bool,
     formatter: str | None,
     no_format: bool,
     no_readme: bool,
@@ -136,9 +129,6 @@ def generate_client(
 
         # With URL
         chanx generate-client --schema https://example.com/api/asyncapi.json --output ./myclient
-
-        # With decamelize option
-        chanx generate-client --schema asyncapi.json --output ./myclient --decamelize
     """
     click.echo(f"📖 Loading AsyncAPI schema: {schema}")
 
@@ -147,7 +137,6 @@ def generate_client(
         generator = ClientGenerator(
             schema_path=schema,
             output_dir=str(output),
-            decamelize=decamelize,
             generate_readme=not no_readme,
         )
 

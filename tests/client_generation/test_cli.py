@@ -122,26 +122,6 @@ class TestCLIGenerateClient(TestCase):
         assert "Operations:" in result.output
         assert "Schemas:" in result.output
 
-    def test_generate_client_with_decamelize(self) -> None:
-        """Test client generation with decamelize option."""
-        output_dir = self.tmp_path / "client"
-
-        result = self.runner.invoke(
-            cli,
-            [
-                "generate-client",
-                "--schema",
-                str(self.schema_path),
-                "--output",
-                str(output_dir),
-                "--decamelize",
-                "--no-format",
-            ],
-        )
-
-        assert result.exit_code == 0
-        assert output_dir.exists()
-
     def test_generate_client_required_options(self) -> None:
         """Test that required options are enforced."""
         # Missing --schema
@@ -176,7 +156,6 @@ class TestCLIGenerateClient(TestCase):
         assert "Generate a type-safe WebSocket client" in result.output
         assert "--schema" in result.output
         assert "--output" in result.output
-        assert "--decamelize" in result.output
         assert "--formatter" in result.output
         assert "--no-format" in result.output
         assert "--no-readme" in result.output

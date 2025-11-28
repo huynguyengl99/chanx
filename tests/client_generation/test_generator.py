@@ -27,13 +27,11 @@ class TestClientGenerator(TestCase):
         generator = ClientGenerator(
             schema_path=str(self.schema_path),
             output_dir=str(output_dir),
-            decamelize=False,
             generate_readme=True,
         )
 
         assert generator.schema_path == str(self.schema_path)
         assert generator.output_dir == output_dir
-        assert generator.decamelize is False
         assert generator.generate_readme is True
         assert generator.schema.info.title == "FastAPI AsyncAPI documentation"
         assert generator.schema.info.version == "1.0.0"

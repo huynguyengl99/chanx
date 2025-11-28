@@ -40,7 +40,6 @@ class ClientGenerator:
         self,
         schema_path: str,
         output_dir: str,
-        decamelize: bool = False,
         generate_readme: bool = True,
     ):
         """
@@ -49,12 +48,10 @@ class ClientGenerator:
         Args:
             schema_path: Path to AsyncAPI schema file
             output_dir: Output directory for generated code
-            decamelize: Convert camelCase names to snake_case
             generate_readme: Whether to generate README.md file
         """
         self.schema_path = schema_path
         self.output_dir = Path(output_dir)
-        self.decamelize = decamelize
         self.generate_readme = generate_readme
 
         # Load and parse schema

@@ -21,7 +21,7 @@ Extend the generated client classes and override `handle_message` to process inc
 ```python
 import asyncio
 from typing import assert_never
-from my_client.chat import ChatClient, IncomingMessage
+from expected_output.chat import ChatClient, IncomingMessage
 
 class MyChatClient(ChatClient):
     async def handle_message(self, message: IncomingMessage) -> None:
@@ -62,14 +62,14 @@ Each channel module exports:
 
 Import from channel modules:
 ```python
-from my_client.chat import ChatClient, IncomingMessage, OutgoingMessage
+from expected_output.chat import ChatClient, IncomingMessage, OutgoingMessage
 ```
 
 ### Shared Messages
 
 Message models shared across multiple channels:
 ```python
-from my_client.shared.messages import *
+from expected_output.shared.messages import *
 ```
 
 ## Sending Messages
@@ -77,7 +77,7 @@ from my_client.shared.messages import *
 Use `send_message()` to send messages to the server:
 
 ```python
-from my_client.chat import ChatClient, OutgoingMessage
+from expected_output.chat import ChatClient, OutgoingMessage
 
 class MyChatClient(ChatClient):
     async def handle_message(self, message):

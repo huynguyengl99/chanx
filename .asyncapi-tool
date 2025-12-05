@@ -1,0 +1,12 @@
+---
+title: ChanX
+description: WebSocket framework for Django/FastAPI with AsyncAPI 3.0 spec generation and Python client generation from AsyncAPI schemas
+links:
+  docsUrl: https://chanx.readthedocs.io/
+  repoUrl: https://github.com/huynguyengl99/chanx
+filters:
+  language: python
+  categories:
+  - code-first
+  - code-generator
+  hasCommercial: false

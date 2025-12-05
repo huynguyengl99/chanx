@@ -1,3 +1,9 @@
+## v2.1.1 (2025-12-05)
+
+### Fix
+
+- correct codegen type for literal and any
+
 ## v2.1.0 (2025-11-28)
 
 ### Feat

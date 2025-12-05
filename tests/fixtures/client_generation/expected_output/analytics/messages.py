@@ -1,4 +1,4 @@
-from typing import Literal
+from typing import Any, Literal
 
 from pydantic import BaseModel
 
@@ -9,7 +9,7 @@ class AnalyticsPayload(BaseModel):
     """AnalyticsPayload"""
 
     event: str
-    data: str | None = None
+    data: Any | None = None
 
 
 class AnalyticsMessage(BaseModel):

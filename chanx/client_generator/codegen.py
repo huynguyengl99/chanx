@@ -2,7 +2,7 @@
 Generate Pydantic model code from SchemaObject list.
 """
 
-from typing import cast
+from typing import Any, cast
 
 from chanx.asyncapi.type_defs import (
     AsyncAPIDocument,
@@ -169,6 +169,18 @@ def _get_python_type(schema: SchemaObject | None) -> str:
     if not schema:
         return "Any"
 
+    # Check for enum first (should generate Literal types)
+    enum_values: list[Any] | None = getattr(schema, "enum", None)
+    if enum_values:
+        # Generate Literal type from enum values
+        formatted_values: list[str] = []
+        for value in enum_values:
+            if isinstance(value, str):
+                formatted_values.append(f'"{value}"')
+            else:
+                formatted_values.append(str(value))
+        return f"Literal[{', '.join(formatted_values)}]"
+
     # Check for anyOf first (common in AsyncAPI for nullable types)
     any_of: list[SchemaObject] | None = getattr(schema, "anyOf", None)
     if any_of:
@@ -229,9 +241,9 @@ def _get_python_type(schema: SchemaObject | None) -> str:
         if title and not callable(title):
             return str(title)
 
-    # Default to str for fields without explicit type (common in AsyncAPI schemas)
-    # This handles cases where AsyncAPI omits the type but expects a string
-    return "str"
+    # Default to Any for fields without explicit type
+    # This is safer than assuming str, as the field can contain any value
+    return "Any"
 
 
 def extract_schemas_from_messages(messages: list[MessageObject]) -> list[SchemaObject]:

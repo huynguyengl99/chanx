@@ -6,6 +6,9 @@ links:
   repoUrl: https://github.com/huynguyengl99/chanx
 filters:
   language: python
+  technology:
+  - Django
+  - FastAPI
   categories:
   - code-first
   - code-generator

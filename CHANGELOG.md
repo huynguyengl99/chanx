@@ -1,3 +1,9 @@
+## v2.2.1 (2025-12-07)
+
+### Fix
+
+- add suppress param for capture_broadcast_events and update docs
+
 ## v2.2.0 (2025-12-07)
 
 ### Feat

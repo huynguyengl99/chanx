@@ -75,9 +75,9 @@ class TestCaptureBroadcastEvents:
             )
 
         assert len(cap_events) == 1
-        assert cap_events[0]["event"].action == "dummy_event"
-        assert cap_events[0]["groups"] == ["test_group"]
-        assert cap_events[0]["event"].payload["text"] == "Hello"
+        assert cap_events[0].event.action == "dummy_event"
+        assert cap_events[0].groups == ["test_group"]
+        assert cap_events[0].event.payload["text"] == "Hello"
 
     @pytest.mark.asyncio
     async def test_capture_multiple_events_and_group_types(self) -> None:
@@ -95,8 +95,8 @@ class TestCaptureBroadcastEvents:
             )
 
         assert len(cap_events) == 2
-        assert cap_events[0]["groups"] == ["group1", "group2"]
-        assert cap_events[1]["groups"] == "single_group"
+        assert cap_events[0].groups == ["group1", "group2"]
+        assert cap_events[1].groups == "single_group"
 
     @pytest.mark.asyncio
     async def test_capture_structured_payload(self) -> None:
@@ -113,9 +113,9 @@ class TestCaptureBroadcastEvents:
             )
 
         assert len(cap_events) == 1
-        assert cap_events[0]["event"].action == "notification"
-        assert cap_events[0]["event"].payload.message == "System update"
-        assert cap_events[0]["event"].payload.level == "info"
+        assert cap_events[0].event.action == "notification"
+        assert cap_events[0].event.payload.message == "System update"
+        assert cap_events[0].event.payload.level == "info"
 
     def test_capture_sync_broadcast(self) -> None:
         """Test capturing events broadcast via broadcast_event_sync."""
@@ -126,7 +126,7 @@ class TestCaptureBroadcastEvents:
             )
 
         assert len(cap_events) == 1
-        assert cap_events[0]["event"].action == "dummy_event"
+        assert cap_events[0].event.action == "dummy_event"
 
     @pytest.mark.asyncio
     async def test_filter_captured_events(self) -> None:
@@ -148,11 +148,11 @@ class TestCaptureBroadcastEvents:
             )
 
         # Filter for specific action
-        test_events = [e for e in cap_events if e["event"].action == "dummy_event"]
+        test_events = [e for e in cap_events if e.event.action == "dummy_event"]
         assert len(test_events) == 2
 
         notification_events = [
-            e for e in cap_events if e["event"].action == "notification"
+            e for e in cap_events if e.event.action == "notification"
         ]
         assert len(notification_events) == 1
 

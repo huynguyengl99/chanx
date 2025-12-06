@@ -13,8 +13,9 @@ fast-channels, etc.) to create concrete testing utilities.
 import asyncio
 from collections.abc import Collection, Generator
 from contextlib import contextmanager
+from dataclasses import dataclass
 from types import TracebackType
-from typing import Any, Self, TypedDict, cast
+from typing import Any, Self, cast
 
 import humps
 from asgiref.timeout import timeout as async_timeout
@@ -29,7 +30,8 @@ from chanx.core.websocket import ChanxWebsocketConsumerMixin
 from chanx.messages.base import BaseMessage
 
 
-class CapturedBroadcastEvent(TypedDict):
+@dataclass
+class CapturedBroadcastEvent:
     """Structure of a captured broadcast event."""
 
     event: BaseMessage

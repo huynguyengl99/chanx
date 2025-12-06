@@ -226,8 +226,8 @@ Key Testing Methods
 
     # Inspect captured events
     assert len(captured) == 1
-    assert captured[0]["event"].action == "notification"
-    assert captured[0]["groups"] == ["users"]
+    assert captured[0].event.action == "notification"
+    assert captured[0].groups == ["users"]
 
 **WebsocketTestCase (Django):**
 
@@ -355,9 +355,9 @@ The ``capture_broadcast_events`` utility allows you to capture and inspect broad
 
         # Assert on captured events
         assert len(captured) == 1
-        assert captured[0]["event"].action == "notification"
-        assert captured[0]["event"].payload.message == "Test notification"
-        assert captured[0]["groups"] == ["users"]
+        assert captured[0].event.action == "notification"
+        assert captured[0].event.payload.message == "Test notification"
+        assert captured[0].groups == ["users"]
 
     async def test_multiple_broadcasts(self):
         with capture_broadcast_events(ChatConsumer) as captured:
@@ -373,11 +373,11 @@ The ``capture_broadcast_events`` utility allows you to capture and inspect broad
 
         # Filter and assert on specific events
         assert len(captured) == 2
-        assert captured[0]["groups"] == ["group1", "group2"]
-        assert captured[1]["groups"] == "single_group"
+        assert captured[0].groups == ["group1", "group2"]
+        assert captured[1].groups == "single_group"
 
         # Filter events by action
-        notifications = [e for e in captured if e["event"].action == "notification"]
+        notifications = [e for e in captured if e.event.action == "notification"]
         assert len(notifications) == 2
 
     async def test_capture_without_suppressing(self):

@@ -1,3 +1,9 @@
+## v2.2.0 (2025-12-07)
+
+### Feat
+
+- add capture_broadcast_events utils for testing
+
 ## v2.1.1 (2025-12-05)
 
 ### Fix

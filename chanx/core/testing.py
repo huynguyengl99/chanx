@@ -11,8 +11,10 @@ fast-channels, etc.) to create concrete testing utilities.
 """
 
 import asyncio
+from collections.abc import Collection, Generator
+from contextlib import contextmanager
 from types import TracebackType
-from typing import Any, Self, cast
+from typing import Any, Self, TypedDict, cast
 
 import humps
 from asgiref.timeout import timeout as async_timeout
@@ -25,6 +27,13 @@ from chanx.constants import (
 from chanx.core.config import config
 from chanx.core.websocket import ChanxWebsocketConsumerMixin
 from chanx.messages.base import BaseMessage
+
+
+class CapturedBroadcastEvent(TypedDict):
+    """Structure of a captured broadcast event."""
+
+    event: BaseMessage
+    groups: Collection[str] | str | None
 
 
 class WebsocketCommunicatorMixin:
@@ -253,3 +262,49 @@ class WebsocketCommunicatorMixin:
     ) -> None:
         """Async context manager exit - disconnects from WebSocket."""
         await self.disconnect()
+
+
+@contextmanager
+def capture_broadcast_events(
+    consumer: type[ChanxWebsocketConsumerMixin],
+) -> Generator[list[CapturedBroadcastEvent], None, None]:
+    """
+    Capture broadcast events sent via broadcast_event() for testing purposes.
+
+    Similar to structlog's capture_logs(), this context manager captures calls to
+    broadcast_event() by monkey-patching the broadcast_event method to spy on events.
+
+    Returns:
+        A list that will be populated with captured broadcast events.
+    """
+    captured_events: list[CapturedBroadcastEvent] = []
+
+    # Save the original broadcast_event method
+    original_broadcast_event = consumer.broadcast_event
+
+    # Create wrapper that captures events
+    async def capture_wrapper(
+        _cls: type[ChanxWebsocketConsumerMixin],
+        event: BaseMessage,
+        groups: Collection[str] | str | None = None,
+    ) -> None:
+        """Wrapper that captures the event before calling original."""
+
+        # Capture the event directly
+        captured_events.append(
+            CapturedBroadcastEvent(
+                event=event,
+                groups=groups,
+            )
+        )
+
+        await original_broadcast_event(event, groups)
+
+    # Monkey-patch the method
+    consumer.broadcast_event = classmethod(capture_wrapper)  # type: ignore[method-assign, assignment]
+
+    try:
+        yield captured_events
+    finally:
+        # Restore original method
+        consumer.broadcast_event = original_broadcast_event  # type: ignore[method-assign]

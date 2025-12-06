@@ -1,3 +1,9 @@
+## v2.2.2 (2025-12-07)
+
+### Fix
+
+- change CapturedBroadcastEvent from TypedDict to dataclass
+
 ## v2.2.1 (2025-12-07)
 
 ### Fix

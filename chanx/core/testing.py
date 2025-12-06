@@ -267,12 +267,18 @@ class WebsocketCommunicatorMixin:
 @contextmanager
 def capture_broadcast_events(
     consumer: type[ChanxWebsocketConsumerMixin],
+    suppress: bool = True,
 ) -> Generator[list[CapturedBroadcastEvent], None, None]:
     """
     Capture broadcast events sent via broadcast_event() for testing purposes.
 
     Similar to structlog's capture_logs(), this context manager captures calls to
     broadcast_event() by monkey-patching the broadcast_event method to spy on events.
+
+    Args:
+        consumer: The consumer class to capture broadcast events from.
+        suppress: If True (default), suppress actual broadcast event calls.
+                  If False, capture events and still call the original broadcast_event.
 
     Returns:
         A list that will be populated with captured broadcast events.
@@ -298,7 +304,9 @@ def capture_broadcast_events(
             )
         )
 
-        await original_broadcast_event(event, groups)
+        # Only call original if not suppressing
+        if not suppress:
+            await original_broadcast_event(event, groups)
 
     # Monkey-patch the method
     consumer.broadcast_event = classmethod(capture_wrapper)  # type: ignore[method-assign, assignment]

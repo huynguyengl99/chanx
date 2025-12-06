@@ -202,6 +202,33 @@ Key Testing Methods
     messages = await comm.receive_all_messages(stop_action="event_complete")  # For events
     messages = await comm.receive_all_messages(stop_action="custom_action")   # Any custom action
 
+**Capturing Broadcast Events:**
+
+.. code-block:: python
+
+    from chanx.core.testing import capture_broadcast_events
+
+    # Capture and suppress broadcasts (default: suppress=True)
+    with capture_broadcast_events(ChatConsumer) as captured:
+        await ChatConsumer.broadcast_event(
+            NotificationEvent(payload={"message": "Test"}),
+            groups=["users"]
+        )
+        # Event is captured but not actually broadcast
+
+    # Capture without suppressing (suppress=False)
+    with capture_broadcast_events(ChatConsumer, suppress=False) as captured:
+        await ChatConsumer.broadcast_event(
+            NotificationEvent(payload={"message": "Test"}),
+            groups=["users"]
+        )
+        # Event is both captured AND broadcast
+
+    # Inspect captured events
+    assert len(captured) == 1
+    assert captured[0]["event"].action == "notification"
+    assert captured[0]["groups"] == ["users"]
+
 **WebsocketTestCase (Django):**
 
 .. code-block:: python
@@ -309,6 +336,60 @@ Common Testing Patterns
             stop_action=EVENT_ACTION_COMPLETE
         )
         assert len(messages) == 1
+
+**Capturing Broadcast Events:**
+
+The ``capture_broadcast_events`` utility allows you to capture and inspect broadcast events without needing a WebSocket connection. Similar to ``structlog``'s ``capture_logs()``, this is useful for testing event broadcasting logic in isolation.
+
+.. code-block:: python
+
+    from chanx.core.testing import capture_broadcast_events
+
+    async def test_notification_broadcast(self):
+        # Capture broadcast events (default: suppress=True, no actual broadcast)
+        with capture_broadcast_events(ChatConsumer) as captured:
+            await ChatConsumer.broadcast_event(
+                NotificationEvent(payload={"message": "Test notification"}),
+                groups=["users"]
+            )
+
+        # Assert on captured events
+        assert len(captured) == 1
+        assert captured[0]["event"].action == "notification"
+        assert captured[0]["event"].payload.message == "Test notification"
+        assert captured[0]["groups"] == ["users"]
+
+    async def test_multiple_broadcasts(self):
+        with capture_broadcast_events(ChatConsumer) as captured:
+            # Send multiple events
+            await ChatConsumer.broadcast_event(
+                NotificationEvent(payload={"message": "First"}),
+                groups=["group1", "group2"]
+            )
+            await ChatConsumer.broadcast_event(
+                NotificationEvent(payload={"message": "Second"}),
+                groups="single_group"
+            )
+
+        # Filter and assert on specific events
+        assert len(captured) == 2
+        assert captured[0]["groups"] == ["group1", "group2"]
+        assert captured[1]["groups"] == "single_group"
+
+        # Filter events by action
+        notifications = [e for e in captured if e["event"].action == "notification"]
+        assert len(notifications) == 2
+
+    async def test_capture_without_suppressing(self):
+        # Set suppress=False to capture AND actually broadcast events
+        with capture_broadcast_events(ChatConsumer, suppress=False) as captured:
+            await ChatConsumer.broadcast_event(
+                NotificationEvent(payload={"message": "Broadcast and capture"}),
+                groups=["users"]
+            )
+            # Events are both captured and sent to channel layer
+
+        assert len(captured) == 1
 
 **Testing Negative Scenarios:**
 

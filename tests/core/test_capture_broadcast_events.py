@@ -59,11 +59,11 @@ class TestCaptureBroadcastEvents:
     @pytest.fixture(autouse=True)
     def setup_method(self) -> None:
         """Set up mock channel layer before each test."""
-        mock_layer = Mock()
-        mock_layer.group_send = AsyncMock()
+        self.mock_layer = Mock()
+        self.mock_layer.group_send = AsyncMock()
 
         # Replace get_channel_layer on the class with a function that returns mock_layer
-        DummyConsumer.get_channel_layer = lambda alias: mock_layer  # type: ignore[misc, assignment]
+        DummyConsumer.get_channel_layer = lambda alias: self.mock_layer  # type: ignore[misc, assignment]
 
     @pytest.mark.asyncio
     async def test_capture_single_event(self) -> None:
@@ -155,3 +155,27 @@ class TestCaptureBroadcastEvents:
             e for e in cap_events if e["event"].action == "notification"
         ]
         assert len(notification_events) == 1
+
+    @pytest.mark.asyncio
+    async def test_suppress_default_true(self) -> None:
+        """Test that suppress=True (default) prevents actual broadcast."""
+        with capture_broadcast_events(DummyConsumer) as cap_events:
+            await DummyConsumer.broadcast_event(
+                DummyEvent(payload={"text": "Suppressed"}),
+                groups=["test_group"],
+            )
+
+        assert len(cap_events) == 1
+        self.mock_layer.group_send.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_suppress_false_allows_broadcast(self) -> None:
+        """Test that suppress=False allows actual broadcast to occur."""
+        with capture_broadcast_events(DummyConsumer, suppress=False) as cap_events:
+            await DummyConsumer.broadcast_event(
+                DummyEvent(payload={"text": "Not suppressed"}),
+                groups=["test_group"],
+            )
+
+        assert len(cap_events) == 1
+        self.mock_layer.group_send.assert_called_once()

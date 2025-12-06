@@ -16,6 +16,12 @@ The core testing module provides the foundation for Chanx's testing infrastructu
    :members:
    :undoc-members:
 
+.. autoclass:: chanx.core.testing.CapturedBroadcastEvent
+   :members:
+   :undoc-members:
+
+.. autofunction:: chanx.core.testing.capture_broadcast_events
+
 
 Django Channels Testing
 -----------------------

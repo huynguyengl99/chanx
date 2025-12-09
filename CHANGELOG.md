@@ -1,3 +1,9 @@
+## v2.3.1 (2025-12-10)
+
+### Fix
+
+- add docs for generate_asyncapi_schema command
+
 ## v2.3.0 (2025-12-10)
 
 ### Feat

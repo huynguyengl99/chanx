@@ -1,3 +1,9 @@
+## v2.3.0 (2025-12-10)
+
+### Feat
+
+- **channels**: add management command to generate AsyncAPI schema files
+
 ## v2.2.2 (2025-12-07)
 
 ### Fix

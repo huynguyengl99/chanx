@@ -27,6 +27,69 @@ Views
 .. autofunction:: chanx.channels.views.generate_asyncapi_schema
 
 
+.. _management-commands:
+
+Management Commands
+-------------------
+.. module:: chanx.channels.management.commands.generate_asyncapi_schema
+
+Generate AsyncAPI schema files without requiring an HTTP server.
+
+**Command:**
+
+.. code-block:: bash
+
+    python manage.py generate_asyncapi_schema [options]
+
+**Parameters:**
+
+.. list-table::
+   :header-rows: 1
+   :widths: 30 15 55
+
+   * - Option
+     - Default
+     - Description
+   * - ``--format {json,yaml}``
+     - ``yaml``
+     - Output format for the schema file
+   * - ``--file FILE``
+     - ``stdout``
+     - Output file path. If not specified, outputs to stdout
+   * - ``--base-url BASE_URL``
+     - ``settings`` or ``ws://localhost:8000``
+     - WebSocket base URL (e.g., ``ws://localhost:8000`` or ``wss://api.example.com``)
+   * - ``--title TITLE``
+     - ``settings.ASYNCAPI_TITLE``
+     - API title for AsyncAPI documentation
+   * - ``--api-version VERSION``
+     - ``settings.ASYNCAPI_VERSION``
+     - API version for AsyncAPI documentation
+   * - ``--description DESCRIPTION``
+     - ``settings.ASYNCAPI_DESCRIPTION``
+     - API description for AsyncAPI documentation
+   * - ``--discovery-class CLASS``
+     - ``DjangoRouteDiscovery``
+     - Python path to custom route discovery class
+
+**Examples:**
+
+.. code-block:: bash
+
+    # Generate YAML to file
+    python manage.py generate_asyncapi_schema --format yaml --file schema.yaml
+
+    # Generate JSON to stdout
+    python manage.py generate_asyncapi_schema --format json
+
+    # With custom metadata
+    python manage.py generate_asyncapi_schema \
+        --title "Production API" \
+        --api-version "2.0.0" \
+        --base-url wss://api.example.com \
+        --file api.yaml
+
+
 Authenticator
 -------------
 .. module:: chanx.channels.authenticator

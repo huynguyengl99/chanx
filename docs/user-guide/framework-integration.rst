@@ -152,6 +152,28 @@ Configure AsyncAPI generation through Django settings:
         'ASYNCAPI_SERVER_PROTOCOL': 'wss',
     }
 
+**Generating Schema Files**
+
+Generate AsyncAPI schema files via management command:
+
+.. code-block:: bash
+
+    # Generate YAML to file
+    python manage.py generate_asyncapi_schema --format yaml --file schema.yaml
+
+    # Generate JSON to stdout
+    python manage.py generate_asyncapi_schema --format json
+
+**Use Cases:**
+
+- **CI/CD pipelines**: Generate schema during build/deployment
+- **Version control**: Commit schema files alongside code
+- **Client generation**: Pre-generate for SDK tooling
+- **Documentation builds**: Include schema in docs
+- **Contract testing**: Validate against generated files
+
+See :ref:`management-commands` for all parameters and examples.
+
 FastAPI Integration
 -------------------
 

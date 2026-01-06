@@ -159,6 +159,9 @@ class TestCLIGenerateClient(TestCase):
         assert "--formatter" in result.output
         assert "--no-format" in result.output
         assert "--no-readme" in result.output
+        assert "--clear-output" in result.output
+        assert "--override-base" in result.output
+        assert "--no-clear-channels" in result.output
 
     def test_generate_client_with_custom_formatter(self) -> None:
         """Test client generation with custom formatter command."""
@@ -206,8 +209,8 @@ class TestCLIGenerateClient(TestCase):
             or "Formatter" in result.output
         )
 
-    def test_generate_client_overwrites_existing_directory(self) -> None:
-        """Test that generating to existing directory overwrites it."""
+    def test_generate_client_default_keeps_base(self) -> None:
+        """Test that default generation keeps base folder but clears channels."""
         output_dir = self.tmp_path / "client"
 
         # Generate once
@@ -224,7 +227,11 @@ class TestCLIGenerateClient(TestCase):
         )
         assert result1.exit_code == 0
 
-        # Create a dummy file
+        # Create a custom file in base
+        base_custom = output_dir / "base" / "custom.txt"
+        base_custom.write_text("Custom base file")
+
+        # Create a dummy file in root
         dummy_file = output_dir / "dummy.txt"
         dummy_file.write_text("This should be removed")
 
@@ -242,8 +249,131 @@ class TestCLIGenerateClient(TestCase):
         )
         assert result2.exit_code == 0
 
-        # Dummy file should be removed
+        # Base custom file should still exist
+        assert base_custom.exists()
+        # Root dummy file should be removed
         assert not dummy_file.exists()
+
+    def test_generate_client_clear_output(self) -> None:
+        """Test that --clear-output removes entire directory."""
+        output_dir = self.tmp_path / "client"
+
+        # Generate once
+        result1 = self.runner.invoke(
+            cli,
+            [
+                "generate-client",
+                "--schema",
+                str(self.schema_path),
+                "--output",
+                str(output_dir),
+                "--no-format",
+            ],
+        )
+        assert result1.exit_code == 0
+
+        # Create a custom file in base
+        base_custom = output_dir / "base" / "custom.txt"
+        base_custom.write_text("Custom base file")
+
+        # Generate again with --clear-output
+        result2 = self.runner.invoke(
+            cli,
+            [
+                "generate-client",
+                "--schema",
+                str(self.schema_path),
+                "--output",
+                str(output_dir),
+                "--no-format",
+                "--clear-output",
+            ],
+        )
+        assert result2.exit_code == 0
+
+        # Base custom file should be removed (entire directory was cleared)
+        assert not base_custom.exists()
+
+    def test_generate_client_override_base(self) -> None:
+        """Test that --override-base regenerates base files."""
+        output_dir = self.tmp_path / "client"
+
+        # Generate once
+        result1 = self.runner.invoke(
+            cli,
+            [
+                "generate-client",
+                "--schema",
+                str(self.schema_path),
+                "--output",
+                str(output_dir),
+                "--no-format",
+            ],
+        )
+        assert result1.exit_code == 0
+
+        # Modify a file in base
+        client_file = output_dir / "base" / "client.py"
+        original_content = client_file.read_text()
+        client_file.write_text("# Modified content")
+
+        # Generate again with --override-base
+        result2 = self.runner.invoke(
+            cli,
+            [
+                "generate-client",
+                "--schema",
+                str(self.schema_path),
+                "--output",
+                str(output_dir),
+                "--no-format",
+                "--override-base",
+            ],
+        )
+        assert result2.exit_code == 0
+
+        # Base client.py should be restored to original
+        assert client_file.read_text() == original_content
+
+    def test_generate_client_no_clear_channels(self) -> None:
+        """Test that --no-clear-channels keeps existing channel files."""
+        output_dir = self.tmp_path / "client"
+
+        # Generate once
+        result1 = self.runner.invoke(
+            cli,
+            [
+                "generate-client",
+                "--schema",
+                str(self.schema_path),
+                "--output",
+                str(output_dir),
+                "--no-format",
+            ],
+        )
+        assert result1.exit_code == 0
+
+        # Create a custom file in a channel
+        channel_custom = output_dir / "chat" / "custom.txt"
+        channel_custom.write_text("Custom channel file")
+
+        # Generate again with --no-clear-channels
+        result2 = self.runner.invoke(
+            cli,
+            [
+                "generate-client",
+                "--schema",
+                str(self.schema_path),
+                "--output",
+                str(output_dir),
+                "--no-format",
+                "--no-clear-channels",
+            ],
+        )
+        assert result2.exit_code == 0
+
+        # Custom channel file should still exist
+        assert channel_custom.exists()
 
     def test_generate_client_formatter_timeout(self) -> None:
         """Test that formatter timeout is handled gracefully."""

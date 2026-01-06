@@ -41,6 +41,9 @@ class ClientGenerator:
         schema_path: str,
         output_dir: str,
         generate_readme: bool = True,
+        clear_output: bool = False,
+        override_base: bool = False,
+        clear_channels: bool = True,
     ):
         """
         Initialize client generator.
@@ -49,10 +52,16 @@ class ClientGenerator:
             schema_path: Path to AsyncAPI schema file
             output_dir: Output directory for generated code
             generate_readme: Whether to generate README.md file
+            clear_output: Whether to remove entire output directory before generation
+            override_base: Whether to regenerate base files even if they exist
+            clear_channels: Whether to clear channel folders (except base) before generation
         """
         self.schema_path = schema_path
         self.output_dir = Path(output_dir)
         self.generate_readme = generate_readme
+        self.clear_output = clear_output
+        self.override_base = override_base
+        self.clear_channels = clear_channels
 
         # Load and parse schema
         schema_dict = SchemaLoader.load(schema_path)
@@ -91,9 +100,18 @@ class ClientGenerator:
 
     def _create_directory_structure(self) -> None:
         """Create output directory structure."""
-        # Remove existing directory if it exists
         if self.output_dir.exists():
-            shutil.rmtree(self.output_dir)
+            if self.clear_output:
+                # Remove entire directory
+                shutil.rmtree(self.output_dir)
+            elif self.clear_channels:
+                # Remove everything except base folder
+                for item in self.output_dir.iterdir():
+                    if item.name != "base":
+                        if item.is_dir():
+                            shutil.rmtree(item)
+                        else:
+                            item.unlink()
 
         # Create directories
         self.output_dir.mkdir(parents=True, exist_ok=True)
@@ -109,11 +127,12 @@ class ClientGenerator:
 
     def _generate_base(self) -> None:
         """Generate base client class."""
-        # Copy the base directory from the client generator to the output directory
         source_base_dir = self.client_generator_path / "base"
         target_base_dir = self.output_dir / "base"
 
-        shutil.copytree(source_base_dir, target_base_dir, dirs_exist_ok=True)
+        # Only regenerate base if it doesn't exist or override_base is True
+        if self.override_base or not target_base_dir.exists():
+            shutil.copytree(source_base_dir, target_base_dir, dirs_exist_ok=True)
 
     def _generate_shared_schemas(self) -> None:
         """Generate shared message schemas used across multiple channels."""
@@ -194,7 +213,7 @@ class ClientGenerator:
                     if m.payload and m.payload.title
                 )
             )
-            lines.append(f'IncomingMessage = {" | ".join(incoming_titles)}')
+            lines.append(f"IncomingMessage = {' | '.join(incoming_titles)}")
             exported_classes.append("IncomingMessage")
 
         if outgoing_messages:
@@ -205,7 +224,7 @@ class ClientGenerator:
                     if m.payload and m.payload.title
                 )
             )
-            lines.append(f'OutgoingMessage = {" | ".join(outgoing_titles)}')
+            lines.append(f"OutgoingMessage = {' | '.join(outgoing_titles)}")
             exported_classes.append("OutgoingMessage")
 
         if lines:

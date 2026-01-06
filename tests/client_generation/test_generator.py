@@ -158,8 +158,8 @@ class TestClientGenerator(TestCase):
         assert len(incoming) > 0
         assert len(outgoing) > 0
 
-    def test_regeneration_cleans_output_directory(self) -> None:
-        """Test that regenerating cleans the output directory first."""
+    def test_default_behavior_keeps_base_clears_channels(self) -> None:
+        """Test that default regeneration keeps base folder but clears channels."""
         output_dir = self.tmp_path / "output"
 
         # Generate once
@@ -169,16 +169,152 @@ class TestClientGenerator(TestCase):
         )
         generator.generate()
 
-        # Create a dummy file
+        # Modify a file in base
+        base_file = output_dir / "base" / "custom.txt"
+        base_file.write_text("Custom base modification")
+
+        # Create a dummy file in root
         dummy_file = output_dir / "dummy.txt"
         dummy_file.write_text("This should be removed")
-        assert dummy_file.exists()
 
-        # Generate again
+        # Create a dummy file in a channel
+        channel_dummy = output_dir / "chat" / "custom.txt"
+        channel_dummy.write_text("This should also be removed")
+
+        # Generate again with default settings
+        generator2 = ClientGenerator(
+            schema_path=str(self.schema_path),
+            output_dir=str(output_dir),
+        )
+        generator2.generate()
+
+        # Base custom file should still exist (base is preserved)
+        assert base_file.exists()
+        # Root dummy file should be removed (channels are cleared)
+        assert not dummy_file.exists()
+        # Channel dummy file should be removed
+        assert not channel_dummy.exists()
+
+    def test_clear_output_removes_entire_directory(self) -> None:
+        """Test that clear_output=True removes entire output directory."""
+        output_dir = self.tmp_path / "output"
+
+        # Generate once
+        generator = ClientGenerator(
+            schema_path=str(self.schema_path),
+            output_dir=str(output_dir),
+        )
         generator.generate()
 
-        # Dummy file should be removed
-        assert not dummy_file.exists()
+        # Modify a file in base
+        base_file = output_dir / "base" / "custom.txt"
+        base_file.write_text("Custom base modification")
+
+        # Generate again with clear_output=True
+        generator2 = ClientGenerator(
+            schema_path=str(self.schema_path),
+            output_dir=str(output_dir),
+            clear_output=True,
+        )
+        generator2.generate()
+
+        # Base custom file should be removed (entire directory was cleared)
+        assert not base_file.exists()
+
+    def test_override_base_regenerates_base(self) -> None:
+        """Test that override_base=True regenerates base even if it exists."""
+        output_dir = self.tmp_path / "output"
+
+        # Generate once
+        generator = ClientGenerator(
+            schema_path=str(self.schema_path),
+            output_dir=str(output_dir),
+        )
+        generator.generate()
+
+        # Modify a file in base
+        client_file = output_dir / "base" / "client.py"
+        original_content = client_file.read_text()
+        client_file.write_text("# Modified content")
+
+        # Generate again with override_base=True
+        generator2 = ClientGenerator(
+            schema_path=str(self.schema_path),
+            output_dir=str(output_dir),
+            override_base=True,
+        )
+        generator2.generate()
+
+        # Base client.py should be restored to original
+        assert client_file.read_text() == original_content
+
+    def test_override_base_false_keeps_modified_base(self) -> None:
+        """Test that override_base=False keeps modified base files."""
+        output_dir = self.tmp_path / "output"
+
+        # Generate once
+        generator = ClientGenerator(
+            schema_path=str(self.schema_path),
+            output_dir=str(output_dir),
+        )
+        generator.generate()
+
+        # Modify a file in base
+        client_file = output_dir / "base" / "client.py"
+        modified_content = "# Modified content"
+        client_file.write_text(modified_content)
+
+        # Generate again with default override_base=False
+        generator2 = ClientGenerator(
+            schema_path=str(self.schema_path),
+            output_dir=str(output_dir),
+        )
+        generator2.generate()
+
+        # Base client.py should still have modified content
+        assert client_file.read_text() == modified_content
+
+    def test_no_clear_channels_keeps_channel_files(self) -> None:
+        """Test that clear_channels=False keeps existing channel files."""
+        output_dir = self.tmp_path / "output"
+
+        # Generate once
+        generator = ClientGenerator(
+            schema_path=str(self.schema_path),
+            output_dir=str(output_dir),
+        )
+        generator.generate()
+
+        # Create a custom file in a channel
+        channel_custom = output_dir / "chat" / "custom.txt"
+        channel_custom.write_text("Custom channel file")
+
+        # Generate again with clear_channels=False
+        generator2 = ClientGenerator(
+            schema_path=str(self.schema_path),
+            output_dir=str(output_dir),
+            clear_channels=False,
+        )
+        generator2.generate()
+
+        # Custom channel file should still exist
+        assert channel_custom.exists()
+
+    def test_base_generated_when_not_exists(self) -> None:
+        """Test that base is generated when it doesn't exist even with override_base=False."""
+        output_dir = self.tmp_path / "output"
+
+        # Generate with override_base=False (default) on a fresh directory
+        generator = ClientGenerator(
+            schema_path=str(self.schema_path),
+            output_dir=str(output_dir),
+            override_base=False,
+        )
+        generator.generate()
+
+        # Base should be generated
+        assert (output_dir / "base").exists()
+        assert (output_dir / "base" / "client.py").exists()
 
     def _compare_directories(
         self, dir1: Path, dir2: Path, exclude: list[str] | None = None

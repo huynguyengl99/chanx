@@ -219,6 +219,18 @@ Basic Usage
 ``--no-readme``
     Skip README.md generation
 
+``--clear-output``
+    Remove entire output directory before generation
+
+``--override-base``
+    Regenerate base files even if they already exist
+
+``--no-clear-channels``
+    Keep existing channel folders instead of clearing them
+
+.. note::
+   By default, regeneration keeps the ``base/`` folder (preserving customizations) and clears channel folders. Use ``--clear-output`` for a fresh start or ``--override-base`` to update base files.
+
 Examples
 ~~~~~~~~
 
@@ -272,6 +284,24 @@ Examples
         --schema asyncapi.json \
         --output ./myclient \
         --no-readme
+
+**Fresh Regeneration (Clear Everything):**
+
+.. code-block:: bash
+
+    chanx generate-client \
+        --schema asyncapi.json \
+        --output ./myclient \
+        --clear-output
+
+**Update Base Files:**
+
+.. code-block:: bash
+
+    chanx generate-client \
+        --schema asyncapi.json \
+        --output ./myclient \
+        --override-base
 
 
 Generated Client Structure

@@ -93,12 +93,33 @@ def cli() -> None:
     default=False,
     help="Skip README.md generation",
 )
+@click.option(
+    "--clear-output",
+    is_flag=True,
+    default=False,
+    help="Remove entire output directory before generation",
+)
+@click.option(
+    "--override-base",
+    is_flag=True,
+    default=False,
+    help="Regenerate base files even if they already exist",
+)
+@click.option(
+    "--no-clear-channels",
+    is_flag=True,
+    default=False,
+    help="Keep existing channel folders instead of clearing them",
+)
 def generate_client(
     schema: str,
     output: Path,
     formatter: str | None,
     no_format: bool,
     no_readme: bool,
+    clear_output: bool,
+    override_base: bool,
+    no_clear_channels: bool,
 ) -> None:
     """
     Generate a type-safe WebSocket client from an AsyncAPI schema.
@@ -127,6 +148,15 @@ def generate_client(
         # Skip README generation
         chanx generate-client --schema asyncapi.json --output ./myclient --no-readme
 
+        # Clear entire output directory before generation
+        chanx generate-client --schema asyncapi.json --output ./myclient --clear-output
+
+        # Force regenerate base files
+        chanx generate-client --schema asyncapi.json --output ./myclient --override-base
+
+        # Keep existing channel folders (don't clear them)
+        chanx generate-client --schema asyncapi.json --output ./myclient --no-clear-channels
+
         # With URL
         chanx generate-client --schema https://example.com/api/asyncapi.json --output ./myclient
     """
@@ -138,6 +168,9 @@ def generate_client(
             schema_path=schema,
             output_dir=str(output),
             generate_readme=not no_readme,
+            clear_output=clear_output,
+            override_base=override_base,
+            clear_channels=not no_clear_channels,
         )
 
         # Display parsed info

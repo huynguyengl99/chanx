@@ -106,7 +106,6 @@ class BaseClient:
                     except Exception as e:
                         # Log and continue processing other messages
                         await self.handle_error(e)
-                        print(f"Error processing message event: {e}")
                         continue
 
         except Exception as e:
@@ -196,7 +195,7 @@ class BaseClient:
         Args:
             error: Exception that occurred during message processing
         """
-        pass
+        raise error
 
     async def handle_websocket_connection_error(self, e: Exception) -> None:
         """

@@ -1,3 +1,13 @@
+## v2.4.0 (2026-01-06)
+
+### Feat
+
+- **cli**: add options to control client generator output behavior
+
+### Fix
+
+- **cli**: generated client re-raise error instead of just printing out error
+
 ## v2.3.1 (2025-12-10)
 
 ### Fix

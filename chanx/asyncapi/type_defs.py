@@ -386,6 +386,16 @@ class ReferenceResolver:
         if ref_value is not None:
             resolved = self._lookup_reference(ref_value)
             if resolved is not None and resolved is not model:
+                # If both are SchemaObjects and original has default, preserve it
+                if isinstance(model, SchemaObject) and isinstance(
+                    resolved, SchemaObject
+                ):
+                    original_default = getattr(model, "default", None)
+                    if original_default is not None:
+                        # Create a copy with the default preserved
+                        resolved = resolved.model_copy(
+                            update={"default": original_default}
+                        )
                 return resolved
 
         # Recursively process all model fields (access via class, not instance)

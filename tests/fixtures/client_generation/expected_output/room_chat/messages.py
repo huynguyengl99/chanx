@@ -10,6 +10,7 @@ class RoomMessagePayload(BaseModel):
 
     message: str
     room_name: str | None = None
+    status: Literal["PENDING", "DELIVERED", "FAILED"] = "PENDING"
 
 
 class RoomChatMessage(BaseModel):

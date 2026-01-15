@@ -538,6 +538,13 @@ components:
       - message
       title: MessagePayload
       type: object
+    MessageStatus:
+      enum:
+      - PENDING
+      - DELIVERED
+      - FAILED
+      title: MessageStatus
+      type: string
     NotificationBroadcastMessage:
       description: Notification broadcast message.
       properties:
@@ -669,6 +676,9 @@ components:
           - type: 'null'
           default: null
           title: Room Name
+        status:
+          $ref: '#/components/schemas/MessageStatus'
+          default: PENDING
       required:
       - message
       title: RoomMessagePayload

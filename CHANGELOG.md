@@ -1,3 +1,9 @@
+## v2.4.1 (2026-01-15)
+
+### Fix
+
+- **asyncapi**: preserve default value when resolving schema $ref
+
 ## v2.4.0 (2026-01-06)
 
 ### Feat

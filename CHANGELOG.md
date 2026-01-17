@@ -1,3 +1,13 @@
+## v2.5.0 (2026-01-17)
+
+### Feat
+
+- **ci**: add Django 6 support and multi-package testing matrix
+
+### Fix
+
+- **deps**: upgrade packages to address security vulnerabilities
+
 ## v2.4.1 (2026-01-15)
 
 ### Fix

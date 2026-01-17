@@ -2,6 +2,7 @@ import os
 from pathlib import Path
 from typing import Any
 
+import django
 from django.conf import settings as django_settings
 
 import pytest
@@ -18,6 +19,10 @@ os.environ.setdefault("CHANX_USE_DJANGO", "True")
 
 
 def pytest_configure() -> None:
+    _db_options = {}
+    if django.VERSION >= (5, 1):
+        _db_options["pool"] = True
+
     django_settings.configure(
         DATABASES={
             "default": {
@@ -27,9 +32,7 @@ def pytest_configure() -> None:
                 "PASSWORD": env.str("POSTGRES_PASSWORD", ""),
                 "HOST": env.str("POSTGRES_HOST", "localhost"),
                 "PORT": env.int("POSTGRES_PORT", 5432),
-                "OPTIONS": {
-                    "pool": True,
-                },
+                "OPTIONS": _db_options,
             }
         },
         INSTALLED_APPS=[

@@ -21,7 +21,7 @@ class AsyncAPISchemaTestCase(APITestCase):
 
     def test_yaml_schema(self) -> None:
         response = self.client.get(reverse("asyncapi_schema") + "?format=yaml")
-        data = response.text
+        data = response.content.decode()
         with open(results_dir / "asyncapi_schema_res.yaml", "w") as f:
             f.write(data)
 

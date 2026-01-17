@@ -40,6 +40,8 @@ if [ "$RUN_COVERAGE" = true ]; then
 
     pytest --cov=chanx --cov-report= --cov-append tests/ext/channels
 
+    pytest --cov=chanx --cov-report= --cov-append tests/ext/fast_channels
+
     pytest --cov=chanx --cov-report= --cov-append tests/client_generation/
 
     pytest --cov=chanx --cov-append --cov-report=xml --cov-report=term-missing tests/core
@@ -52,6 +54,8 @@ else
     pytest sandbox_fastapi
 
     pytest tests/ext/channels
+
+    pytest tests/ext/fast_channels
 
     pytest tests/client_generation/
 

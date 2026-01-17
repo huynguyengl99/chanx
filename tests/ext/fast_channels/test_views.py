@@ -25,7 +25,7 @@ class TestGenerateAsyncAPISchema:
     def setup_method(self) -> None:
         """Set up test fixtures."""
         self.mock_request = Mock(spec=Request)
-        self.mock_request.url.hostname = "localhost"
+        self.mock_request.url.netloc = "localhost"
         self.mock_request.url.scheme = "http"
 
         async def websocket_endpoint(websocket: WebSocket) -> None:

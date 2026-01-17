@@ -14,7 +14,7 @@ class TestBuildDefaultConfigFromApp:
     def setup_method(self) -> None:
         """Set up test fixtures."""
         self.mock_request = Mock(spec=Request)
-        self.mock_request.url.hostname = "localhost"
+        self.mock_request.url.netloc = "localhost"
         self.mock_request.url.scheme = "http"
 
     def test_build_config_with_basic_app(self) -> None:
@@ -91,7 +91,7 @@ class TestBuildDefaultConfigFromApp:
 
     def test_build_config_different_hostname(self) -> None:
         """Test building config with different hostname."""
-        self.mock_request.url.hostname = "api.example.com"
+        self.mock_request.url.netloc = "api.example.com"
         mock_app = Mock()
         mock_app.title = "External API"
 

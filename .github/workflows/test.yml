@@ -20,15 +20,21 @@ jobs:
           enable-cache: true
           python-version: "3.11"
       - name: Install tox
-        run: uv tool install tox --with tox-uv --with git+https://github.com/huynguyengl99/tox-gh.git
+        run: uv tool install tox --with tox-uv --with tox-gh
       - name: Run lint
         run: tox -e lint
 
-  test:
+  test-django:
+    name: test py${{ matrix.py }}-django${{ matrix.django }}
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: ["3.11", "3.12", "3.13"]
+        py: ["3.11", "3.12", "3.13"]
+        django: ["50", "51", "60"]
+        exclude:
+          # Django 6.0 requires Python 3.12+
+          - py: "3.11"
+            django: "60"
       fail-fast: false
     services:
       postgres:
@@ -60,18 +66,69 @@ jobs:
       POSTGRES_HOST: localhost
       POSTGRES_PORT: 5432
       REDIS_URL: redis://localhost:6379
-      TOX_GH_MAJOR_MINOR: ${{ matrix.python-version }}
+      TOX_GH_MAJOR_MINOR: ${{ matrix.py }}
     steps:
       - uses: actions/checkout@v4
       - name: Install the latest version of uv
         uses: astral-sh/setup-uv@v5
         with:
           enable-cache: true
-          python-version: ${{ matrix.python-version }}
+          python-version: ${{ matrix.py }}
       - name: Install tox
-        run: uv tool install tox --with tox-uv --with git+https://github.com/huynguyengl99/tox-gh.git
+        run: uv tool install tox --with tox-uv --with tox-gh
       - name: Run tests
-        run: tox
+        run: tox -e py$(echo "${{ matrix.py }}" | tr -d '.')-django${{ matrix.django }}
+
+  test-other:
+    name: test py${{ matrix.py }}-${{ matrix.package }}
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        py: ["3.11", "3.12", "3.13"]
+        package: ["fastapi", "core"]
+      fail-fast: false
+    services:
+      postgres:
+        image: postgres
+        env:
+          POSTGRES_PASSWORD: chanx_test_pass
+          POSTGRES_DB: chanx_test_db
+          POSTGRES_USER: chanx_test_user
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+      redis:
+        image: redis
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 6379:6379
+    env:
+      POSTGRES_DB: chanx_test_db
+      POSTGRES_USER: chanx_test_user
+      POSTGRES_PASSWORD: chanx_test_pass
+      POSTGRES_HOST: localhost
+      POSTGRES_PORT: 5432
+      REDIS_URL: redis://localhost:6379
+      TOX_GH_MAJOR_MINOR: ${{ matrix.py }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install the latest version of uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+          python-version: ${{ matrix.py }}
+      - name: Install tox
+        run: uv tool install tox --with tox-uv --with tox-gh
+      - name: Run tests
+        run: tox -e py$(echo "${{ matrix.py }}" | tr -d '.')-${{ matrix.package }}
 
   coverage:
     runs-on: ubuntu-latest
@@ -113,7 +170,7 @@ jobs:
           enable-cache: true
           python-version: "3.11"
       - name: Install tox
-        run: uv tool install tox --with tox-uv --with git+https://github.com/huynguyengl99/tox-gh.git
+        run: uv tool install tox --with tox-uv --with tox-gh
       - name: Run coverage
         run: tox -e coverage
       - name: Upload coverage reports to Codecov

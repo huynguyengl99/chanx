@@ -32,16 +32,16 @@ dev-django = [
   "django-stubs[compatible-mypy]>=5.2",
   "djangorestframework-camel-case>=1.4.2",
   "djangorestframework-simplejwt>=5.5.0",
-  "drf-auth-kit[social]>=0.3.9",
+  "drf-auth-kit[social]>=1.1.1",
   "drf-nested-routers>=0.95.0",
   "drf-spectacular>=0.28.0,<1",
   "drf-standardized-errors>=0.15.0",
   "environs>=14.1.1",
   "factory-boy>=3.3.3,<4",
   "ipython>=8.35.0",
-  "langchain-community>=0.3.5,<1.0",
-  "langchain-openai>=0.2.10,<1.0",
-  "langchain>=0.3.0,<1.0",
+  "langchain-community>=0.3.21,<1.0",
+  "langchain-openai>=0.3.0,<1.0",
+  "langchain>=0.3.18,<1.0",
   "psycopg-pool>=3.2.6,<4",
   "psycopg[binary]>=3.2.6,<4",
   "pytest-django>=4.11.1,<5",
@@ -134,7 +134,7 @@ core = [
 fast_channels = [
   "chanx[core]",
   "fast-channels>=1.0.2",
-  "fastapi>=0.117.1"
+  "fastapi>=0.118.0"
 ]
 
 [project.scripts]

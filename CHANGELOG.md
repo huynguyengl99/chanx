@@ -1,3 +1,9 @@
+## v2.6.0 (2026-03-07)
+
+### Feat
+
+- add mixin support for ws and event handlers
+
 ## v2.5.0 (2026-01-17)
 
 ### Feat

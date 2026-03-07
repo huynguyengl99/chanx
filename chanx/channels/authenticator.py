@@ -17,7 +17,7 @@ Key components:
 """
 
 import uuid
-from collections.abc import Sequence
+from collections.abc import MutableMapping, Sequence
 from typing import TYPE_CHECKING, Any, Literal, cast
 
 from django.contrib.auth.base_user import AbstractBaseUser
@@ -153,7 +153,7 @@ class DjangoAuthenticator(BaseAuthenticator):
 
     # Main public methods
 
-    async def authenticate(self, scope: dict[str, Any]) -> bool:
+    async def authenticate(self, scope: MutableMapping[str, Any]) -> bool:
         """
         Authenticate the WebSocket connection using DRF authentication.
 
@@ -275,7 +275,7 @@ class DjangoAuthenticator(BaseAuthenticator):
 
     @sync_to_async
     def _perform_dispatch(
-        self, req: HttpRequest, scope: dict[str, Any]
+        self, req: HttpRequest, scope: MutableMapping[str, Any]
     ) -> tuple[Response, HttpRequest]:
         """
         Perform authentication dispatch synchronously.
@@ -307,7 +307,7 @@ class DjangoAuthenticator(BaseAuthenticator):
         return res, req
 
     def _bind_structlog_request_context(
-        self, req: HttpRequest, scope: dict[str, Any]
+        self, req: HttpRequest, scope: MutableMapping[str, Any]
     ) -> None:
         """
         Bind structured logging context variables from request.

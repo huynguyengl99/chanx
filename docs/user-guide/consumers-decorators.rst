@@ -659,6 +659,7 @@ Next Steps
 
 Now that you understand Chanx's decorator-based approach, you can:
 
+- Learn about :doc:`mixins` for reusable handler composition
 - Learn about :doc:`asyncapi` documentation generation
 - Explore :doc:`testing` patterns for WebSocket consumers
 - Check out :doc:`framework-integration` for Django views and FastAPI API endpoints

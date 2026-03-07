@@ -10,6 +10,7 @@ from chanx.messages.outgoing import PongMessage
 from fast_channels.type_defs import WebSocketDisconnectEvent
 from sandbox_fastapi.base_consumer import BaseConsumer
 
+from ..mixins import ExtraRequestMessage, ExtraWsHandlerMixin
 from .messages import (
     AnalyticsMessage,
     AnalyticsNotificationMessage,
@@ -27,13 +28,15 @@ from .messages import (
     SystemPeriodicNotify,
 )
 
+AllEvent = SystemNotify | ExtraRequestMessage
+
 
 @channel(
     name="chat",
     description="Basic Chat Consumer using centralized chat layer",
     tags=["chat", "showcase"],
 )
-class ChatConsumer(BaseConsumer[SystemNotify]):
+class ChatConsumer(ExtraWsHandlerMixin, BaseConsumer[AllEvent]):
     """
     Chat consumer using the centralized chat layer.
     Migrated to use chanx framework.

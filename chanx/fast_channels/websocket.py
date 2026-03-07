@@ -29,7 +29,7 @@ from fast_channels.layers import get_channel_layer
 ReceiveEvent = TypeVar("ReceiveEvent", bound=BaseMessage, default=BaseMessage)
 
 
-class AsyncJsonWebsocketConsumer(  # type: ignore[misc]
+class AsyncJsonWebsocketConsumer(
     ChanxWebsocketConsumerMixin[ReceiveEvent], FastChannelsAsyncJsonWebsocketConsumer
 ):
     """

@@ -12,6 +12,7 @@ from sandbox_fastapi.apps.background_jobs.messages import (
     JobPayload,
     JobStatusMessage,
 )
+from sandbox_fastapi.apps.mixins import ExtraEventMessage, ExtraResponseMessage
 from sandbox_fastapi.main import app
 
 
@@ -34,6 +35,24 @@ async def test_connection_established_and_ping_handler() -> None:
 
         assert len(replies) == 1
         assert replies == [PongMessage()]
+
+
+@pytest.mark.asyncio
+async def test_extra_event_handler_from_mixin() -> None:
+    """Test extra event handler provided by ExtraEventHandlerMixin."""
+    async with WebsocketCommunicator(
+        app, "/ws/background_jobs", consumer=BackgroundJobConsumer
+    ) as comm:
+        # Skip connection message
+        await comm.receive_all_messages(stop_action="job_status")
+
+        await BackgroundJobConsumer.broadcast_event(
+            ExtraEventMessage(payload="test"),
+        )
+        replies = await comm.receive_all_messages(stop_action=EVENT_ACTION_COMPLETE)
+
+        assert len(replies) == 1
+        assert replies == [ExtraResponseMessage(payload="test any extra thing")]
 
 
 @pytest.mark.asyncio

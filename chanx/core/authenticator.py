@@ -7,6 +7,7 @@ reject unauthorized access, and send error messages to clients.
 """
 
 from abc import ABC, abstractmethod
+from collections.abc import MutableMapping
 from typing import Any
 
 from chanx.type_defs import SendMessageFn
@@ -34,7 +35,7 @@ class BaseAuthenticator(ABC):
         self.send_message = send_message
 
     @abstractmethod
-    async def authenticate(self, scope: dict[str, Any]) -> bool:
+    async def authenticate(self, scope: MutableMapping[str, Any]) -> bool:
         """
         Authenticate a WebSocket connection request.
 

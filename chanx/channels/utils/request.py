@@ -13,13 +13,14 @@ ensuring consistency across both synchronous and asynchronous parts
 of a Django application.
 """
 
+from collections.abc import MutableMapping
 from typing import Any
 
 from django.contrib.auth.models import AnonymousUser
 from django.http import HttpRequest
 
 
-def request_from_scope(scope: dict[str, Any], method: str) -> HttpRequest:
+def request_from_scope(scope: MutableMapping[str, Any], method: str) -> HttpRequest:
     """
     Creates a Django HttpRequest from an ASGI scope dictionary.
 

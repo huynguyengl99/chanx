@@ -381,6 +381,9 @@ Key Features
 **Decorator-Based Handlers**
   ``@ws_handler`` for WebSocket messages, ``@event_handler`` for channel events, ``@channel`` for consumer metadata
 
+**Handler Mixins**
+  Compose reusable ``@ws_handler`` and ``@event_handler`` logic via Python mixin classes
+
 **Discriminated Union Routing**
   Automatic message type detection and routing using Pydantic's discriminator field pattern
 

@@ -10,7 +10,10 @@ from chanx.messages.outgoing import PongMessage
 from sandbox_fastapi.base_consumer import BaseConsumer
 from sandbox_fastapi.tasks import queue_job
 
+from ..mixins import ExtraEventHandlerMixin, ExtraEventMessage
 from .messages import JobMessage, JobResult, JobStatusMessage
+
+AllEvent = JobResult | ExtraEventMessage
 
 
 @channel(
@@ -18,13 +21,14 @@ from .messages import JobMessage, JobResult, JobStatusMessage
     description="Background Jobs Consumer - Real background job processing with ARQ",
     tags=["jobs", "background", "arq"],
 )
-class BackgroundJobConsumer(BaseConsumer[JobResult]):
+class BackgroundJobConsumer(ExtraEventHandlerMixin, BaseConsumer[AllEvent]):
     """
     Consumer for processing messages with real background jobs using ARQ.
     Migrated to use chanx framework.
     """
 
     channel_layer_alias = "chat"
+    groups = ["background_jobs"]
 
     @ws_handler(
         summary="Handle ping requests",

@@ -8,7 +8,7 @@ authentication, group broadcasting, and channel event handling capabilities.
 
 import asyncio
 import uuid
-from collections.abc import Callable, Collection
+from collections.abc import Callable, Collection, MutableMapping
 from functools import reduce
 from types import UnionType
 from typing import (
@@ -30,6 +30,7 @@ from typing_extensions import TypeVar
 from chanx.constants import COMPLETE_ACTIONS
 from chanx.core.authenticator import BaseAuthenticator
 from chanx.core.config import config
+from chanx.core.registry import message_registry
 from chanx.messages.base import BaseMessage
 from chanx.messages.outgoing import (
     CompleteMessage,
@@ -80,7 +81,7 @@ class ChanxWebsocketConsumerMixin(Generic[ReceiveEvent]):
     )
 
     # Framework attributes (set by channels/fast-channels)
-    scope: dict[str, Any]
+    scope: MutableMapping[str, Any]
     groups: list[str]  # Channel groups this consumer belongs to
     channel_layer: (
         Any  # Channel layer instance for group operations (framework-provided)
@@ -159,8 +160,25 @@ class ChanxWebsocketConsumerMixin(Generic[ReceiveEvent]):
                     event_handler_info
                 )
 
-        # Extract types and build unions/adapters
+        # Register handler messages and build adapters
+        cls._register_handler_messages()
         cls._build_adapters()
+
+    @classmethod
+    def _register_handler_messages(cls) -> None:
+        """Register all handler message types under this consumer's name."""
+        for handler_info in cls._MESSAGE_HANDLER_INFO_MAP.values():
+            input_type = handler_info["input_type"]
+            if input_type:
+                message_registry.add(input_type, cls.__name__)
+            output_type = handler_info["output_type"]
+            if output_type:
+                message_registry.add(output_type, cls.__name__)
+
+        for handler_info in cls._EVENT_HANDLER_INFO_MAP.values():
+            output_type = handler_info["output_type"]
+            if output_type:
+                message_registry.add(output_type, cls.__name__)
 
     @classmethod
     def _extract_types_from_handlers(

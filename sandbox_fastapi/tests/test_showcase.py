@@ -6,6 +6,7 @@ from chanx.fast_channels.testing import WebsocketCommunicator
 from chanx.messages.incoming import PingMessage
 from chanx.messages.outgoing import PongMessage
 
+from sandbox_fastapi.apps.mixins import ExtraRequestMessage, ExtraResponseMessage
 from sandbox_fastapi.apps.showcase.consumer import (
     AnalyticsConsumer,
     ChatConsumer,
@@ -47,6 +48,20 @@ async def test_chat_consumer_ping() -> None:
 
         assert len(replies) == 1
         assert replies == [PongMessage()]
+
+
+@pytest.mark.asyncio
+async def test_chat_consumer_extra_handler_from_mixin() -> None:
+    """Test extra handler provided by ExtraWsHandlerMixin on ChatConsumer."""
+    async with WebsocketCommunicator(app, "/ws/chat", consumer=ChatConsumer) as comm:
+        # Skip join message
+        await comm.receive_all_messages(stop_action=GROUP_ACTION_COMPLETE)
+
+        await comm.send_message(ExtraRequestMessage(payload="hello"))
+        replies = await comm.receive_all_messages()
+
+        assert len(replies) == 1
+        assert replies == [ExtraResponseMessage(payload="hello any extra thing")]
 
 
 @pytest.mark.asyncio

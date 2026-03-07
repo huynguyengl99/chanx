@@ -17,6 +17,10 @@ channels:
         $ref: '#/components/messages/chat_message'
       chat_notification_message:
         $ref: '#/components/messages/chat_notification_message'
+      extra_request_message:
+        $ref: '#/components/messages/extra_request_message'
+      extra_response_message:
+        $ref: '#/components/messages/extra_response_message'
       ping_message:
         $ref: '#/components/messages/ping_message'
       pong_message:
@@ -96,6 +100,8 @@ channels:
     title: background_jobs
     description: Background Jobs Consumer - Real background job processing with ARQ
     messages:
+      extra_response_message:
+        $ref: '#/components/messages/extra_response_message'
       job_message:
         $ref: '#/components/messages/job_message'
       job_status_message:
@@ -141,6 +147,19 @@ operations:
         $ref: '#/channels/chat'
       messages:
       - $ref: '#/channels/chat/messages/chat_notification_message'
+  handle_extra_message:
+    action: receive
+    channel:
+      $ref: '#/channels/chat'
+    description: Simple extra message
+    summary: Handle extra request
+    messages:
+    - $ref: '#/channels/chat/messages/extra_request_message'
+    reply:
+      channel:
+        $ref: '#/channels/chat'
+      messages:
+      - $ref: '#/channels/chat/messages/extra_response_message'
   handle_ping:
     action: receive
     channel:
@@ -324,6 +343,14 @@ operations:
         $ref: '#/channels/background_jobs'
       messages:
       - $ref: '#/channels/background_jobs/messages/pong_message'
+  handle_extra_event:
+    action: send
+    channel:
+      $ref: '#/channels/background_jobs'
+    description: Simple extra event message
+    summary: Handle extra event
+    messages:
+    - $ref: '#/channels/background_jobs/messages/extra_response_message'
   handle_job_result:
     action: send
     channel:
@@ -372,6 +399,12 @@ components:
     chat_notification_message:
       payload:
         $ref: '#/components/schemas/ChatNotificationMessage'
+    extra_request_message:
+      payload:
+        $ref: '#/components/schemas/ExtraRequestMessage'
+    extra_response_message:
+      payload:
+        $ref: '#/components/schemas/ExtraResponseMessage'
     job_message:
       payload:
         $ref: '#/components/schemas/JobMessage'
@@ -485,6 +518,36 @@ components:
       required:
       - message
       title: ChatPayload
+      type: object
+    ExtraRequestMessage:
+      description: Extra request message for ws handler mixin.
+      properties:
+        action:
+          const: extra_request
+          default: extra_request
+          title: Action
+          type: string
+        payload:
+          title: Payload
+          type: string
+      required:
+      - payload
+      title: ExtraRequestMessage
+      type: object
+    ExtraResponseMessage:
+      description: Extra response message returned by handler mixins.
+      properties:
+        action:
+          const: extra_response
+          default: extra_response
+          title: Action
+          type: string
+        payload:
+          title: Payload
+          type: string
+      required:
+      - payload
+      title: ExtraResponseMessage
       type: object
     JobMessage:
       description: Background job message.

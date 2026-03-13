@@ -121,7 +121,7 @@ def _base_handler(  # noqa
                     "Must provide input type either by annotate function or input_type parameter"
                 )
 
-            final_input_type = remain[0].annotation
+            final_input_type = type_hints.get(remain[0].name, remain[0].annotation)
 
         if not final_output_type:
             # Look for output type in return annotation

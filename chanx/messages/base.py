@@ -17,7 +17,7 @@ JSON messages into the correct message type based on the 'action' field.
 """
 
 import abc
-from typing import Any, Literal, get_origin
+from typing import Any, Literal, get_origin, get_type_hints
 
 from pydantic import BaseModel, ConfigDict
 from typing_extensions import Unpack
@@ -64,8 +64,12 @@ class BaseMessage(BaseModel, abc.ABC):
         if abc.ABC in cls.__bases__:
             return
 
+        if "action" not in cls.__annotations__:
+            raise TypeError(f"Class {cls.__name__!r} must define an 'action' field")
+
         try:
-            action_field = cls.__annotations__["action"]
+            hints = get_type_hints(cls)
+            action_field = hints["action"]
         except (KeyError, AttributeError) as e:
             raise TypeError(
                 f"Class {cls.__name__!r} must define an 'action' field"

@@ -268,6 +268,47 @@ class TestEventHandler:
         )
 
 
+class TestFutureAnnotations:
+    """Test decorators with `from __future__ import annotations`."""
+
+    def test_ws_handler_with_future_annotations(self) -> None:
+        """Test that ws_handler works when annotations are stringified."""
+        from ._future_annotations_module import (
+            FutureMessage,
+            FutureResponse,
+            handle_future,
+        )
+
+        handler_info = getattr(handle_future, "_ws_handler_info")
+        assert handler_info["input_type"] == FutureMessage
+        assert handler_info["output_type"] == FutureResponse
+        assert handler_info["message_action"] == "future_test"
+
+    def test_ws_handler_with_future_annotations_custom_action(self) -> None:
+        """Test ws_handler with custom action and future annotations."""
+        from ._future_annotations_module import (
+            FutureMessage,
+            FutureResponse,
+            handle_future_custom,
+        )
+
+        handler_info = getattr(handle_future_custom, "_ws_handler_info")
+        assert handler_info["action"] == "custom_future"
+        assert handler_info["input_type"] == FutureMessage
+        assert handler_info["output_type"] == FutureResponse
+
+    def test_event_handler_with_future_annotations(self) -> None:
+        """Test that event_handler works when annotations are stringified."""
+        from ._future_annotations_module import (
+            FutureMessage,
+            handle_future_event,
+        )
+
+        handler_info = getattr(handle_future_event, "_event_handler_info")
+        assert handler_info["input_type"] == FutureMessage
+        assert handler_info["output_type"] is None
+
+
 class TestChannelDecorator:
     """Test the @channel decorator."""
 

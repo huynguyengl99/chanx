@@ -1,3 +1,9 @@
+## v2.6.1 (2026-03-13)
+
+### Fix
+
+- support `from __future__ import annotations` in decorators and BaseMessage
+
 ## v2.6.0 (2026-03-07)
 
 ### Feat

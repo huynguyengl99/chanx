@@ -118,8 +118,11 @@ class ChanxWebsocketConsumerMixin(Generic[ReceiveEvent]):
         cls.name = cls.__name__.removesuffix("Consumer")
         cls.snake_name = humps.decamelize(cls.name)
 
-        # Skip if this is the abstract base class itself
-        if cls.__name__ == "AbstractAsyncJsonWebsocketConsumer":
+        # Skip if this is the abstract base class or itself
+        if cls.__name__ in (
+            "AbstractAsyncJsonWebsocketConsumer",
+            "AsyncJsonWebsocketConsumer",
+        ):
             return
 
         # Initialize handler info maps

@@ -100,7 +100,7 @@ classifiers = [
   "Topic :: Software Development"
 ]
 dependencies = [
-  "pydantic>=2,<3"
+  "pydantic>=2,<3",
 ]
 description = "The missing toolkit for Channels — auth, logging, consumers, and more."
 license = {file = "LICENSE"}

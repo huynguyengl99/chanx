@@ -119,10 +119,7 @@ class ChanxWebsocketConsumerMixin(Generic[ReceiveEvent]):
         cls.snake_name = humps.decamelize(cls.name)
 
         # Skip if this is the abstract base class or itself
-        if cls.__name__ in (
-            "AbstractAsyncJsonWebsocketConsumer",
-            "AsyncJsonWebsocketConsumer",
-        ):
+        if cls.__name__ == "AbstractAsyncJsonWebsocketConsumer":
             return
 
         # Initialize handler info maps
@@ -247,26 +244,35 @@ class ChanxWebsocketConsumerMixin(Generic[ReceiveEvent]):
         Extract input/output types from handlers and build unions and adapters.
         """
         # Extract types from both handler maps
-        message_input_types, message_output_types = cls._extract_types_from_handlers(
-            cls._MESSAGE_HANDLER_INFO_MAP
-        )
-        event_input_types, event_output_types = cls._extract_types_from_handlers(
-            cls._EVENT_HANDLER_INFO_MAP
-        )
+        if cls._MESSAGE_HANDLER_INFO_MAP:
+            message_input_types, message_output_types = (
+                cls._extract_types_from_handlers(cls._MESSAGE_HANDLER_INFO_MAP)
+            )
 
-        incoming_message_union = cls._create_discriminated_union(
-            message_input_types, cls.discriminator_field
-        )
-        cls.incoming_message_adapter = cls._create_adapter(
-            incoming_message_union, cls.discriminator_field
-        )
+            incoming_message_union = cls._create_discriminated_union(
+                message_input_types, cls.discriminator_field
+            )
+            cls.incoming_message_adapter = cls._create_adapter(
+                incoming_message_union, cls.discriminator_field
+            )
+        else:
+            message_output_types = []
+            cls.incoming_message_adapter = None
 
-        incoming_event_union = cls._create_discriminated_union(
-            event_input_types, cls.discriminator_field
-        )
-        cls.incoming_event_adapter = cls._create_adapter(
-            incoming_event_union, cls.discriminator_field
-        )
+        if cls._EVENT_HANDLER_INFO_MAP:
+            event_input_types, event_output_types = cls._extract_types_from_handlers(
+                cls._EVENT_HANDLER_INFO_MAP
+            )
+
+            incoming_event_union = cls._create_discriminated_union(
+                event_input_types, cls.discriminator_field
+            )
+            cls.incoming_event_adapter = cls._create_adapter(
+                incoming_event_union, cls.discriminator_field
+            )
+        else:
+            event_output_types = []
+            cls.incoming_event_adapter = None
 
         all_output_types = set(message_output_types + event_output_types)
         all_output_types |= {

@@ -48,10 +48,11 @@ class TestInitSubclass:
         assert EmptyConsumer._MESSAGE_HANDLER_INFO_MAP == {}
         assert EmptyConsumer._EVENT_HANDLER_INFO_MAP == {}
 
-        # Should have adapters (even if empty)
-        assert hasattr(EmptyConsumer, "incoming_message_adapter")
-        assert hasattr(EmptyConsumer, "incoming_event_adapter")
-        assert hasattr(EmptyConsumer, "outgoing_message_adapter")
+        # Adapters should be None when no handlers are registered
+        assert EmptyConsumer.incoming_message_adapter is None
+        assert EmptyConsumer.incoming_event_adapter is None
+        # Outgoing adapter always exists (includes system messages)
+        assert EmptyConsumer.outgoing_message_adapter is not None
 
     def test_consumer_with_handlers_builds_maps(self) -> None:
         """Test that a consumer with handlers builds handler maps correctly."""
@@ -122,6 +123,7 @@ class TestTypeAdapterBuilding:
 
         # Should be able to validate a test message
         adapter = SingleMessageConsumer.incoming_message_adapter
+        assert adapter is not None
         validated = adapter.validate_python(
             {"action": "test", "payload": {"key": "value"}}
         )
@@ -142,6 +144,7 @@ class TestTypeAdapterBuilding:
                 return DummyResponse(payload="other handled")
 
         adapter = MultiMessageConsumer.incoming_message_adapter
+        assert adapter is not None
 
         # Should validate both message types
         test_msg = adapter.validate_python(
@@ -178,6 +181,63 @@ class TestTypeAdapterBuilding:
             {"action": "test_response", "payload": "test"}
         )
         assert isinstance(response_msg, DummyResponse)
+
+
+class TestEmptyConsumerRuntime:
+    """Test runtime behavior when a consumer has no handlers."""
+
+    @pytest.mark.asyncio
+    async def test_handle_json_with_no_message_handlers(self) -> None:
+        """handle_json should call handle_json_processing_error when no handlers."""
+
+        class NoHandlerConsumer(AsyncJsonWebsocketConsumer):
+            pass
+
+        consumer = NoHandlerConsumer()
+        consumer.handle_json_processing_error = AsyncMock()  # type: ignore[method-assign]
+
+        await consumer.handle_json({"action": "test", "payload": {}})
+
+        consumer.handle_json_processing_error.assert_called_once()
+        error = consumer.handle_json_processing_error.call_args[0][0]
+        assert isinstance(error, RuntimeError)
+        assert "No message handlers registered" in str(error)
+
+    @pytest.mark.asyncio
+    async def test_handle_channel_event_with_no_event_handlers(self) -> None:
+        """handle_channel_event should log and return when no event handlers."""
+
+        class NoHandlerConsumer(AsyncJsonWebsocketConsumer):
+            pass
+
+        consumer = NoHandlerConsumer()
+        consumer.receive_event = AsyncMock()  # type: ignore[method-assign]
+
+        await consumer.handle_channel_event(
+            {"event_data": {"action": "test", "payload": {}}}
+        )
+
+        # Should not have reached receive_event
+        consumer.receive_event.assert_not_called()
+
+    def test_adapters_none_based_on_handler_type(self) -> None:
+        """Adapters should be None only for handler types not registered."""
+
+        class WsOnlyConsumer(AsyncJsonWebsocketConsumer):
+            @ws_handler
+            async def handle_test(self, _message: DummyMessage) -> DummyResponse:
+                return DummyResponse(payload="handled")
+
+        assert WsOnlyConsumer.incoming_message_adapter is not None
+        assert WsOnlyConsumer.incoming_event_adapter is None
+
+        class EventOnlyConsumer(AsyncJsonWebsocketConsumer):
+            @event_handler
+            async def handle_test_event(self, event: DummyEvent) -> None:
+                pass
+
+        assert EventOnlyConsumer.incoming_message_adapter is None
+        assert EventOnlyConsumer.incoming_event_adapter is not None
 
 
 class TestWebsocketEdgeCases:

@@ -90,11 +90,12 @@ class ChanxWebsocketConsumerMixin(Generic[ReceiveEvent]):
     channel_layer_alias: str
 
     # Auto-generated type adapters (built by metaclass)
+    # None when no handlers are registered for that direction
     incoming_message_adapter: ClassVar[
-        TypeAdapter[BaseMessage]
+        TypeAdapter[BaseMessage] | None
     ]  # Validates incoming messages
     incoming_event_adapter: ClassVar[
-        TypeAdapter[BaseMessage]
+        TypeAdapter[BaseMessage] | None
     ]  # Validates incoming events
     outgoing_message_adapter: ClassVar[
         TypeAdapter[BaseMessage]
@@ -254,15 +255,19 @@ class ChanxWebsocketConsumerMixin(Generic[ReceiveEvent]):
         incoming_message_union = cls._create_discriminated_union(
             message_input_types, cls.discriminator_field
         )
-        cls.incoming_message_adapter = cls._create_adapter(
-            incoming_message_union, cls.discriminator_field
+        cls.incoming_message_adapter = (
+            cls._create_adapter(incoming_message_union, cls.discriminator_field)
+            if incoming_message_union is not None
+            else None
         )
 
         incoming_event_union = cls._create_discriminated_union(
             event_input_types, cls.discriminator_field
         )
-        cls.incoming_event_adapter = cls._create_adapter(
-            incoming_event_union, cls.discriminator_field
+        cls.incoming_event_adapter = (
+            cls._create_adapter(incoming_event_union, cls.discriminator_field)
+            if incoming_event_union is not None
+            else None
         )
 
         all_output_types = set(message_output_types + event_output_types)
@@ -294,7 +299,7 @@ class ChanxWebsocketConsumerMixin(Generic[ReceiveEvent]):
         Returns:
             A discriminated union type that can validate any of the input message types
         """
-        if message_types is None:
+        if not message_types:
             return None
 
         if len(message_types) == 1:
@@ -460,6 +465,11 @@ class ChanxWebsocketConsumerMixin(Generic[ReceiveEvent]):
             **kwargs: Additional keyword arguments
         """
         try:
+            if self.incoming_message_adapter is None:
+                await self.handle_json_processing_error(
+                    RuntimeError("No message handlers registered on this consumer")
+                )
+                return
             message = self.incoming_message_adapter.validate_python(content)
             await self.receive_message(message)
 
@@ -738,6 +748,9 @@ class ChanxWebsocketConsumerMixin(Generic[ReceiveEvent]):
             event_payload: The message from the channel layer containing event data
         """
         try:
+            if self.incoming_event_adapter is None:
+                await logger.aexception("No event handlers registered on this consumer")
+                return
             event_data_dict: dict[str, Any] = event_payload.get("event_data", {})
             event = self.incoming_event_adapter.validate_python(event_data_dict)
 

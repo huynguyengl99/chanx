@@ -1,3 +1,9 @@
+## v2.6.2 (2026-04-17)
+
+### Fix
+
+- handle empty handler maps in adapter building
+
 ## v2.6.1 (2026-03-13)
 
 ### Fix

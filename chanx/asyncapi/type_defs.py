@@ -10,7 +10,7 @@ from __future__ import annotations
 
 from typing import Any, cast
 
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 
 # -------------------------
@@ -110,10 +110,7 @@ class SchemaObject(BaseModel):
     deprecated: bool | None = None
     examples: list[Any] | None = None
 
-    class Config:
-        """Pydantic configuration for SchemaObject to support alias field names."""
-
-        populate_by_name = True
+    model_config = ConfigDict(validate_by_name=True)
 
 
 # -------------------------
@@ -186,10 +183,7 @@ class MessageObject(BaseModel):
     bindings: dict[str, dict[str, Any]] | None = None
     traits: list[MessageTraitObject | dict[str, Any]] | None = None
 
-    class Config:
-        """Pydantic configuration for MessageObject to support alias field names."""
-
-        populate_by_name = True
+    model_config = ConfigDict(validate_by_name=True)
 
 
 # -------------------------
@@ -252,10 +246,7 @@ class ParameterObject(BaseModel):
     examples: list[str] | None = None
     location: str | None = None
 
-    class Config:
-        """Pydantic configuration for ParameterObject to support alias field names."""
-
-        populate_by_name = True
+    model_config = ConfigDict(validate_by_name=True)
 
 
 class ChannelObject(BaseModel):

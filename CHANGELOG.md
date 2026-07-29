@@ -1,3 +1,9 @@
+## v2.8.1 (2026-07-29)
+
+### Fix
+
+- **class**: use pydantic v2 model_config
+
 ## v2.8.0 (2026-06-23)
 
 ### Feat

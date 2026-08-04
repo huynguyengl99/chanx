@@ -15,6 +15,14 @@ WebSocket Consumer
    :members:
 
 
+Demultiplexer
+-------------
+.. module:: chanx.fast_channels.multiplex
+
+.. autoclass:: chanx.fast_channels.multiplex.AsyncJsonWebsocketDemultiplexer
+   :members:
+
+
 Views
 -----
 .. module:: chanx.fast_channels.views

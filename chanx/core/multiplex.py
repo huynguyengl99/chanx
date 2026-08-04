@@ -25,6 +25,7 @@ from dataclasses import dataclass, field
 from typing import Any, ClassVar, TypeGuard, cast
 
 import structlog
+from asgiref.timeout import timeout as async_timeout
 from pydantic import BaseModel, TypeAdapter, ValidationError, create_model
 from typing_extensions import TypeVar
 
@@ -109,12 +110,16 @@ class ChildConnection:
         consumer: The sub-consumer instance driven by the demultiplexer.
         queue: Inbound ASGI message queue acting as the sub-consumer's `receive`.
         task: Task running the sub-consumer's ASGI application loop.
+        ready: Set once the sub-consumer has finished handling websocket.connect.
+        receive_calls: How many times the sub-consumer has asked for a message.
         closed: Whether the sub-consumer has closed and is no longer routable.
     """
 
     consumer: ChanxWebsocketConsumerMixin[Any]
     queue: asyncio.Queue[ASGIMessage] = field(default_factory=_new_asgi_queue)
     task: asyncio.Task[None] | None = None
+    ready: asyncio.Event = field(default_factory=asyncio.Event)
+    receive_calls: int = 0
     closed: bool = False
 
 
@@ -147,6 +152,9 @@ class ChanxDemultiplexerMixin(ChanxWebsocketConsumerMixin[ReceiveEvent]):
     # Envelope field names, overridable per demultiplexer.
     envelope_consumer_field: ClassVar[str] = "consumer"
     envelope_message_field: ClassVar[str] = "message"
+
+    # Seconds to wait for sub-consumers to finish connecting before serving traffic.
+    child_connect_timeout: ClassVar[float] = 5.0
 
     # Seconds to wait for sub-consumers to shut down cleanly on disconnect.
     child_shutdown_timeout: ClassVar[float] = 5.0
@@ -302,6 +310,10 @@ class ChanxDemultiplexerMixin(ChanxWebsocketConsumerMixin[ReceiveEvent]):
         outgoing frames. The scope copy is taken after authentication so values the
         authenticator added (such as ``scope["user"]``) are visible to every
         sub-consumer, while later per-sub-consumer mutations stay isolated.
+
+        Returns once every sub-consumer has finished connecting, so that a client
+        which starts sending or expects group traffic as soon as the socket opens
+        cannot race ahead of the sub-consumers joining their groups.
         """
         for key, consumer_class in self.consumers.items():
             connection = ChildConnection(consumer=consumer_class())
@@ -311,7 +323,7 @@ class ChanxDemultiplexerMixin(ChanxWebsocketConsumerMixin[ReceiveEvent]):
             connection.task = create_task(
                 child_app(
                     dict(self.scope),
-                    connection.queue.get,
+                    self._make_child_receive(connection),
                     self._make_child_send(key),
                 ),
                 background_tasks=self._child_tasks,
@@ -319,6 +331,66 @@ class ChanxDemultiplexerMixin(ChanxWebsocketConsumerMixin[ReceiveEvent]):
             )
 
             await connection.queue.put({"type": WEBSOCKET_CONNECT})
+
+        await self._wait_for_children_ready()
+
+    @staticmethod
+    def _make_child_receive(
+        connection: ChildConnection,
+    ) -> Callable[[], Awaitable[ASGIMessage]]:
+        """
+        Build the ASGI `receive` callable handed to a single sub-consumer.
+
+        A consumer's dispatch loop only asks for its next message once it has
+        finished handling the previous one, so the second request proves
+        ``websocket.connect`` has completed -- joining groups included. That is what
+        marks the sub-consumer ready.
+
+        Args:
+            connection: The sub-consumer connection to read messages for
+
+        Returns:
+            An async callable yielding the sub-consumer's next inbound message
+        """
+
+        async def child_receive() -> ASGIMessage:
+            """Take the sub-consumer's next inbound ASGI message."""
+            connection.receive_calls += 1
+            if connection.receive_calls > 1:
+                connection.ready.set()
+            return await connection.queue.get()
+
+        return child_receive
+
+    async def _wait_for_children_ready(self) -> None:
+        """
+        Wait for every sub-consumer to finish connecting.
+
+        A sub-consumer that closed while connecting still becomes ready, so the only
+        way to time out here is a sub-consumer that hangs or crashes during connect;
+        that is logged and the shared connection carries on without it.
+        """
+        waits = [
+            connection.ready.wait()
+            for connection in self._children.values()
+            if not connection.ready.is_set()
+        ]
+        if not waits:
+            return
+
+        try:
+            async with async_timeout(self.child_connect_timeout):
+                await asyncio.gather(*waits)
+        except (TimeoutError, asyncio.CancelledError):
+            unready = [
+                key
+                for key, connection in self._children.items()
+                if not connection.ready.is_set()
+            ]
+            await logger.awarning(
+                "Timed out waiting for multiplexed consumers to connect",
+                consumer_keys=unready,
+            )
 
     async def _stop_children(self, code: int) -> None:
         """

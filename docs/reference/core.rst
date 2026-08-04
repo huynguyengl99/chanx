@@ -23,6 +23,14 @@ WebSocket Consumer
    :members:
 
 
+Demultiplexer
+-------------
+.. module:: chanx.core.multiplex
+
+.. autoclass:: chanx.core.multiplex.ChanxDemultiplexerMixin
+   :members:
+
+
 Authenticator
 -------------
 .. module:: chanx.core.authenticator

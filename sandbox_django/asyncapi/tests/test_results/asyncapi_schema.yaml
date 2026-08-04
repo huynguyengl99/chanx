@@ -55,6 +55,69 @@ channels:
         $ref: '#/components/messages/topicCreatedMessage'
       voteUpdatedMessage:
         $ref: '#/components/messages/voteUpdatedMessage'
+  discussionMultiplex:
+    address: ws/discussion/mux/
+    title: discussion_multiplex
+    description: Demultiplexer serving the discussion list and group chat consumers
+    messages:
+      pingMessage:
+        $ref: '#/components/messages/pingMessage'
+      pongMessage:
+        $ref: '#/components/messages/pongMessage'
+    tags:
+    - name: discussion
+    - name: multiplex
+  discussionMultiplexTopics:
+    address: ws/discussion/mux/
+    title: discussion_multiplex_topics
+    description: '
+
+      WebSocket consumer for discussion topic list view.
+
+
+      Handles global discussion updates like new topics, votes, and answer acceptance/unacceptance.
+
+      '
+    messages:
+      answerAcceptedMessage:
+        $ref: '#/components/messages/answerAcceptedMessage'
+      answerUnacceptedMessage:
+        $ref: '#/components/messages/answerUnacceptedMessage'
+      pingMessage:
+        $ref: '#/components/messages/pingMessage'
+      pongMessage:
+        $ref: '#/components/messages/pongMessage'
+      topicCreatedMessage:
+        $ref: '#/components/messages/topicCreatedMessage'
+      voteUpdatedMessage:
+        $ref: '#/components/messages/voteUpdatedMessage'
+    x-chanx-multiplex:
+      consumerField: consumer
+      messageField: message
+      consumerKey: topics
+  discussionMultiplexGroupChat:
+    address: ws/discussion/mux/
+    title: discussion_multiplex_group_chat
+    description: '
+
+      WebSocket consumer for group chat updates.
+
+      '
+    messages:
+      addedToGroupMessage:
+        $ref: '#/components/messages/addedToGroupMessage'
+      groupChatUpdatedMessage:
+        $ref: '#/components/messages/groupChatUpdatedMessage'
+      pingMessage:
+        $ref: '#/components/messages/pingMessage'
+      pongMessage:
+        $ref: '#/components/messages/pongMessage'
+      removedFromGroupMessage:
+        $ref: '#/components/messages/removedFromGroupMessage'
+    x-chanx-multiplex:
+      consumerField: consumer
+      messageField: message
+      consumerKey: group_chat
   discussionTopic:
     address: ws/discussion/{pk}/
     title: discussion_topic
@@ -213,6 +276,101 @@ operations:
     summary: ''
     messages:
     - $ref: '#/channels/discussionList/messages/voteUpdatedMessage'
+  discussionMultiplexerHandlePing:
+    action: receive
+    channel:
+      $ref: '#/channels/discussionMultiplex'
+    description: Answered by the demultiplexer itself, without an envelope
+    summary: Handle ping requests for the shared connection
+    messages:
+    - $ref: '#/channels/discussionMultiplex/messages/pingMessage'
+    reply:
+      channel:
+        $ref: '#/channels/discussionMultiplex'
+      messages:
+      - $ref: '#/channels/discussionMultiplex/messages/pongMessage'
+  discussionMultiplexTopicsHandlePing:
+    action: receive
+    channel:
+      $ref: '#/channels/discussionMultiplexTopics'
+    description: Simple ping-pong for connectivity testing
+    summary: Handle ping requests
+    messages:
+    - $ref: '#/channels/discussionMultiplexTopics/messages/pingMessage'
+    reply:
+      channel:
+        $ref: '#/channels/discussionMultiplexTopics'
+      messages:
+      - $ref: '#/channels/discussionMultiplexTopics/messages/pongMessage'
+  discussionMultiplexTopicsHandleAcceptAnswer:
+    action: send
+    channel:
+      $ref: '#/channels/discussionMultiplexTopics'
+    description: ''
+    summary: ''
+    messages:
+    - $ref: '#/channels/discussionMultiplexTopics/messages/answerAcceptedMessage'
+  discussionMultiplexTopicsHandleNewTopic:
+    action: send
+    channel:
+      $ref: '#/channels/discussionMultiplexTopics'
+    description: ''
+    summary: ''
+    messages:
+    - $ref: '#/channels/discussionMultiplexTopics/messages/topicCreatedMessage'
+  discussionMultiplexTopicsHandleUnacceptAnswer:
+    action: send
+    channel:
+      $ref: '#/channels/discussionMultiplexTopics'
+    description: ''
+    summary: ''
+    messages:
+    - $ref: '#/channels/discussionMultiplexTopics/messages/answerUnacceptedMessage'
+  discussionMultiplexTopicsHandleVoteUpdate:
+    action: send
+    channel:
+      $ref: '#/channels/discussionMultiplexTopics'
+    description: ''
+    summary: ''
+    messages:
+    - $ref: '#/channels/discussionMultiplexTopics/messages/voteUpdatedMessage'
+  discussionMultiplexGroupChatHandlePing:
+    action: receive
+    channel:
+      $ref: '#/channels/discussionMultiplexGroupChat'
+    description: Simple ping-pong for connectivity testing
+    summary: Handle ping requests
+    messages:
+    - $ref: '#/channels/discussionMultiplexGroupChat/messages/pingMessage'
+    reply:
+      channel:
+        $ref: '#/channels/discussionMultiplexGroupChat'
+      messages:
+      - $ref: '#/channels/discussionMultiplexGroupChat/messages/pongMessage'
+  discussionMultiplexGroupChatHandleGroupChatUpdate:
+    action: send
+    channel:
+      $ref: '#/channels/discussionMultiplexGroupChat'
+    description: ''
+    summary: ''
+    messages:
+    - $ref: '#/channels/discussionMultiplexGroupChat/messages/groupChatUpdatedMessage'
+  discussionMultiplexGroupChatHandleNotifyAddedToGroup:
+    action: send
+    channel:
+      $ref: '#/channels/discussionMultiplexGroupChat'
+    description: ''
+    summary: ''
+    messages:
+    - $ref: '#/channels/discussionMultiplexGroupChat/messages/addedToGroupMessage'
+  discussionMultiplexGroupChatHandleNotifyRemovedFromGroup:
+    action: send
+    channel:
+      $ref: '#/channels/discussionMultiplexGroupChat'
+    description: ''
+    summary: ''
+    messages:
+    - $ref: '#/channels/discussionMultiplexGroupChat/messages/removedFromGroupMessage'
   discussionTopicHandlePing:
     action: receive
     channel:

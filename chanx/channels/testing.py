@@ -19,8 +19,8 @@ import humps
 from asgiref.sync import async_to_sync
 
 from chanx.channels.settings import chanx_settings
-from chanx.channels.websocket import AsyncJsonWebsocketConsumer
 from chanx.core.testing import WebsocketCommunicatorMixin
+from chanx.core.websocket import ChanxWebsocketConsumerMixin
 from chanx.messages.outgoing import AuthenticationMessage
 
 
@@ -31,11 +31,13 @@ class WebsocketCommunicator(WebsocketCommunicatorMixin, ChannelsWebsocketCommuni
     Combines Chanx testing features (send_message, receive_all_messages, message validation)
     with Django Channels' WebSocket communicator (connect, disconnect, send_json_to).
 
+    Accepts a demultiplexer as ``consumer`` to test a multiplexed route.
+
     For Django-specific features like authentication, use DjangoWebsocketCommunicator.
     """
 
     application: Any
-    consumer: type[AsyncJsonWebsocketConsumer]
+    consumer: type[ChanxWebsocketConsumerMixin[Any]]
 
 
 class DjangoWebsocketCommunicator(WebsocketCommunicator):
@@ -125,7 +127,7 @@ class WebsocketTestCase(TransactionTestCase):
 
     ws_path: str = ""
     router: Any = None
-    consumer: type[AsyncJsonWebsocketConsumer[Any]]
+    consumer: type[ChanxWebsocketConsumerMixin[Any]]
 
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         """

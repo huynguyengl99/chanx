@@ -22,7 +22,7 @@ import asyncio
 import json
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, field
-from typing import Any, ClassVar, cast
+from typing import Any, ClassVar, TypeGuard, cast
 
 import structlog
 from pydantic import BaseModel, TypeAdapter, ValidationError, create_model
@@ -72,6 +72,22 @@ def _is_consumer_class(value: object) -> bool:
         True if the value is a ChanxWebsocketConsumerMixin subclass
     """
     return isinstance(value, type) and issubclass(value, ChanxWebsocketConsumerMixin)
+
+
+def is_demultiplexer(value: object) -> TypeGuard[type["ChanxDemultiplexerMixin[Any]"]]:
+    """
+    Report whether a value is a Chanx demultiplexer class.
+
+    Takes a plain object because callers such as route discovery cannot always
+    resolve a consumer class from an endpoint and may hold None instead.
+
+    Args:
+        value: The candidate consumer class
+
+    Returns:
+        True if the value is a ChanxDemultiplexerMixin subclass
+    """
+    return isinstance(value, type) and issubclass(value, ChanxDemultiplexerMixin)
 
 
 def _new_asgi_queue() -> asyncio.Queue[ASGIMessage]:

@@ -9,9 +9,9 @@ the previous duplicated implementations.
 import re
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, replace
-from typing import Any, TypeGuard
+from typing import Any
 
-from chanx.core.multiplex import ChanxDemultiplexerMixin
+from chanx.core.multiplex import ChanxDemultiplexerMixin, is_demultiplexer
 from chanx.core.websocket import ChanxWebsocketConsumerMixin
 
 
@@ -63,22 +63,6 @@ class RouteInfo:
         return path
 
 
-def _is_demultiplexer(value: object) -> TypeGuard[type[ChanxDemultiplexerMixin[Any]]]:
-    """
-    Report whether a discovered route handler is a Chanx demultiplexer class.
-
-    Takes a plain object because route discovery cannot always resolve a consumer
-    class from an endpoint and may report None.
-
-    Args:
-        value: The candidate consumer from a discovered route
-
-    Returns:
-        True if the value is a ChanxDemultiplexerMixin subclass
-    """
-    return isinstance(value, type) and issubclass(value, ChanxDemultiplexerMixin)
-
-
 def expand_multiplexed_route(route: RouteInfo) -> list[RouteInfo]:
     """
     Expand a multiplexed route into one RouteInfo per sub-consumer.
@@ -97,7 +81,7 @@ def expand_multiplexed_route(route: RouteInfo) -> list[RouteInfo]:
         List of routes to register in place of the given route.
     """
     consumer = route.consumer
-    if not _is_demultiplexer(consumer):
+    if not is_demultiplexer(consumer):
         return [route]
 
     routes: list[RouteInfo] = []

@@ -9,7 +9,7 @@ for comprehensive testing of FastAPI WebSocket consumers.
 from typing import Any
 
 from chanx.core.testing import WebsocketCommunicatorMixin
-from chanx.fast_channels.websocket import AsyncJsonWebsocketConsumer
+from chanx.core.websocket import ChanxWebsocketConsumerMixin
 from fast_channels.testing import (
     WebsocketCommunicator as FastChannelsWebsocketCommunicator,
 )
@@ -39,7 +39,9 @@ class WebsocketCommunicator(
     - Full compatibility with FastAPI ASGI applications
     - fast-channels channel layer support
     - High-performance async operation
+
+    Accepts a demultiplexer as ``consumer`` to test a multiplexed route.
     """
 
     application: Any
-    consumer: type[AsyncJsonWebsocketConsumer]
+    consumer: type[ChanxWebsocketConsumerMixin[Any]]

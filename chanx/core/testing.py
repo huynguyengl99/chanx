@@ -26,6 +26,7 @@ from chanx.constants import (
     MESSAGE_ACTION_COMPLETE,
 )
 from chanx.core.config import config
+from chanx.core.multiplex import ChanxDemultiplexerMixin, is_demultiplexer
 from chanx.core.websocket import ChanxWebsocketConsumerMixin
 from chanx.messages.base import BaseMessage
 
@@ -161,60 +162,167 @@ class WebsocketCommunicatorMixin:
 
         return json_list
 
-    async def receive_all_messages(
+    @property
+    def demultiplexer(self) -> type[ChanxDemultiplexerMixin[Any]] | None:
+        """
+        The demultiplexer under test, or None when the consumer is not multiplexed.
+
+        Returns:
+            The demultiplexer class, or None for a single-consumer route
+        """
+        consumer = self.consumer
+        return consumer if is_demultiplexer(consumer) else None
+
+    def _unwrap_envelope(
+        self, raw_message: dict[str, Any]
+    ) -> tuple[str | None, dict[str, Any], type[ChanxWebsocketConsumerMixin[Any]]]:
+        """
+        Split a received frame into its consumer key, inner message and validator.
+
+        For a single-consumer route, and for demultiplexer-level frames such as
+        errors that are sent unwrapped, the frame is its own inner message and the
+        communicator's consumer validates it.
+
+        Args:
+            raw_message: The raw JSON frame received from the WebSocket
+
+        Returns:
+            Tuple of (consumer key or None, inner message, validating consumer)
+        """
+        demultiplexer = self.demultiplexer
+        if demultiplexer is None:
+            return None, raw_message, self.consumer
+
+        key = raw_message.get(demultiplexer.envelope_consumer_field)
+        sub_consumer = (
+            demultiplexer.consumers.get(key) if isinstance(key, str) else None
+        )
+        if key is None or sub_consumer is None:
+            # Unwrapped frame, or an envelope for a consumer this demultiplexer
+            # does not serve; either way the demultiplexer validates it.
+            return None, raw_message, demultiplexer
+
+        inner = cast(
+            dict[str, Any], raw_message.get(demultiplexer.envelope_message_field) or {}
+        )
+        return key, inner, sub_consumer
+
+    async def receive_all_envelopes(
         self,
         stop_action: COMPLETE_ACTIONS_TYPE | str = MESSAGE_ACTION_COMPLETE,
         timeout: float = 1,
-    ) -> list[BaseMessage]:
+        stop_consumer: str | None = None,
+    ) -> list[tuple[str | None, BaseMessage]]:
         """
-        Receives and collects JSON messages until a specific action is received.
+        Receives and collects messages together with the consumer that sent them.
 
-        Automatically filters out completion messages (ACTION_COMPLETE and GROUP_ACTION_COMPLETE).
+        Behaves like receive_all_messages, but also reports which multiplexed
+        consumer each message came from. The key is None for messages sent by a
+        single-consumer route, and for demultiplexer-level messages such as errors.
 
         Args:
             stop_action: The action type to stop collecting at
             timeout: Maximum time to wait for messages (in seconds)
+            stop_consumer: Only stop at stop_action when it comes from this
+                           multiplexed consumer. Useful when several consumers
+                           each send their own completion message.
 
         Returns:
-            List of received JSON messages (excluding completion messages)
+            List of (consumer key, message) pairs, excluding completion messages
         """
         if not self.consumer:
             raise ValueError("consumer must be initialized to use this method")
 
-        messages: list[BaseMessage] = []
+        envelopes: list[tuple[str | None, BaseMessage]] = []
 
         try:
             async with async_timeout(timeout):
                 while True:
                     raw_message = await self.receive_json_from(timeout)
 
-                    if getattr(self.consumer, "camelize", False) or config.camelize:
-                        raw_message = humps.decamelize(raw_message)
+                    key, inner, validator = self._unwrap_envelope(raw_message)
 
-                    message_action = raw_message.get(self.action_key)
+                    if getattr(validator, "camelize", False) or config.camelize:
+                        inner = humps.decamelize(inner)
+
+                    message_action = inner.get(self.action_key)
 
                     if message_action not in COMPLETE_ACTIONS:
-                        message = (
-                            self.consumer.outgoing_message_adapter.validate_python(
-                                raw_message
-                            )
+                        message = validator.outgoing_message_adapter.validate_python(
+                            inner
                         )
-                        messages.append(message)
+                        envelopes.append((key, message))
 
-                    if message_action == stop_action:
+                    if message_action == stop_action and (
+                        stop_consumer is None or key == stop_consumer
+                    ):
                         break
         except (asyncio.CancelledError, asyncio.TimeoutError):
             pass
-        return messages
+        return envelopes
 
-    async def send_message(self, message: BaseMessage) -> None:
+    async def receive_all_messages(
+        self,
+        stop_action: COMPLETE_ACTIONS_TYPE | str = MESSAGE_ACTION_COMPLETE,
+        timeout: float = 1,
+        stop_consumer: str | None = None,
+    ) -> list[BaseMessage]:
+        """
+        Receives and collects JSON messages until a specific action is received.
+
+        Automatically filters out completion messages (ACTION_COMPLETE and GROUP_ACTION_COMPLETE).
+
+        When the consumer under test is a demultiplexer, enveloped frames are
+        unwrapped and each inner message is validated against the consumer it came
+        from. Use receive_all_envelopes() when you also need to know which consumer
+        sent each message.
+
+        Args:
+            stop_action: The action type to stop collecting at
+            timeout: Maximum time to wait for messages (in seconds)
+            stop_consumer: Only stop at stop_action when it comes from this
+                           multiplexed consumer
+
+        Returns:
+            List of received JSON messages (excluding completion messages)
+        """
+        envelopes = await self.receive_all_envelopes(
+            stop_action, timeout, stop_consumer
+        )
+        return [message for _key, message in envelopes]
+
+    async def send_message(
+        self, message: BaseMessage, *, consumer: str | None = None
+    ) -> None:
         """
         Sends a Message object as JSON to the WebSocket.
 
         Args:
             message: The Message instance to send
+            consumer: Multiplexed consumer key to address the message to. Requires
+                      the communicator's consumer to be a demultiplexer. When
+                      omitted the message is sent unwrapped, which reaches a
+                      demultiplexer's own handlers.
+
+        Raises:
+            ValueError: If consumer is given but the communicator is not testing a
+                        demultiplexer.
         """
-        await self.send_json_to(message.model_dump())
+        content: dict[str, Any] = message.model_dump()
+
+        if consumer is not None:
+            demultiplexer = self.demultiplexer
+            if demultiplexer is None:
+                raise ValueError(
+                    f"Cannot address consumer {consumer!r}:"
+                    f" {self.consumer.__name__} is not a demultiplexer"
+                )
+            content = {
+                demultiplexer.envelope_consumer_field: consumer,
+                demultiplexer.envelope_message_field: content,
+            }
+
+        await self.send_json_to(content)
 
     async def assert_closed(self) -> None:
         """Asserts that the WebSocket has been closed."""

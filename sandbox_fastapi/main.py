@@ -21,6 +21,9 @@ from fastapi.staticfiles import StaticFiles
 from sandbox_fastapi.apps.background_jobs.consumer import (
     BackgroundJobConsumer,  # RQ background jobs
 )
+from sandbox_fastapi.apps.multiplex.consumer import (
+    MainDemultiplexer,  # Several consumers over one route
+)
 from sandbox_fastapi.apps.room_chat.consumer import (
     RoomChatConsumer,  # Dynamic room connections
 )
@@ -176,5 +179,8 @@ ws_router.add_websocket_route(
 ws_router.add_websocket_route(
     "/room/{room_name}", RoomChatConsumer.as_asgi()
 )  # Dynamic room connections (now using chanx!)
+ws_router.add_websocket_route(
+    "/mux", MainDemultiplexer.as_asgi()
+)  # System, chat and notifications multiplexed over one connection
 
 app.mount("/ws", ws_router)

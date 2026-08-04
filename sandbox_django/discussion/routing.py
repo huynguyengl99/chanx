@@ -2,12 +2,18 @@ from channels.routing import URLRouter
 
 from chanx.channels.routing import path
 
-from discussion.consumers import DiscussionListConsumer, DiscussionTopicConsumer
+from discussion.consumers import (
+    DiscussionListConsumer,
+    DiscussionMultiplexer,
+    DiscussionTopicConsumer,
+)
 
 router = URLRouter(
     [
         # List view (for global updates)
         path("", DiscussionListConsumer.as_asgi()),
+        # Discussion list and group chat multiplexed over one connection
+        path("mux/", DiscussionMultiplexer.as_asgi()),
         # Topic detail view (for topic-specific operations)
         path("<int:pk>/", DiscussionTopicConsumer.as_asgi()),
     ]

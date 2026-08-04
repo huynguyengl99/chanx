@@ -862,7 +862,7 @@
         ]
       }
     },
-    "system_message_handle_ping_2": {
+    "multiplex_system_handle_ping": {
       "action": "receive",
       "channel": {
         "$ref": "#/channels/multiplex_system"
@@ -885,7 +885,7 @@
         ]
       }
     },
-    "system_message_handle_system": {
+    "multiplex_system_handle_system": {
       "action": "receive",
       "channel": {
         "$ref": "#/channels/multiplex_system"
@@ -908,7 +908,7 @@
         ]
       }
     },
-    "chat_handle_chat": {
+    "multiplex_chat_handle_chat": {
       "action": "receive",
       "channel": {
         "$ref": "#/channels/multiplex_chat"
@@ -931,7 +931,7 @@
         ]
       }
     },
-    "chat_handle_extra_message": {
+    "multiplex_chat_handle_extra_message": {
       "action": "receive",
       "channel": {
         "$ref": "#/channels/multiplex_chat"
@@ -954,7 +954,7 @@
         ]
       }
     },
-    "chat_handle_ping": {
+    "multiplex_chat_handle_ping": {
       "action": "receive",
       "channel": {
         "$ref": "#/channels/multiplex_chat"
@@ -977,7 +977,7 @@
         ]
       }
     },
-    "chat_system_notify_chat": {
+    "multiplex_chat_system_notify_chat": {
       "action": "send",
       "channel": {
         "$ref": "#/channels/multiplex_chat"
@@ -990,7 +990,7 @@
         }
       ]
     },
-    "chat_handle_passthrough_user_joined_notification": {
+    "multiplex_chat_handle_passthrough_user_joined_notification": {
       "action": "send",
       "channel": {
         "$ref": "#/channels/multiplex_chat"
@@ -1003,7 +1003,7 @@
         }
       ]
     },
-    "chat_handle_passthrough_user_left_notification": {
+    "multiplex_chat_handle_passthrough_user_left_notification": {
       "action": "send",
       "channel": {
         "$ref": "#/channels/multiplex_chat"
@@ -1016,7 +1016,7 @@
         }
       ]
     },
-    "chat_handle_passthrough_extra_passthrough_message": {
+    "multiplex_chat_handle_passthrough_extra_passthrough_message": {
       "action": "send",
       "channel": {
         "$ref": "#/channels/multiplex_chat"
@@ -1029,7 +1029,7 @@
         }
       ]
     },
-    "notification_handle_notification": {
+    "multiplex_notifications_handle_notification": {
       "action": "receive",
       "channel": {
         "$ref": "#/channels/multiplex_notifications"
@@ -1052,7 +1052,7 @@
         ]
       }
     },
-    "notification_handle_ping_2": {
+    "multiplex_notifications_handle_ping": {
       "action": "receive",
       "channel": {
         "$ref": "#/channels/multiplex_notifications"
@@ -1075,7 +1075,7 @@
         ]
       }
     },
-    "notification_system_notify_notification": {
+    "multiplex_notifications_system_notify_notification": {
       "action": "send",
       "channel": {
         "$ref": "#/channels/multiplex_notifications"
@@ -1088,7 +1088,7 @@
         }
       ]
     },
-    "notification_system_notify_periodic_notification": {
+    "multiplex_notifications_system_notify_periodic_notification": {
       "action": "send",
       "channel": {
         "$ref": "#/channels/multiplex_notifications"

@@ -509,7 +509,7 @@ operations:
         $ref: '#/channels/multiplex'
       messages:
       - $ref: '#/channels/multiplex/messages/pong_message'
-  system_message_handle_ping_2:
+  multiplex_system_handle_ping:
     action: receive
     channel:
       $ref: '#/channels/multiplex_system'
@@ -522,7 +522,7 @@ operations:
         $ref: '#/channels/multiplex_system'
       messages:
       - $ref: '#/channels/multiplex_system/messages/pong_message'
-  system_message_handle_system:
+  multiplex_system_handle_system:
     action: receive
     channel:
       $ref: '#/channels/multiplex_system'
@@ -535,7 +535,7 @@ operations:
         $ref: '#/channels/multiplex_system'
       messages:
       - $ref: '#/channels/multiplex_system/messages/system_echo_message'
-  chat_handle_chat:
+  multiplex_chat_handle_chat:
     action: receive
     channel:
       $ref: '#/channels/multiplex_chat'
@@ -548,7 +548,7 @@ operations:
         $ref: '#/channels/multiplex_chat'
       messages:
       - $ref: '#/channels/multiplex_chat/messages/chat_notification_message'
-  chat_handle_extra_message:
+  multiplex_chat_handle_extra_message:
     action: receive
     channel:
       $ref: '#/channels/multiplex_chat'
@@ -561,7 +561,7 @@ operations:
         $ref: '#/channels/multiplex_chat'
       messages:
       - $ref: '#/channels/multiplex_chat/messages/extra_response_message'
-  chat_handle_ping:
+  multiplex_chat_handle_ping:
     action: receive
     channel:
       $ref: '#/channels/multiplex_chat'
@@ -574,7 +574,7 @@ operations:
         $ref: '#/channels/multiplex_chat'
       messages:
       - $ref: '#/channels/multiplex_chat/messages/pong_message'
-  chat_system_notify_chat:
+  multiplex_chat_system_notify_chat:
     action: send
     channel:
       $ref: '#/channels/multiplex_chat'
@@ -582,7 +582,7 @@ operations:
     summary: ''
     messages:
     - $ref: '#/channels/multiplex_chat/messages/chat_notification_message'
-  chat_handle_passthrough_user_joined_notification:
+  multiplex_chat_handle_passthrough_user_joined_notification:
     action: send
     channel:
       $ref: '#/channels/multiplex_chat'
@@ -590,7 +590,7 @@ operations:
     summary: ''
     messages:
     - $ref: '#/channels/multiplex_chat/messages/user_joined_notification'
-  chat_handle_passthrough_user_left_notification:
+  multiplex_chat_handle_passthrough_user_left_notification:
     action: send
     channel:
       $ref: '#/channels/multiplex_chat'
@@ -598,7 +598,7 @@ operations:
     summary: ''
     messages:
     - $ref: '#/channels/multiplex_chat/messages/user_left_notification'
-  chat_handle_passthrough_extra_passthrough_message:
+  multiplex_chat_handle_passthrough_extra_passthrough_message:
     action: send
     channel:
       $ref: '#/channels/multiplex_chat'
@@ -606,7 +606,7 @@ operations:
     summary: ''
     messages:
     - $ref: '#/channels/multiplex_chat/messages/extra_passthrough_message'
-  notification_handle_notification:
+  multiplex_notifications_handle_notification:
     action: receive
     channel:
       $ref: '#/channels/multiplex_notifications'
@@ -619,7 +619,7 @@ operations:
         $ref: '#/channels/multiplex_notifications'
       messages:
       - $ref: '#/channels/multiplex_notifications/messages/notification_broadcast_message'
-  notification_handle_ping_2:
+  multiplex_notifications_handle_ping:
     action: receive
     channel:
       $ref: '#/channels/multiplex_notifications'
@@ -632,7 +632,7 @@ operations:
         $ref: '#/channels/multiplex_notifications'
       messages:
       - $ref: '#/channels/multiplex_notifications/messages/pong_message'
-  notification_system_notify_notification:
+  multiplex_notifications_system_notify_notification:
     action: send
     channel:
       $ref: '#/channels/multiplex_notifications'
@@ -640,7 +640,7 @@ operations:
     summary: ''
     messages:
     - $ref: '#/channels/multiplex_notifications/messages/notification_broadcast_message'
-  notification_system_notify_periodic_notification:
+  multiplex_notifications_system_notify_periodic_notification:
     action: send
     channel:
       $ref: '#/channels/multiplex_notifications'

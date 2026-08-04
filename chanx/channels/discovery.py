@@ -11,7 +11,11 @@ from channels.routing import URLRouter
 from django.http import HttpRequest
 
 from chanx.channels.websocket import AsyncJsonWebsocketConsumer
-from chanx.routing.discovery import RouteDiscovery, RouteInfo
+from chanx.routing.discovery import (
+    RouteDiscovery,
+    RouteInfo,
+    expand_multiplexed_route,
+)
 from chanx.routing.patterns import get_pattern_string_and_params
 from chanx.routing.traversal import traverse_middleware_stack
 from chanx.utils.logging import logger
@@ -109,13 +113,15 @@ class DjangoRouteDiscovery(RouteDiscovery):
                     consumer = cast(
                         type[AsyncJsonWebsocketConsumer], handler.consumer_class
                     )
-                    routes.append(
-                        RouteInfo(
-                            path=full_path,
-                            handler=handler,
-                            base_url=base_url,
-                            path_params=path_params,
-                            consumer=consumer,
+                    routes.extend(
+                        expand_multiplexed_route(
+                            RouteInfo(
+                                path=full_path,
+                                handler=handler,
+                                base_url=base_url,
+                                path_params=path_params,
+                                consumer=consumer,
+                            )
                         )
                     )
             except AttributeError as e:

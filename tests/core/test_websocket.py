@@ -5,6 +5,7 @@ Tests the framework-agnostic parts of AsyncJsonWebsocketConsumer
 including message processing, type adapter building, and handler routing.
 """
 
+import re
 from typing import Any, ClassVar, Literal
 from unittest.mock import AsyncMock
 
@@ -392,6 +393,202 @@ class TestPassthroughEvents:
                 passthrough_events = [NotAMessage]  # type: ignore[list-item]
 
             _ = InvalidConsumer  # used to trigger class creation above
+
+
+class TestHandlerCollisions:
+    """Test that two distinct handlers cannot claim the same action."""
+
+    def test_duplicate_message_action_raises(self) -> None:
+        """Test that two ws handlers for one action fail at class definition."""
+
+        class HealthMixin:
+            @ws_handler
+            async def handle_health_probe(self, _message: DummyMessage) -> None:
+                return None
+
+        class EchoMixin:
+            @ws_handler
+            async def handle_echo_probe(self, _message: DummyMessage) -> None:
+                return None
+
+        with pytest.raises(TypeError, match="two message handlers for action 'test'"):
+
+            class CollidingConsumer(HealthMixin, EchoMixin, AsyncJsonWebsocketConsumer):  # type: ignore[misc]
+                pass
+
+            _ = CollidingConsumer  # used to trigger class creation above
+
+    def test_duplicate_event_action_raises(self) -> None:
+        """Test that two event handlers for one action fail at class definition."""
+
+        class HealthMixin:
+            @event_handler
+            async def handle_health_event(self, event: DummyEvent) -> None:
+                return None
+
+        class EchoMixin:
+            @event_handler
+            async def handle_echo_event(self, event: DummyEvent) -> None:
+                return None
+
+        with pytest.raises(
+            TypeError, match="two event handlers for action 'test_event'"
+        ):
+
+            class CollidingConsumer(HealthMixin, EchoMixin, AsyncJsonWebsocketConsumer):  # type: ignore[misc]
+                pass
+
+            _ = CollidingConsumer  # used to trigger class creation above
+
+    def test_error_message_is_order_independent(self) -> None:
+        """Test that the reported method names do not depend on MRO ordering."""
+
+        class HealthMixin:
+            @ws_handler
+            async def handle_health_probe(self, _message: DummyMessage) -> None:
+                return None
+
+        class EchoMixin:
+            @ws_handler
+            async def handle_echo_probe(self, _message: DummyMessage) -> None:
+                return None
+
+        expected = re.escape("handle_echo_probe() and handle_health_probe()")
+
+        with pytest.raises(TypeError, match=expected):
+
+            class OneOrder(HealthMixin, EchoMixin, AsyncJsonWebsocketConsumer):  # type: ignore[misc]
+                pass
+
+        with pytest.raises(TypeError, match=expected):
+
+            class OtherOrder(EchoMixin, HealthMixin, AsyncJsonWebsocketConsumer):  # type: ignore[misc]
+                pass
+
+    def test_overriding_an_inherited_handler_is_allowed(self) -> None:
+        """Test that redefining a handler method in a subclass still works."""
+
+        class ParentConsumer(AsyncJsonWebsocketConsumer):
+            @ws_handler
+            async def handle_dummy(self, _message: DummyMessage) -> DummyResponse:
+                return DummyResponse(payload="parent")
+
+        class ChildConsumer(ParentConsumer):
+            @ws_handler
+            async def handle_dummy(self, _message: DummyMessage) -> DummyResponse:
+                return DummyResponse(payload="child")
+
+        assert ChildConsumer._MESSAGE_HANDLER_INFO_MAP["test"]["method_name"] == (
+            "handle_dummy"
+        )
+
+    def test_overriding_a_mixin_handler_is_allowed(self) -> None:
+        """Test that a consumer can override a handler contributed by a mixin."""
+
+        class DummyMixin:
+            @ws_handler
+            async def handle_dummy(self, _message: DummyMessage) -> DummyResponse:
+                return DummyResponse(payload="mixin")
+
+        class OverridingConsumer(DummyMixin, AsyncJsonWebsocketConsumer):  # type: ignore[misc]
+            @ws_handler
+            async def handle_dummy(self, _message: DummyMessage) -> DummyResponse:
+                return DummyResponse(payload="consumer")
+
+        assert set(OverridingConsumer._MESSAGE_HANDLER_INFO_MAP) == {"test"}
+
+
+class TestExtraGroups:
+    """Test the extra_groups feature and per-instance groups isolation."""
+
+    def test_extra_groups_merge_across_mro(self) -> None:
+        """Test that extra_groups from every mixin land on the instance."""
+
+        class HealthMixin:
+            extra_groups: ClassVar[list[str]] = ["health_group"]
+
+        class EchoMixin:
+            extra_groups: ClassVar[list[str]] = ["echo_group"]
+
+        class GatewayConsumer(HealthMixin, EchoMixin, AsyncJsonWebsocketConsumer):  # type: ignore[misc]
+            extra_groups = ["gateway_group"]
+
+        consumer = GatewayConsumer()
+        assert consumer.groups == ["gateway_group", "health_group", "echo_group"]
+
+    def test_extra_groups_merge_dedupes(self) -> None:
+        """Test that a group declared in both mixin and consumer appears once."""
+
+        class SharedMixin:
+            extra_groups: ClassVar[list[str]] = ["shared_group", "mixin_group"]
+
+        class MergedConsumer(SharedMixin, AsyncJsonWebsocketConsumer):  # type: ignore[misc]
+            extra_groups = ["shared_group"]
+
+        assert MergedConsumer().groups == ["shared_group", "mixin_group"]
+
+    def test_extra_groups_union_with_declared_groups(self) -> None:
+        """Test that extra_groups are appended to a framework-owned groups list."""
+
+        class NotifyMixin:
+            extra_groups: ClassVar[list[str]] = ["notify_group"]
+
+        class MergedConsumer(NotifyMixin, AsyncJsonWebsocketConsumer):  # type: ignore[misc]
+            groups = ["static_group"]
+
+        assert MergedConsumer().groups == ["static_group", "notify_group"]
+
+    def test_groups_keeps_mro_shadowing(self) -> None:
+        """Test that `groups` still shadows normally, so a subclass can narrow it."""
+
+        class BaseConsumer(AsyncJsonWebsocketConsumer):
+            groups = ["parent_group"]
+
+        class NarrowedConsumer(BaseConsumer):
+            groups = ["child_group"]
+
+        assert NarrowedConsumer().groups == ["child_group"]
+
+    def test_broadcast_default_groups_include_extras(self) -> None:
+        """Test that broadcast_event's default targets match what instances join."""
+
+        class NotifyMixin:
+            extra_groups: ClassVar[list[str]] = ["notify_group"]
+
+        class MergedConsumer(NotifyMixin, AsyncJsonWebsocketConsumer):  # type: ignore[misc]
+            groups = ["static_group"]
+
+        assert MergedConsumer._default_groups() == MergedConsumer().groups
+
+    def test_default_groups_without_declared_groups(self) -> None:
+        """Test that a consumer never declaring `groups` still resolves defaults."""
+
+        class BareConsumer(AsyncJsonWebsocketConsumer):
+            pass
+
+        assert BareConsumer._default_groups() == []
+
+    def test_groups_set_before_super_init_is_preserved(self) -> None:
+        """Test that a consumer assigning self.groups in __init__ is not clobbered."""
+
+        class CustomInitConsumer(AsyncJsonWebsocketConsumer):
+            def __init__(self, *args: Any, **kwargs: Any) -> None:
+                self.groups = ["from_init"]
+                super().__init__(*args, **kwargs)
+
+        assert CustomInitConsumer().groups == ["from_init"]
+
+    def test_runtime_group_mutation_is_per_instance(self) -> None:
+        """Test that appending to self.groups does not leak into the class attribute."""
+
+        class StaticGroupConsumer(AsyncJsonWebsocketConsumer):
+            groups = ["static_group"]
+
+        first = StaticGroupConsumer()
+        first.groups.append("per_connection_group")
+
+        assert StaticGroupConsumer.groups == ["static_group"]
+        assert StaticGroupConsumer().groups == ["static_group"]
 
 
 class TestWebsocketEdgeCases:

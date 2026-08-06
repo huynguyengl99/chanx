@@ -102,6 +102,32 @@ A single consumer can use multiple mixins:
 
 This consumer handles ``ping``, ``extra_request`` (from the WebSocket mixin), and ``extra_event`` (from the event mixin).
 
+Contributing Groups
+-------------------
+
+A mixin whose ``@event_handler`` methods rely on a channel group needs that group to be joined, but ``groups`` is owned by the underlying framework and follows normal MRO shadowing — if two classes in the chain declare it, only the most derived one applies. Use ``extra_groups`` instead, which Chanx merges across the whole MRO:
+
+.. code-block:: python
+
+    class HealthMixin:
+        extra_groups: ClassVar[list[str]] = ["health_group"]
+
+        @event_handler
+        async def handle_health_alert(
+            self, event: HealthAlertEvent
+        ) -> HealthAlertEvent:
+            return event
+
+
+    class EchoMixin:
+        extra_groups: ClassVar[list[str]] = ["echo_group"]
+
+
+    class GatewayConsumer(HealthMixin, EchoMixin, AsyncJsonWebsocketConsumer):
+        groups = ["static_group"]
+
+``GatewayConsumer`` joins ``static_group``, ``health_group``, and ``echo_group``. Duplicates are collapsed, and ``groups`` keeps its usual behaviour, so a subclass can still replace an inherited group list outright.
+
 How It Works
 ------------
 

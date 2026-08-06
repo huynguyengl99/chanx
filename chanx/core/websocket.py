@@ -73,6 +73,11 @@ class ChanxWebsocketConsumerMixin(Generic[ReceiveEvent]):
     passthrough_events: ClassVar[list[type[BaseMessage]]] = []
     passthrough_method_prefix: ClassVar[str] = "handle_passthrough_"
 
+    # Groups contributed by mixins, merged across the MRO. Kept separate from
+    # ``groups``, which the underlying framework owns and shadows as usual.
+    extra_groups: ClassVar[list[str]] = []
+    _merged_extra_groups: ClassVar[list[str]] = []
+
     # Internal handler registries - populated automatically by metaclass
     _MESSAGE_HANDLER_INFO_MAP: dict[str, AsyncAPIHandlerInfo] = (
         {}
@@ -134,6 +139,8 @@ class ChanxWebsocketConsumerMixin(Generic[ReceiveEvent]):
         cls._MESSAGE_HANDLER_INFO_MAP = {}
         cls._EVENT_HANDLER_INFO_MAP = {}
 
+        cls._merged_extra_groups = cls._collect_extra_groups()
+
         # Process all handlers
         cls._process_handlers()
 
@@ -159,15 +166,15 @@ class ChanxWebsocketConsumerMixin(Generic[ReceiveEvent]):
             # Process WebSocket handlers
             if hasattr(attr, "_ws_handler_info"):
                 ws_handler_info: AsyncAPIHandlerInfo = attr._ws_handler_info
-                cls._MESSAGE_HANDLER_INFO_MAP[ws_handler_info["message_action"]] = (
-                    ws_handler_info
+                cls._register_handler_info(
+                    cls._MESSAGE_HANDLER_INFO_MAP, ws_handler_info, "message"
                 )
 
             # Process event handlers
             if hasattr(attr, "_event_handler_info"):
                 event_handler_info: AsyncAPIHandlerInfo = attr._event_handler_info
-                cls._EVENT_HANDLER_INFO_MAP[event_handler_info["message_action"]] = (
-                    event_handler_info
+                cls._register_handler_info(
+                    cls._EVENT_HANDLER_INFO_MAP, event_handler_info, "event"
                 )
 
         # Process passthrough events
@@ -176,6 +183,31 @@ class ChanxWebsocketConsumerMixin(Generic[ReceiveEvent]):
         # Register handler messages and build adapters
         cls._register_handler_messages()
         cls._build_adapters()
+
+    @classmethod
+    def _register_handler_info(
+        cls,
+        handler_info_map: dict[str, AsyncAPIHandlerInfo],
+        handler_info: AsyncAPIHandlerInfo,
+        kind: str,
+    ) -> None:
+        """
+        Register a handler under its action, rejecting duplicates.
+
+        Compares method names so overriding stays legal: an overridden handler
+        resolves to a single attribute and so registers under one name.
+        """
+        action = handler_info["message_action"]
+        existing = handler_info_map.get(action)
+        if existing and existing["method_name"] != handler_info["method_name"]:
+            first, second = sorted(
+                [existing["method_name"], handler_info["method_name"]]
+            )
+            raise TypeError(
+                f"{cls.__name__} has two {kind} handlers for action {action!r}: "
+                f"{first}() and {second}(). Actions must be unique within a consumer."
+            )
+        handler_info_map[action] = handler_info
 
     @classmethod
     def _collect_passthrough_events(cls) -> list[type[BaseMessage]]:
@@ -196,6 +228,26 @@ class ChanxWebsocketConsumerMixin(Generic[ReceiveEvent]):
                     seen.add(msg_type)
                     merged.append(msg_type)
         return merged
+
+    @classmethod
+    def _collect_extra_groups(cls) -> list[str]:
+        """Collect extra_groups from the entire MRO, deduplicated."""
+        merged: list[str] = []
+        seen: set[str] = set()
+        for klass in cls.__mro__:
+            for group in klass.__dict__.get("extra_groups", []):
+                if group not in seen:
+                    seen.add(group)
+                    merged.append(group)
+        return merged
+
+    @classmethod
+    def _default_groups(cls) -> list[str]:
+        """Groups a consumer joins by default: declared ``groups`` plus extras."""
+        # getattr: fast-channels only annotates ``groups``, leaving it unset.
+        groups = list(getattr(cls, "groups", None) or [])
+        groups.extend(g for g in cls._merged_extra_groups if g not in groups)
+        return groups
 
     @classmethod
     def _process_passthrough_events(cls) -> None:
@@ -397,6 +449,12 @@ class ChanxWebsocketConsumerMixin(Generic[ReceiveEvent]):
 
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         super().__init__(*args, **kwargs)
+
+        # Copy: a class-level ``groups`` list is shared by every instance.
+        groups = list(self.groups)
+        groups.extend(g for g in self._merged_extra_groups if g not in groups)
+        self.groups = groups
+
         if self.authenticator_class:
             self.authenticator = self.authenticator_class(self.send_message)
 
@@ -784,7 +842,7 @@ class ChanxWebsocketConsumerMixin(Generic[ReceiveEvent]):
         assert channel_layer is not None
         group_list: list[str]
         if groups is None:
-            group_list = cls.groups or []
+            group_list = cls._default_groups()
         elif isinstance(groups, str):
             group_list = [groups]
         else:

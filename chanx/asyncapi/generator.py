@@ -67,7 +67,9 @@ class AsyncAPIGenerator:
 
         self.channels: dict[str, dict[str, Any]] = {}
 
-        self._route_channel_mapping: dict[str, str] = {}
+        # Keyed by (path, consumer name): a multiplexed route serves several
+        # consumers at the same address, so the path alone is not unique.
+        self._route_channel_mapping: dict[tuple[str, str], str] = {}
 
         self.operations: dict[str, dict[str, Any]] = {}
 
@@ -157,7 +159,7 @@ class AsyncAPIGenerator:
             )
 
             # Use decorator metadata or fallback to defaults
-            channel_name: str = channel_info.get("name") or route.consumer.snake_name
+            channel_name = self._resolve_channel_name(route, channel_info)
             channel_description = channel_info.get(
                 "description", dedent(str(route.consumer.__doc__))
             )
@@ -192,11 +194,96 @@ class AsyncAPIGenerator:
                     for tag in channel_info.get("tags") or []
                 ]
 
-            # Use the resolved channel_name (which may be overridden by decorator)
+            # Describe the multiplexing envelope for sub-consumers of a
+            # demultiplexed route, so clients know how to address this channel.
+            if route.demultiplexer is not None and route.consumer_key is not None:
+                channel["x-chanx-multiplex"] = {
+                    "consumerField": route.demultiplexer.envelope_consumer_field,
+                    "messageField": route.demultiplexer.envelope_message_field,
+                    "consumerKey": route.consumer_key,
+                }
+
             self.channels[channel_name] = channel
-            self._route_channel_mapping[route.path] = channel_name
+            self._route_channel_mapping[self._route_key(route)] = channel_name
 
         return self.channels
+
+    @staticmethod
+    def _consumer_channel_name(consumer: type[ChanxWebsocketConsumerMixin]) -> str:
+        """
+        Resolve the channel name a consumer would use on a route of its own.
+
+        Args:
+            consumer: The consumer class to name
+
+        Returns:
+            The @channel decorator name, or the consumer's snake_case name
+        """
+        channel_info: ChannelInfo | dict[str, Any] = getattr(
+            consumer, "_channel_info", {}
+        )
+        return channel_info.get("name") or consumer.snake_name
+
+    def _resolve_channel_name(
+        self, route: RouteInfo, channel_info: ChannelInfo | dict[str, Any]
+    ) -> str:
+        """
+        Resolve the channel name for a route.
+
+        A sub-consumer of a multiplexed route is named after its demultiplexer and
+        envelope key, both because that is how a client addresses it and because the
+        same consumer may also be mounted on a route of its own, where it keeps its
+        plain name.
+
+        Args:
+            route: The route the channel is being built for
+            channel_info: The consumer's @channel decorator metadata
+
+        Returns:
+            A channel name not already used in this specification
+        """
+        if route.demultiplexer is not None and route.consumer_key is not None:
+            demultiplexer_name = self._consumer_channel_name(route.demultiplexer)
+            channel_name = f"{demultiplexer_name}_{route.consumer_key}"
+        else:
+            channel_name = channel_info.get("name") or route.consumer.snake_name
+
+        return self._deduplicate_channel_name(channel_name, route)
+
+    @staticmethod
+    def _route_key(route: RouteInfo) -> tuple[str, str]:
+        """
+        Build the lookup key identifying a route's channel.
+
+        Args:
+            route: The route to build a key for
+
+        Returns:
+            Tuple of (path, consumer class name)
+        """
+        return route.path, route.consumer.__name__
+
+    def _deduplicate_channel_name(self, channel_name: str, route: RouteInfo) -> str:
+        """
+        Make a channel name unique across the specification.
+
+        Two routes can still resolve to the same name, for instance when one
+        consumer is mounted on two routes, or two demultiplexers share a name.
+
+        Args:
+            channel_name: The channel name resolved for this route
+            route: The route the channel is being built for
+
+        Returns:
+            A channel name not already used in this specification
+        """
+        if channel_name not in self.channels:
+            return channel_name
+
+        suffix = 2
+        while f"{channel_name}_{suffix}" in self.channels:
+            suffix += 1
+        return f"{channel_name}_{suffix}"
 
     def get_channel_messages(
         self, consumer: type[ChanxWebsocketConsumerMixin]
@@ -248,6 +335,41 @@ class AsyncAPIGenerator:
                     handler_info, consumer, route, is_event=True
                 )
 
+    def _unique_operation_name(
+        self, action_name: str, route: RouteInfo, channel_name: str
+    ) -> str:
+        """
+        Make an operation name unique across the specification.
+
+        An operation on a multiplexed route is always qualified with its channel
+        name, both because the same consumer is often also mounted on a route of its
+        own and because that route must keep the plain name whichever is documented
+        first. Otherwise a colliding action is qualified with the consumer name, and
+        a numeric suffix is appended when even that is taken.
+
+        Args:
+            action_name: The action name resolved from the handler
+            route: The route the operation belongs to
+            channel_name: The name of the channel the operation belongs to
+
+        Returns:
+            An operation name not already used in this specification
+        """
+        if route.consumer_key is not None:
+            qualified = f"{channel_name}_{action_name}"
+        elif action_name not in self._operation_names:
+            return action_name
+        else:
+            qualified = "_".join((route.consumer.snake_name, action_name))
+
+        if qualified not in self._operation_names:
+            return qualified
+
+        suffix = 2
+        while f"{qualified}_{suffix}" in self._operation_names:
+            suffix += 1
+        return f"{qualified}_{suffix}"
+
     def _build_single_operation(
         self,
         handler_info: AsyncAPIHandlerInfo,
@@ -265,11 +387,10 @@ class AsyncAPIGenerator:
         Returns:
             AsyncAPI operation definition.
         """
-        action_name = handler_info["action"]
-        if action_name in self._operation_names:
-            action_name = "_".join((consumer.snake_name, action_name))
-
-        channel_name = self._route_channel_mapping[route.path]
+        channel_name = self._route_channel_mapping[self._route_key(route)]
+        action_name = self._unique_operation_name(
+            handler_info["action"], route, channel_name
+        )
         operation: dict[str, Any] = {
             "action": "receive" if not is_event else "send",
             "channel": {"$ref": f"#/channels/{channel_name}"},

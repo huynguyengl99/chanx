@@ -107,7 +107,7 @@ license = {file = "LICENSE"}
 name = "chanx"
 readme = "README.rst"
 requires-python = ">=3.11,<4.0"
-version = "2.8.1"
+version = "2.9.0"
 
 [project.optional-dependencies]
 channels = [

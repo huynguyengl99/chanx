@@ -1,3 +1,9 @@
+## v2.9.0 (2026-08-06)
+
+### Feat
+
+- complete mixin composition for groups and handler actions
+
 ## v2.8.1 (2026-07-29)
 
 ### Fix

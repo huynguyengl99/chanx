@@ -6,10 +6,12 @@ including message processing, type adapter building, and handler routing.
 """
 
 from typing import Any, ClassVar, Literal
-from unittest.mock import AsyncMock
+from unittest.mock import AsyncMock, Mock
 
 import pytest
 from chanx.channels.websocket import AsyncJsonWebsocketConsumer
+from chanx.constants import CONNECT_COMPLETE_SCOPE_KEY
+from chanx.core.authenticator import BaseAuthenticator
 from chanx.core.decorators import event_handler, ws_handler
 from chanx.messages.base import BaseMessage
 from chanx.messages.outgoing import CompleteMessage, ErrorMessage
@@ -425,3 +427,103 @@ class TestWebsocketEdgeCases:
                 "event_data": event.model_dump(mode="json"),
             },
         )
+
+
+class TestConnectCompleteSignal:
+    """Test the connect-complete contract an owner declares through the scope."""
+
+    @staticmethod
+    def make_consumer(
+        consumer_class: type[AsyncJsonWebsocketConsumer], signal: Any
+    ) -> AsyncJsonWebsocketConsumer:
+        """Build a consumer wired up enough to run websocket_connect."""
+        consumer = consumer_class()
+        consumer.scope = {CONNECT_COMPLETE_SCOPE_KEY: signal} if signal else {}
+        consumer.groups = []
+        consumer.channel_name = "test-channel"
+        consumer.accept = AsyncMock()  # type: ignore[method-assign]
+        consumer.close = AsyncMock()  # type: ignore[method-assign]
+        return consumer
+
+    @pytest.mark.asyncio
+    async def test_signal_fires_after_a_successful_connect(self) -> None:
+        class PlainConsumer(AsyncJsonWebsocketConsumer):
+            pass
+
+        signal = Mock()
+        consumer = self.make_consumer(PlainConsumer, signal)
+
+        await consumer.websocket_connect({"type": "websocket.connect"})
+
+        signal.assert_called_once_with()
+
+    @pytest.mark.asyncio
+    async def test_signal_fires_when_authentication_denies(self) -> None:
+        """A denied sub-consumer must not hold its owner for the full timeout."""
+
+        class DenyingAuthenticator(BaseAuthenticator):
+            async def authenticate(self, scope: Any) -> bool:
+                return False
+
+        class DeniedConsumer(AsyncJsonWebsocketConsumer):
+            authenticator_class = DenyingAuthenticator
+
+        signal = Mock()
+        consumer = self.make_consumer(DeniedConsumer, signal)
+        consumer.authenticator = DenyingAuthenticator(consumer.send_message)
+
+        await consumer.websocket_connect({"type": "websocket.connect"})
+
+        consumer.close.assert_awaited_once()  # type: ignore[attr-defined]
+        signal.assert_called_once_with()
+
+    @pytest.mark.asyncio
+    async def test_signal_fires_while_an_exception_propagates(self) -> None:
+        class FailingConsumer(AsyncJsonWebsocketConsumer):
+            async def post_authentication(self) -> None:
+                raise RuntimeError("boom")
+
+        signal = Mock()
+        consumer = self.make_consumer(FailingConsumer, signal)
+
+        with pytest.raises(RuntimeError, match="boom"):
+            await consumer.websocket_connect({"type": "websocket.connect"})
+
+        signal.assert_called_once_with()
+
+    @pytest.mark.asyncio
+    async def test_awaitable_signal_is_awaited(self) -> None:
+        class PlainConsumer(AsyncJsonWebsocketConsumer):
+            pass
+
+        signal = AsyncMock()
+        consumer = self.make_consumer(PlainConsumer, signal)
+
+        await consumer.websocket_connect({"type": "websocket.connect"})
+
+        signal.assert_awaited_once_with()
+
+    @pytest.mark.asyncio
+    async def test_a_raising_signal_does_not_break_the_connection(self) -> None:
+        """An owner's bookkeeping must not be able to fail a connection."""
+
+        class PlainConsumer(AsyncJsonWebsocketConsumer):
+            pass
+
+        signal = Mock(side_effect=RuntimeError("owner is broken"))
+        consumer = self.make_consumer(PlainConsumer, signal)
+
+        await consumer.websocket_connect({"type": "websocket.connect"})
+
+        consumer.accept.assert_awaited_once()  # type: ignore[attr-defined]
+
+    @pytest.mark.asyncio
+    async def test_consumer_without_the_key_is_unaffected(self) -> None:
+        class PlainConsumer(AsyncJsonWebsocketConsumer):
+            pass
+
+        consumer = self.make_consumer(PlainConsumer, None)
+
+        await consumer.websocket_connect({"type": "websocket.connect"})
+
+        consumer.accept.assert_awaited_once()  # type: ignore[attr-defined]

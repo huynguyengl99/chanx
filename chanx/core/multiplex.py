@@ -29,6 +29,7 @@ from asgiref.timeout import timeout as async_timeout
 from pydantic import BaseModel, TypeAdapter, ValidationError, create_model
 from typing_extensions import TypeVar
 
+from chanx.constants import CONNECT_COMPLETE_SCOPE_KEY
 from chanx.core.websocket import ChanxWebsocketConsumerMixin
 from chanx.messages.base import BaseMessage
 from chanx.messages.outgoing import ErrorMessage
@@ -110,8 +111,8 @@ class ChildConnection:
         consumer: The sub-consumer instance driven by the demultiplexer.
         queue: Inbound ASGI message queue acting as the sub-consumer's `receive`.
         task: Task running the sub-consumer's ASGI application loop.
-        ready: Set once the sub-consumer has finished handling websocket.connect.
-        receive_calls: How many times the sub-consumer has asked for a message.
+        ready: Set once the sub-consumer has signalled that connect handling
+               finished, or once its task has ended.
         closed: Whether the sub-consumer has closed and is no longer routable.
     """
 
@@ -119,7 +120,6 @@ class ChildConnection:
     queue: asyncio.Queue[ASGIMessage] = field(default_factory=_new_asgi_queue)
     task: asyncio.Task[None] | None = None
     ready: asyncio.Event = field(default_factory=asyncio.Event)
-    receive_calls: int = 0
     closed: bool = False
 
 
@@ -311,6 +311,9 @@ class ChanxDemultiplexerMixin(ChanxWebsocketConsumerMixin[ReceiveEvent]):
         authenticator added (such as ``scope["user"]``) are visible to every
         sub-consumer, while later per-sub-consumer mutations stay isolated.
 
+        The scope also carries the sub-consumer's readiness signal, which the Chanx
+        base consumer invokes once its own ``websocket_connect`` has run.
+
         Returns once every sub-consumer has finished connecting, so that a client
         which starts sending or expects group traffic as soon as the socket opens
         cannot race ahead of the sub-consumers joining their groups.
@@ -319,56 +322,37 @@ class ChanxDemultiplexerMixin(ChanxWebsocketConsumerMixin[ReceiveEvent]):
             connection = ChildConnection(consumer=consumer_class())
             self._children[key] = connection
 
+            child_scope = dict(self.scope) | {
+                CONNECT_COMPLETE_SCOPE_KEY: connection.ready.set
+            }
+
             child_app = cast(Any, connection.consumer)
-            connection.task = create_task(
+            task = create_task(
                 child_app(
-                    dict(self.scope),
-                    self._make_child_receive(connection),
+                    child_scope,
+                    connection.queue.get,
                     self._make_child_send(key),
                 ),
                 background_tasks=self._child_tasks,
                 name=f"chanx-multiplex-{type(self).__name__}-{key}",
             )
+            # A sub-consumer that dies before signalling would otherwise hold the
+            # shared connection for the whole connect timeout.
+            task.add_done_callback(lambda _task, c=connection: c.ready.set())  # type: ignore[misc]
+            connection.task = task
 
             await connection.queue.put({"type": WEBSOCKET_CONNECT})
 
         await self._wait_for_children_ready()
 
-    @staticmethod
-    def _make_child_receive(
-        connection: ChildConnection,
-    ) -> Callable[[], Awaitable[ASGIMessage]]:
-        """
-        Build the ASGI `receive` callable handed to a single sub-consumer.
-
-        A consumer's dispatch loop only asks for its next message once it has
-        finished handling the previous one, so the second request proves
-        ``websocket.connect`` has completed -- joining groups included. That is what
-        marks the sub-consumer ready.
-
-        Args:
-            connection: The sub-consumer connection to read messages for
-
-        Returns:
-            An async callable yielding the sub-consumer's next inbound message
-        """
-
-        async def child_receive() -> ASGIMessage:
-            """Take the sub-consumer's next inbound ASGI message."""
-            connection.receive_calls += 1
-            if connection.receive_calls > 1:
-                connection.ready.set()
-            return await connection.queue.get()
-
-        return child_receive
-
     async def _wait_for_children_ready(self) -> None:
         """
         Wait for every sub-consumer to finish connecting.
 
-        A sub-consumer that closed while connecting still becomes ready, so the only
-        way to time out here is a sub-consumer that hangs or crashes during connect;
-        that is logged and the shared connection carries on without it.
+        A sub-consumer that closed while connecting, or whose task ended, still
+        becomes ready, so the only way to time out here is a sub-consumer that hangs
+        inside ``websocket_connect``; that is logged and the shared connection
+        carries on without it.
         """
         waits = [
             connection.ready.wait()

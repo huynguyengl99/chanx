@@ -28,7 +28,7 @@ from asgiref.sync import async_to_sync
 from pydantic import Field, TypeAdapter, ValidationError
 from typing_extensions import TypeVar
 
-from chanx.constants import COMPLETE_ACTIONS
+from chanx.constants import COMPLETE_ACTIONS, CONNECT_COMPLETE_SCOPE_KEY
 from chanx.core.authenticator import BaseAuthenticator
 from chanx.core.config import config
 from chanx.core.decorators import event_handler
@@ -452,32 +452,66 @@ class ChanxWebsocketConsumerMixin(Generic[ReceiveEvent]):
         Accepts the connection, authenticates the user, and either
         adds the user to appropriate groups or closes the connection.
 
+        Whatever the outcome, the connect-complete signal is emitted before
+        returning; see :meth:`_signal_connect_complete` for the contract.
+
         Args:
             message: The connection message from the framework
         """
-        await self.accept()  # type: ignore
+        try:
+            await self.accept()  # type: ignore
 
-        # Authenticate the connection
-        if self.authenticator:
-            auth_result = await self.authenticator.authenticate(self.scope)
+            # Authenticate the connection
+            if self.authenticator:
+                auth_result = await self.authenticator.authenticate(self.scope)
 
-            if not auth_result:
-                await self.close()  # type: ignore
-                return
+                if not auth_result:
+                    await self.close()  # type: ignore
+                    return
+
+            try:
+                for group in self.groups:
+                    channel_layer = self.__class__.get_channel_layer(
+                        self.channel_layer_alias
+                    )
+                    if channel_layer:
+                        await channel_layer.group_add(group, self.channel_name)
+            except AttributeError:
+                raise ValueError(
+                    "BACKEND is unconfigured or doesn't support groups"
+                ) from None
+
+            await self.post_authentication()
+        finally:
+            await self._signal_connect_complete()
+
+    async def _signal_connect_complete(self) -> None:
+        """
+        Tell an owner driving this consumer that connect handling has finished.
+
+        A component that runs a consumer itself -- the demultiplexer being the one
+        in Chanx -- needs to know when the consumer is ready to be talked to, which
+        is only true once its groups are joined. It declares that interest by
+        putting a zero-argument callable under ``chanx_connect_complete`` in the
+        scope it hands the consumer; that callable is invoked exactly once, on
+        every exit from websocket_connect: after post_authentication() on the happy
+        path, after close() when authentication denied the request, and while an
+        exception is propagating.
+
+        Consumers on a route of their own never carry the key, so this is a no-op
+        for them. A callback that raises is logged and swallowed: an owner's
+        bookkeeping must not be able to break a connection.
+        """
+        signal = self.scope.get(CONNECT_COMPLETE_SCOPE_KEY)
+        if signal is None:
+            return
 
         try:
-            for group in self.groups:
-                channel_layer = self.__class__.get_channel_layer(
-                    self.channel_layer_alias
-                )
-                if channel_layer:
-                    await channel_layer.group_add(group, self.channel_name)
-        except AttributeError:
-            raise ValueError(
-                "BACKEND is unconfigured or doesn't support groups"
-            ) from None
-
-        await self.post_authentication()
+            result = signal()
+            if inspect.isawaitable(result):
+                await result
+        except Exception:
+            await logger.aexception("Failed to signal connect completion")
 
     async def websocket_disconnect(self, message: Any) -> None:
         """

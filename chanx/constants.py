@@ -31,3 +31,9 @@ COMPLETE_ACTIONS = {
 }
 
 CHANX_ACTIONS = COMPLETE_ACTIONS | {"error"}
+
+MULTIPLEX_READY_ACTION: Literal["multiplex_ready"] = "multiplex_ready"
+
+# Scope key a consumer's owner may set to learn when connect handling has finished.
+# See ChanxWebsocketConsumerMixin.websocket_connect for the contract.
+CONNECT_COMPLETE_SCOPE_KEY = "chanx_connect_complete"

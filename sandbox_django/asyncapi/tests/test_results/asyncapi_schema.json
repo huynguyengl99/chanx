@@ -97,7 +97,13 @@
         {
           "name": "multiplex"
         }
-      ]
+      ],
+      "x-chanx-multiplex": {
+        "consumerField": "consumer",
+        "messageField": "message",
+        "versionField": "version",
+        "version": 1
+      }
     },
     "discussionMultiplexTopics": {
       "address": "ws/discussion/mux/",

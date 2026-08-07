@@ -252,7 +252,13 @@
         {
           "name": "multiplex"
         }
-      ]
+      ],
+      "x-chanx-multiplex": {
+        "consumerField": "consumer",
+        "messageField": "message",
+        "versionField": "version",
+        "version": 1
+      }
     },
     "multiplex_system": {
       "address": "/ws/mux",

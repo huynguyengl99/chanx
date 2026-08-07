@@ -249,6 +249,24 @@ class ParameterObject(BaseModel):
     model_config = ConfigDict(validate_by_name=True)
 
 
+class MultiplexExtension(BaseModel):
+    """
+    The ``x-chanx-multiplex`` channel extension describing a multiplexed route.
+
+    Present on every channel of a demultiplexed route. ``consumerKey`` is absent
+    on the demultiplexer's own channel, which is how a reader tells the channel
+    that owns the socket from the channels reached through it.
+    """
+
+    consumerField: str
+    messageField: str
+    versionField: str
+    version: int
+    consumerKey: str | None = None
+
+    model_config = ConfigDict(validate_by_name=True)
+
+
 class ChannelObject(BaseModel):
     """AsyncAPI Channel Object describing a communication channel."""
 
@@ -264,6 +282,14 @@ class ChannelObject(BaseModel):
     publish: OperationObject | None = None
     tags: list[TagObject] | None = None
     externalDocs: ExternalDocumentationObject | None = None
+
+    # Without this the extension would be dropped when a generated document is
+    # read back in, which is how the client generator learns a route is multiplexed.
+    multiplex: MultiplexExtension | None = Field(
+        default=None, alias="x-chanx-multiplex"
+    )
+
+    model_config = ConfigDict(validate_by_name=True)
 
 
 # -------------------------

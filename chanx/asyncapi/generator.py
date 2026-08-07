@@ -19,6 +19,7 @@ from chanx.asyncapi.constants import (
     DEFAULT_SERVER_URL,
 )
 from chanx.asyncapi.type_defs import ChannelObject, ParameterObject
+from chanx.core.multiplex import is_demultiplexer
 from chanx.core.registry import message_registry
 from chanx.core.websocket import ChanxWebsocketConsumerMixin
 from chanx.messages.base import BaseMessage
@@ -194,21 +195,46 @@ class AsyncAPIGenerator:
                     for tag in channel_info.get("tags") or []
                 ]
 
-            # Describe the multiplexing envelope for sub-consumers of a
-            # demultiplexed route, so clients know how to address this channel.
-            if route.demultiplexer is not None and route.consumer_key is not None:
-                channel["x-chanx-multiplex"] = {
-                    "consumerField": route.demultiplexer.envelope_consumer_field,
-                    "messageField": route.demultiplexer.envelope_message_field,
-                    "versionField": route.demultiplexer.envelope_version_field,
-                    "version": route.demultiplexer.envelope_version,
-                    "consumerKey": route.consumer_key,
-                }
+            multiplex = self._multiplex_extension(route)
+            if multiplex is not None:
+                channel["x-chanx-multiplex"] = multiplex
 
             self.channels[channel_name] = channel
             self._route_channel_mapping[self._route_key(route)] = channel_name
 
         return self.channels
+
+    @staticmethod
+    def _multiplex_extension(route: RouteInfo) -> dict[str, Any] | None:
+        """
+        Describe the multiplexing envelope for a channel of a demultiplexed route.
+
+        Every channel of such a route carries it, so a reader can tell the whole
+        route is multiplexed from any one of its channels. The demultiplexer's own
+        channel is the one without a ``consumerKey``: it owns the socket and speaks
+        un-enveloped.
+
+        Args:
+            route: The route the channel is being built for
+
+        Returns:
+            The extension dictionary, or None for a route that is not multiplexed
+        """
+        demultiplexer = route.demultiplexer or (
+            route.consumer if is_demultiplexer(route.consumer) else None
+        )
+        if demultiplexer is None:
+            return None
+
+        extension: dict[str, Any] = {
+            "consumerField": demultiplexer.envelope_consumer_field,
+            "messageField": demultiplexer.envelope_message_field,
+            "versionField": demultiplexer.envelope_version_field,
+            "version": demultiplexer.envelope_version,
+        }
+        if route.consumer_key is not None:
+            extension["consumerKey"] = route.consumer_key
+        return extension
 
     @staticmethod
     def _consumer_channel_name(consumer: type[ChanxWebsocketConsumerMixin]) -> str:

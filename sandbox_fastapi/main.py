@@ -139,6 +139,24 @@ html = """
                 </form>
                 <ul id='messages' class='messages'></ul>
             </div>
+
+            <!-- Multiplexed Chat Box: system + chat + notifications over one socket -->
+            <div class="chat-box mux-chat">
+                <h3>Multiplex (3 consumers, 1 connection)</h3>
+                <div class="job-controls room-controls">
+                    <select id="muxTarget">
+                        <option value="system">system &rarr; user_message</option>
+                        <option value="chat">chat &rarr; chat</option>
+                        <option value="notifications">notifications &rarr; notification</option>
+                    </select>
+                    <button onclick="sendMuxPing()">Ping mux</button>
+                </div>
+                <form class="input-form" onsubmit="sendMuxMessage(event)">
+                    <input type="text" id="muxMessageText" placeholder="Type message for selected consumer..." autocomplete="off"/>
+                    <button type="submit">Send</button>
+                </form>
+                <ul id='muxMessages' class='messages'></ul>
+            </div>
         </div>
         <!-- Load single JavaScript file with all functionality -->
         <script src="/static/js/main.js"></script>

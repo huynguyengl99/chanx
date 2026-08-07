@@ -12,7 +12,22 @@ var wsReliable = new WebSocket("ws://localhost:8080/ws/reliable");
 var wsAnalytics = new WebSocket("ws://localhost:8080/ws/analytics");
 var wsSystem = new WebSocket("ws://localhost:8080/ws/system");
 var wsBackgroundJob = new WebSocket("ws://localhost:8080/ws/background_jobs");
+var wsMux = new WebSocket("ws://localhost:8080/ws/mux"); // Several consumers, one socket
 var wsRoom = null; // Dynamic room connection
+
+// Action each multiplexed sub-consumer accepts, keyed by its envelope name
+var MUX_ACTIONS = {
+    system: "user_message",
+    chat: "chat",
+    notifications: "notification"
+};
+
+// Reuse the per-layer message classes so the routing is visible at a glance
+var MUX_CLASSES = {
+    system: "system",
+    chat: "chat",
+    notifications: "notification"
+};
 
 // =============================================================================
 // WebSocket Event Handlers
@@ -120,6 +135,23 @@ wsBackgroundJob.onmessage = function(event) {
     }
 };
 
+// Handle multiplexed messages. Frames produced by a sub-consumer arrive wrapped
+// in an envelope naming it; the demultiplexer's own replies arrive bare.
+wsMux.onmessage = function(event) {
+    try {
+        var data = JSON.parse(event.data);
+        var consumer = data.consumer;
+        var inner = consumer ? data.message : data;
+        addMuxMessage(
+            "[" + (consumer || "mux") + "] " + describeMuxMessage(inner),
+            consumer ? MUX_CLASSES[consumer] : "system"
+        );
+    } catch (e) {
+        // Fallback for non-JSON messages
+        addMuxMessage(event.data, "system");
+    }
+};
+
 // =============================================================================
 // Utility Functions - Message Display
 // =============================================================================
@@ -162,6 +194,28 @@ function addJobMessage(text) {
     message.appendChild(content);
     messages.appendChild(message);
     messages.scrollTop = messages.scrollHeight;
+}
+
+function addMuxMessage(text, cssClass) {
+    var messages = document.getElementById('muxMessages');
+    var message = document.createElement('li');
+    message.className = cssClass || 'user-message';
+    var content = document.createTextNode(text);
+    message.appendChild(content);
+    messages.appendChild(message);
+    messages.scrollTop = messages.scrollHeight;
+}
+
+// Render the inner (un-enveloped) message of a multiplexed frame
+function describeMuxMessage(message) {
+    var payload = message.payload || {};
+    if (message.action === "error") {
+        return "❌ " + JSON.stringify(payload.detail || payload);
+    }
+    if (payload.message !== undefined) {
+        return message.action + ": " + payload.message;
+    }
+    return message.action;
 }
 
 // =============================================================================
@@ -326,6 +380,52 @@ function sendMessage(event) {
 
     input.value = '';
     event.preventDefault();
+}
+
+// =============================================================================
+// Multiplex Functions
+// =============================================================================
+
+// Send an enveloped frame to the sub-consumer picked in the dropdown. The chat
+// and notifications sub-consumers share their groups with the standalone
+// /ws/chat and /ws/notifications routes, so replies also land in those boxes.
+function sendMuxMessage(event) {
+    event.preventDefault();
+
+    var input = document.getElementById("muxMessageText");
+    var message = input.value;
+
+    if (message.trim() === '') return;
+
+    if (wsMux.readyState === WebSocket.OPEN) {
+        var target = document.getElementById("muxTarget").value;
+        var frame = {
+            consumer: target,
+            message: {
+                action: MUX_ACTIONS[target],
+                payload: {
+                    message: message
+                }
+            }
+        };
+        wsMux.send(JSON.stringify(frame));
+        addMuxMessage("👤 " + JSON.stringify(frame), 'user-message');
+    }
+
+    input.value = '';
+}
+
+// Send a frame with no envelope: it falls through to the demultiplexer's own
+// @ws_handler instead of being routed to a sub-consumer.
+function sendMuxPing() {
+    if (wsMux.readyState !== WebSocket.OPEN) return;
+
+    var frame = {
+        action: "ping",
+        payload: null
+    };
+    wsMux.send(JSON.stringify(frame));
+    addMuxMessage("👤 " + JSON.stringify(frame), 'user-message');
 }
 
 // =============================================================================

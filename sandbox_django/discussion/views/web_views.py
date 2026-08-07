@@ -139,3 +139,24 @@ class DiscussionTopicDetailView(APIView):
             context["topic"] = topic
 
         return Response(context)
+
+
+class DiscussionMultiplexView(APIView):
+    """Console for exercising the discussion demultiplexer over one socket."""
+
+    renderer_classes = [TemplateHTMLRenderer]
+    template_name = "discussion/multiplex.html"
+    permission_classes = [AllowAny]
+
+    def get(self, request: HttpRequest) -> Response:
+        """Handle GET requests to display the multiplex console."""
+        context: dict[str, Any] = {"recent_topics": []}
+
+        # The demultiplexer requires authentication, so the trigger links are
+        # only useful once logged in.
+        if request.user.is_authenticated:
+            context["recent_topics"] = DiscussionTopic.objects.order_by("-created_at")[
+                :5
+            ]
+
+        return Response(context)

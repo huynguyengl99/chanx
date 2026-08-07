@@ -7,6 +7,9 @@
     <div class="d-flex justify-content-between align-items-center mb-4">
         <h1>Discussions</h1>
         <div class="d-flex align-items-center gap-3">
+            <a href="{% url 'discussion-mux' %}" class="btn btn-outline-secondary">
+                <i class="bi bi-diagram-3"></i> Multiplex Console
+            </a>
             {% if request.user.is_authenticated %}
             <a href="{% url 'discussion-new' %}" class="btn btn-primary">
                 <i class="bi bi-plus-circle"></i> Ask Question

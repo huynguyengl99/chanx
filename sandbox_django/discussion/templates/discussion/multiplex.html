@@ -1,0 +1,293 @@
+{% extends "discussion/base.html" %}
+
+{% block title %}Multiplex Console - Chanx Example{% endblock %}
+
+{% block extra_css %}
+{{ block.super }}
+<style>
+    /* Multiplex console: one row per frame on the shared socket */
+    .frame-log {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+        max-height: 460px;
+        overflow-y: auto;
+        background: #fbfbfc;
+        border: 1px solid #e9ecef;
+        border-radius: 6px;
+    }
+
+    .frame-log li {
+        display: flex;
+        gap: 10px;
+        align-items: baseline;
+        padding: 8px 12px;
+        border-bottom: 1px solid #f1f3f5;
+        font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+        font-size: 0.8rem;
+        word-break: break-all;
+    }
+
+    .frame-log li:last-child {
+        border-bottom: none;
+    }
+
+    .frame-dir {
+        flex: 0 0 auto;
+        font-weight: bold;
+        color: #adb5bd;
+    }
+
+    .frame-tag {
+        flex: 0 0 auto;
+        padding: 1px 8px;
+        border-radius: 10px;
+        font-size: 0.7rem;
+        font-weight: 600;
+        color: white;
+        text-transform: uppercase;
+        letter-spacing: 0.03em;
+    }
+
+    /* One colour per sub-consumer, so envelope routing is visible at a glance */
+    .tag-topics { background-color: #0066cc; }
+    .tag-group_chat { background-color: #28a745; }
+    .tag-mux { background-color: #6c757d; }
+    .tag-sent { background-color: #ffc107; color: #000; }
+
+    .frame-body { flex: 1 1 auto; }
+
+    .frame-log li.outgoing { background: #fffdf5; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="mb-1">Multiplex Console</h1>
+            <p class="text-muted mb-0">
+                Two consumers over a single connection to
+                <code>/ws/discussion/mux/</code>
+            </p>
+        </div>
+        <a href="{% url 'discussion-home' %}" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left"></i> Discussions
+        </a>
+    </div>
+
+    {% if not request.user.is_authenticated %}
+    <div class="alert alert-warning">
+        <h4 class="alert-heading">Login required</h4>
+        <p>
+            The demultiplexer authenticates the shared connection with
+            <code>IsAuthenticated</code>, so the socket will be rejected while
+            you are anonymous.
+        </p>
+        <hr>
+        <p class="mb-0">
+            Please <a href="{% url 'rest_login' %}?next={{ request.path }}" class="alert-link">log in</a>
+            to use this console.
+        </p>
+    </div>
+    {% endif %}
+
+    <div class="row g-4">
+        <!-- Controls -->
+        <div class="col-lg-5">
+            <div class="card mb-4">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">Connection</h5>
+                    <span id="muxStatus" class="badge bg-secondary">connecting…</span>
+                </div>
+                <div class="card-body">
+                    <p class="text-muted small">
+                        Frames naming a <code>consumer</code> are routed to that
+                        sub-consumer. Frames without one fall through to the
+                        demultiplexer's own <code>@ws_handler</code> methods.
+                    </p>
+                    <div class="d-grid gap-2">
+                        <button class="btn btn-primary" onclick="muxPing('topics')">
+                            Ping <code class="text-white">topics</code> (enveloped)
+                        </button>
+                        <button class="btn btn-success" onclick="muxPing('group_chat')">
+                            Ping <code class="text-white">group_chat</code> (enveloped)
+                        </button>
+                        <button class="btn btn-secondary" onclick="muxPing(null)">
+                            Ping demultiplexer (no envelope)
+                        </button>
+                        <button class="btn btn-outline-danger" onclick="muxClear()">
+                            Clear log
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">Trigger real events</h5>
+                </div>
+                <div class="card-body">
+                    <p class="text-muted small">
+                        Both sub-consumers only accept <code>ping</code> from the
+                        client — everything else is pushed from the server by
+                        HTTP actions. Do one of these in a second tab and watch
+                        the enveloped event land here.
+                    </p>
+                    <ul class="list-unstyled mb-0">
+                        <li class="mb-2">
+                            <a href="{% url 'discussion-new' %}" target="_blank">
+                                <i class="bi bi-plus-circle"></i> Create a topic
+                            </a>
+                            &rarr; <code>[topics] topic_created</code>
+                        </li>
+                        {% for topic in recent_topics %}
+                        <li class="mb-2">
+                            <a href="{% url 'discussion-detail' topic.pk %}" target="_blank">
+                                <i class="bi bi-hand-thumbs-up"></i> Vote on "{{ topic.title|truncatechars:32 }}"
+                            </a>
+                            &rarr; <code>[topics] vote_updated</code>
+                        </li>
+                        {% endfor %}
+                        <li>
+                            <a href="{% url 'chat-home' %}" target="_blank">
+                                <i class="bi bi-people"></i> Join or leave a group chat
+                            </a>
+                            &rarr; <code>[group_chat] added_to_group</code>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- Frame log -->
+        <div class="col-lg-7">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">Frames on the wire</h5>
+                </div>
+                <div class="card-body">
+                    <ul id="muxFrames" class="frame-log">
+                        <li><span class="frame-body text-muted">Waiting for the socket…</span></li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+{{ block.super }}
+<script>
+    // Multiplex console: exercises DiscussionMultiplexer over one socket.
+    //
+    // Outgoing enveloped frame:
+    //   {"consumer": "topics", "message": {"action": "ping", "payload": null}}
+    // Incoming enveloped frame (the server adds "version"):
+    //   {"version": 1, "consumer": "topics", "message": {"action": "pong", ...}}
+    // Frames without a "consumer" belong to the demultiplexer itself.
+
+    let muxSocket = null;
+    let muxRetryCount = 0;
+    const MUX_MAX_RETRIES = 5;
+
+    function muxSetStatus(text, cssClass) {
+        const badge = document.getElementById('muxStatus');
+        badge.textContent = text;
+        badge.className = 'badge ' + cssClass;
+    }
+
+    function muxLog(direction, consumer, body) {
+        const list = document.getElementById('muxFrames');
+
+        // Drop the placeholder on the first real frame
+        if (list.dataset.ready !== 'true') {
+            list.innerHTML = '';
+            list.dataset.ready = 'true';
+        }
+
+        const item = document.createElement('li');
+        if (direction === 'out') {
+            item.className = 'outgoing';
+        }
+
+        const dir = document.createElement('span');
+        dir.className = 'frame-dir';
+        dir.textContent = direction === 'out' ? '↑' : '↓';
+
+        const tag = document.createElement('span');
+        tag.className = 'frame-tag ' + (direction === 'out' ? 'tag-sent' : 'tag-' + consumer);
+        tag.textContent = direction === 'out' ? 'sent' : consumer;
+
+        const text = document.createElement('span');
+        text.className = 'frame-body';
+        text.textContent = body;
+
+        item.appendChild(dir);
+        item.appendChild(tag);
+        item.appendChild(text);
+        list.appendChild(item);
+        list.scrollTop = list.scrollHeight;
+    }
+
+    function muxConnect() {
+        const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+        const wsUrl = `${protocol}//${window.location.host}/ws/discussion/mux/`;
+
+        muxSocket = new WebSocket(wsUrl);
+
+        muxSocket.onopen = () => {
+            muxRetryCount = 0;
+            muxSetStatus('connected', 'bg-success');
+        };
+
+        muxSocket.onmessage = (event) => {
+            const data = JSON.parse(event.data);
+            // Sub-consumer frames are enveloped; the demultiplexer's own are not
+            const consumer = data.consumer;
+            const inner = consumer ? data.message : data;
+            muxLog('in', consumer || 'mux', JSON.stringify(inner));
+        };
+
+        muxSocket.onclose = () => {
+            muxSetStatus('disconnected', 'bg-danger');
+
+            if (muxRetryCount < MUX_MAX_RETRIES) {
+                const retryDelay = Math.pow(2, muxRetryCount) * 1000;
+                setTimeout(() => {
+                    muxRetryCount++;
+                    muxSetStatus('reconnecting…', 'bg-warning text-dark');
+                    muxConnect();
+                }, retryDelay);
+            }
+        };
+
+        muxSocket.onerror = (error) => {
+            console.error('Multiplex WebSocket error:', error);
+        };
+    }
+
+    // Ping a sub-consumer by name, or the demultiplexer itself when consumer is null
+    function muxPing(consumer) {
+        if (!muxSocket || muxSocket.readyState !== WebSocket.OPEN) {
+            muxLog('out', null, 'socket is not open');
+            return;
+        }
+
+        const ping = { action: 'ping', payload: null };
+        const frame = consumer ? { consumer: consumer, message: ping } : ping;
+
+        muxSocket.send(JSON.stringify(frame));
+        muxLog('out', null, JSON.stringify(frame));
+    }
+
+    function muxClear() {
+        const list = document.getElementById('muxFrames');
+        list.innerHTML = '';
+        list.dataset.ready = 'true';
+    }
+
+    muxConnect();
+</script>
+{% endblock %}

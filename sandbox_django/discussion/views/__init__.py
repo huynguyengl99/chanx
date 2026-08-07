@@ -2,6 +2,7 @@ from .reply_views import DiscussionReplyViewSet
 from .topic_views import DiscussionTopicViewSet
 from .web_views import (
     DiscussionHomeView,
+    DiscussionMultiplexView,
     DiscussionTopicDetailView,
     NewDiscussionTopicView,
 )
@@ -14,4 +15,5 @@ __all__ = [
     "DiscussionHomeView",
     "NewDiscussionTopicView",
     "DiscussionTopicDetailView",
+    "DiscussionMultiplexView",
 ]

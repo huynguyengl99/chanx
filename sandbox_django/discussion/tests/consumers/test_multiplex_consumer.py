@@ -1,6 +1,7 @@
 from rest_framework import status
 
 from chanx.channels.testing import DjangoWebsocketCommunicator
+from chanx.constants import MULTIPLEX_READY_ACTION
 from chanx.messages.incoming import PingMessage
 from chanx.messages.outgoing import PongMessage
 from test_utils.testing import WebsocketTestCase
@@ -24,24 +25,30 @@ class TestDiscussionMultiplexer(WebsocketTestCase):
 
     async def connect_authenticated(self) -> DjangoWebsocketCommunicator:
         """
-        Connect and settle the authentication traffic.
+        Connect and settle the opening traffic.
 
         The demultiplexer authenticates the shared connection and reports it
         unwrapped, then every sub-consumer runs its own authenticator and reports
         its own result under its envelope key -- a sub-consumer may well be
-        stricter than the demultiplexer.
+        stricter than the demultiplexer. The multiplex_ready handshake closes the
+        burst, so reading up to it leaves the socket at a known point.
         """
         communicator = self.auth_communicator
         await communicator.connect()
         await communicator.assert_authenticated_status_ok()
 
-        pending = set(DiscussionMultiplexer.consumers)
-        while pending:
+        authenticated: set[str] = set()
+        while True:
             frame = await communicator.receive_json_from()
-            key = frame.get("consumer")
-            if key in pending and frame["message"]["action"] == "authentication":
-                pending.discard(key)
+            if frame.get("action") == MULTIPLEX_READY_ACTION:
+                assert sorted(frame["payload"]["ready"]) == sorted(
+                    DiscussionMultiplexer.consumers
+                )
+                break
+            if frame["message"]["action"] == "authentication":
+                authenticated.add(frame["consumer"])
 
+        assert authenticated == set(DiscussionMultiplexer.consumers)
         return communicator
 
     async def test_connect_and_ping_the_demultiplexer(self) -> None:
@@ -87,11 +94,9 @@ class TestDiscussionMultiplexer(WebsocketTestCase):
 
     async def test_channel_event_reaches_the_owning_sub_consumer(self) -> None:
         """The multiplexed list consumer stays subscribed to its own group."""
+        # The handshake connect_authenticated() waits for already means every
+        # sub-consumer has joined its groups, so an event can be broadcast at once.
         await self.connect_authenticated()
-
-        # Make sure the sub-consumers have joined their groups.
-        await self.auth_communicator.send_message(PingMessage(), consumer="topics")
-        await self.auth_communicator.receive_all_envelopes(stop_consumer="topics")
 
         payload = NewTopicEventPayload(
             id=1,

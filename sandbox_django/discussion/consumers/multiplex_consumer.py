@@ -18,8 +18,8 @@ from chanx.channels.multiplex import AsyncJsonWebsocketDemultiplexer
 from chanx.core.decorators import channel, ws_handler
 from chanx.messages.incoming import PingMessage
 from chanx.messages.outgoing import PongMessage
-
 from chat.consumers.group import GroupChatConsumer
+
 from discussion.consumers.list_consumer import DiscussionListConsumer
 
 

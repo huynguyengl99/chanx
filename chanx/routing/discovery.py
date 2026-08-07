@@ -69,8 +69,9 @@ def expand_multiplexed_route(route: RouteInfo) -> list[RouteInfo]:
 
     A route served by a demultiplexer documents several consumers at the same
     address, so downstream consumers of route discovery (AsyncAPI generation in
-    particular) need one entry per sub-consumer. The demultiplexer itself is kept
-    as an entry only when it declares its own message handlers.
+    particular) need one entry per sub-consumer. The demultiplexer keeps an entry of
+    its own too: it always sends the multiplex_ready handshake, and it may declare
+    un-enveloped top-level handlers on top of that.
 
     Routes that are not multiplexed are returned unchanged.
 
@@ -84,11 +85,7 @@ def expand_multiplexed_route(route: RouteInfo) -> list[RouteInfo]:
     if not is_demultiplexer(consumer):
         return [route]
 
-    routes: list[RouteInfo] = []
-
-    if consumer._MESSAGE_HANDLER_INFO_MAP:
-        # The demultiplexer also handles un-enveloped top-level messages.
-        routes.append(route)
+    routes: list[RouteInfo] = [route]
 
     for key, sub_consumer in consumer.consumers.items():
         routes.append(

@@ -8,6 +8,7 @@ Provides ready-to-use message types for server-to-client communication:
 - CompleteMessage: Signals completion of message processing
 - GroupCompleteMessage: Signals completion of group message distribution
 - EventCompleteMessage: Signals completion of event processing
+- MultiplexReadyMessage: Announces which consumers a multiplexed route serves
 
 These messages handle common communication patterns in WebSocket applications
 including status updates, error reporting, and process completion signals.
@@ -21,6 +22,7 @@ from chanx.constants import (
     EVENT_ACTION_COMPLETE,
     GROUP_ACTION_COMPLETE,
     MESSAGE_ACTION_COMPLETE,
+    MULTIPLEX_READY_ACTION,
 )
 from chanx.messages.base import BaseMessage
 
@@ -119,3 +121,35 @@ class EventCompleteMessage(BaseMessage):
 
     action: Literal["event_complete"] = EVENT_ACTION_COMPLETE
     payload: None = None
+
+
+class MultiplexReadyPayload(BaseModel):
+    """
+    Payload announcing the state of a multiplexed route's consumers.
+
+    Attributes:
+        version: Envelope version the route speaks
+        ready: Envelope keys that are connected and accepting messages
+        unavailable: Envelope keys that failed to connect, most often because their
+                     own authenticator denied the request
+    """
+
+    version: int
+    ready: list[str]
+    unavailable: list[str]
+
+
+class MultiplexReadyMessage(BaseMessage):
+    """
+    Handshake message closing a multiplexed connection's setup.
+
+    Sent unwrapped by a demultiplexer once every sub-consumer has finished
+    connecting, so a client knows which envelope keys it may address before it
+    starts sending.
+
+    Attributes:
+        payload: MultiplexReadyPayload listing the route's consumers
+    """
+
+    action: Literal["multiplex_ready"] = MULTIPLEX_READY_ACTION
+    payload: MultiplexReadyPayload

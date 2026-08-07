@@ -24,11 +24,17 @@ from chanx.constants import (
     COMPLETE_ACTIONS,
     COMPLETE_ACTIONS_TYPE,
     MESSAGE_ACTION_COMPLETE,
+    MULTIPLEX_READY_ACTION,
 )
 from chanx.core.config import config
 from chanx.core.multiplex import ChanxDemultiplexerMixin, is_demultiplexer
 from chanx.core.websocket import ChanxWebsocketConsumerMixin
 from chanx.messages.base import BaseMessage
+from chanx.messages.outgoing import MultiplexReadyMessage
+
+# Protocol frames excluded from collected messages: they punctuate a conversation
+# rather than belong to it. Assert on them with the dedicated helpers instead.
+SKIPPED_ACTIONS = COMPLETE_ACTIONS | {MULTIPLEX_READY_ACTION}
 
 
 @dataclass
@@ -229,6 +235,7 @@ class WebsocketCommunicatorMixin:
 
         Returns:
             List of (consumer key, message) pairs, excluding completion messages
+            and the multiplex_ready handshake
         """
         if not self.consumer:
             raise ValueError("consumer must be initialized to use this method")
@@ -247,7 +254,7 @@ class WebsocketCommunicatorMixin:
 
                     message_action = inner.get(self.action_key)
 
-                    if message_action not in COMPLETE_ACTIONS:
+                    if message_action not in SKIPPED_ACTIONS:
                         message = validator.outgoing_message_adapter.validate_python(
                             inner
                         )
@@ -291,6 +298,34 @@ class WebsocketCommunicatorMixin:
         )
         return [message for _key, message in envelopes]
 
+    async def receive_multiplex_ready(
+        self, timeout: float = 1
+    ) -> MultiplexReadyMessage:
+        """
+        Receives the multiplex_ready handshake a demultiplexer sends on connect.
+
+        Args:
+            timeout: Maximum time to wait for the frame (in seconds)
+
+        Returns:
+            The MultiplexReadyMessage announcing which consumers are addressable
+
+        Raises:
+            ValueError: If the communicator is not testing a demultiplexer
+            AssertionError: If the next frame is not the handshake
+        """
+        if self.demultiplexer is None:
+            raise ValueError(
+                f"{self.consumer.__name__} is not a demultiplexer"
+                f" and never sends a multiplex_ready frame"
+            )
+
+        raw_message = await self.receive_json_from(timeout)
+        assert (
+            raw_message.get(self.action_key) == MULTIPLEX_READY_ACTION
+        ), f"Expected a {MULTIPLEX_READY_ACTION} frame, got {raw_message!r}"
+        return MultiplexReadyMessage.model_validate(raw_message)
+
     async def send_message(
         self, message: BaseMessage, *, consumer: str | None = None
     ) -> None:
@@ -318,6 +353,7 @@ class WebsocketCommunicatorMixin:
                     f" {self.consumer.__name__} is not a demultiplexer"
                 )
             content = {
+                demultiplexer.envelope_version_field: demultiplexer.envelope_version,
                 demultiplexer.envelope_consumer_field: consumer,
                 demultiplexer.envelope_message_field: content,
             }

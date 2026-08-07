@@ -125,11 +125,23 @@ async def drain(communicator: WebsocketCommunicator) -> None:
 
 
 @pytest.mark.asyncio
+async def test_ready_frame_announces_every_consumer() -> None:
+    async with make_communicator() as comm:
+        ready = await comm.receive_multiplex_ready()
+
+        assert ready.payload.version == 1
+        assert sorted(ready.payload.ready) == ["chat", "echo"]
+        assert ready.payload.unavailable == []
+
+
+@pytest.mark.asyncio
 async def test_message_is_routed_to_named_consumer() -> None:
     async with make_communicator() as comm:
+        await comm.receive_multiplex_ready()
         await comm.send_message(EchoMessage(payload="hello"), consumer="echo")
 
         assert await comm.receive_json_from() == {
+            "version": 1,
             "consumer": "echo",
             "message": EchoReply(payload="echo: hello").model_dump(),
         }
@@ -138,6 +150,7 @@ async def test_message_is_routed_to_named_consumer() -> None:
 @pytest.mark.asyncio
 async def test_unenveloped_message_falls_through_to_demultiplexer() -> None:
     async with make_communicator() as comm:
+        await comm.receive_multiplex_ready()
         await comm.send_message(PingMessage())
 
         assert await comm.receive_json_from() == PongMessage().model_dump()
@@ -146,12 +159,30 @@ async def test_unenveloped_message_falls_through_to_demultiplexer() -> None:
 @pytest.mark.asyncio
 async def test_unknown_consumer_key_errors_without_closing() -> None:
     async with make_communicator() as comm:
+        await comm.receive_multiplex_ready()
         await comm.send_json_to({"consumer": "nope", "message": {"action": "fc_echo"}})
 
         response = await comm.receive_json_from()
         assert response["action"] == "error"
         assert response["payload"]["consumer"] == "nope"
 
+        await comm.send_message(EchoMessage(payload="alive"), consumer="echo")
+        assert (await comm.receive_json_from())["consumer"] == "echo"
+
+
+@pytest.mark.asyncio
+async def test_unsupported_envelope_version_is_rejected() -> None:
+    async with make_communicator() as comm:
+        await comm.receive_multiplex_ready()
+        await comm.send_json_to(
+            {"version": 2, "consumer": "echo", "message": {"action": "fc_echo"}}
+        )
+
+        response = await comm.receive_json_from()
+        assert response["action"] == "error"
+        assert response["payload"]["version"] == 1
+
+        # The socket survives, and a versionless envelope still routes.
         await comm.send_message(EchoMessage(payload="alive"), consumer="echo")
         assert (await comm.receive_json_from())["consumer"] == "echo"
 

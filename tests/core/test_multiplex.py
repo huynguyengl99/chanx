@@ -103,10 +103,12 @@ class TestDeclarationValidation:
             consumers={"echo": EchoConsumer},
             envelope_consumer_field="stream",
             envelope_message_field="data",
+            envelope_version_field="v",
         )
 
         assert declared.envelope_consumer_field == "stream"
         assert declared.envelope_message_field == "data"
+        assert declared.envelope_version_field == "v"
 
     @pytest.mark.parametrize(
         "namespace, match",
@@ -143,10 +145,26 @@ class TestDeclarationValidation:
             pytest.param(
                 {
                     "consumers": {"echo": EchoConsumer},
+                    "envelope_version_field": "consumer",
+                },
+                "must use different names",
+                id="version-field-collides-with-consumer-field",
+            ),
+            pytest.param(
+                {
+                    "consumers": {"echo": EchoConsumer},
                     "envelope_consumer_field": "not an identifier",
                 },
                 "must be a valid identifier",
                 id="non-identifier-envelope-field",
+            ),
+            pytest.param(
+                {
+                    "consumers": {"echo": EchoConsumer},
+                    "envelope_version_field": "not an identifier",
+                },
+                "must be a valid identifier",
+                id="non-identifier-version-field",
             ),
         ],
     )
@@ -167,6 +185,23 @@ class TestEnvelopeAdapter:
         assert envelope.consumer == "echo"  # type: ignore[attr-defined]
         assert envelope.message == {"action": "mux_echo", "payload": "hi"}  # type: ignore[attr-defined]
 
+    def test_version_is_optional_and_defaults_to_absent(self) -> None:
+        """A client that never learned about versions still validates."""
+        envelope = PlainDemultiplexer.envelope_adapter.validate_python(
+            {"consumer": "echo", "message": {"action": "mux_echo", "payload": "hi"}}
+        )
+        assert envelope.version is None  # type: ignore[attr-defined]
+
+    def test_version_is_read_when_present(self) -> None:
+        envelope = PlainDemultiplexer.envelope_adapter.validate_python(
+            {
+                "version": 1,
+                "consumer": "echo",
+                "message": {"action": "mux_echo", "payload": "hi"},
+            }
+        )
+        assert envelope.version == 1  # type: ignore[attr-defined]
+
     def test_adapter_uses_custom_field_names(self) -> None:
         declared = declare_demultiplexer(
             consumers={"echo": EchoConsumer},
@@ -186,6 +221,7 @@ class TestEnvelopeAdapter:
             {"message": {"action": "mux_echo"}},
             {"consumer": "echo", "message": "not-a-dict"},
             {"consumer": 5, "message": {}},
+            {"consumer": "echo", "message": {}, "version": "one"},
         ],
     )
     def test_malformed_envelope_is_rejected(self, content: dict[str, Any]) -> None:
@@ -234,14 +270,17 @@ class TestExpandMultiplexedRoute:
         expanded = expand_multiplexed_route(route)
 
         assert [(r.consumer, r.consumer_key) for r in expanded] == [
+            (PlainDemultiplexer, None),
             (EchoConsumer, "echo"),
             (HealthConsumer, "health"),
         ]
-        assert all(r.demultiplexer is PlainDemultiplexer for r in expanded)
+        assert all(r.demultiplexer is PlainDemultiplexer for r in expanded[1:])
         assert all(r.path == route.path for r in expanded)
         assert all(r.base_url == route.base_url for r in expanded)
 
-    def test_demultiplexer_with_own_handlers_keeps_its_own_route(self) -> None:
+    def test_demultiplexer_keeps_its_own_route(self) -> None:
+        # The demultiplexer always sends the multiplex_ready handshake, so it is
+        # documented whether or not it declares top-level handlers of its own.
         route = make_route(HandlerDemultiplexer)
         expanded = expand_multiplexed_route(route)
 

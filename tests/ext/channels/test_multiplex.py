@@ -166,12 +166,29 @@ class StreamDemultiplexer(AsyncJsonWebsocketDemultiplexer):
     consumers = {"echo": EchoConsumer}
     envelope_consumer_field = "stream"
     envelope_message_field = "data"
+    envelope_version_field = "v"
+
+
+class CrashingConsumer(AsyncJsonWebsocketConsumer):
+    """Sub-consumer that dies while connecting."""
+
+    async def websocket_connect(self, message: Any) -> None:
+        raise RuntimeError("sub-consumer exploded during connect")
 
 
 class DenyingDemultiplexer(AsyncJsonWebsocketDemultiplexer):
     """Demultiplexer where one sub-consumer denies the connection."""
 
     consumers = {"echo": EchoConsumer, "denied": DeniedConsumer}
+
+
+class CrashingDemultiplexer(AsyncJsonWebsocketDemultiplexer):
+    """Demultiplexer where one sub-consumer crashes while connecting."""
+
+    consumers = {"echo": EchoConsumer, "crash": CrashingConsumer}
+    # Long enough that a connection waiting it out would fail the test's timeout,
+    # so this genuinely proves readiness does not depend on a surviving child.
+    child_connect_timeout = 30.0
 
 
 # --------------------------------------------------------------------------- #
@@ -186,8 +203,18 @@ class TestMultiplexRouting(WebsocketTestCase):
     router = URLRouter([path("mux/", MainDemultiplexer.as_asgi())])
     consumer = MainDemultiplexer
 
+    async def test_ready_frame_announces_every_consumer(self) -> None:
+        await self.auth_communicator.connect()
+
+        ready = await self.auth_communicator.receive_multiplex_ready()
+
+        assert ready.payload.version == 1
+        assert sorted(ready.payload.ready) == ["chat", "echo"]
+        assert ready.payload.unavailable == []
+
     async def test_message_is_routed_to_named_consumer(self) -> None:
         await self.auth_communicator.connect()
+        await self.auth_communicator.receive_multiplex_ready()
 
         await self.auth_communicator.send_message(
             EchoMessage(payload="hello"), consumer="echo"
@@ -195,6 +222,7 @@ class TestMultiplexRouting(WebsocketTestCase):
 
         response = await self.auth_communicator.receive_json_from()
         assert response == {
+            "version": 1,
             "consumer": "echo",
             "message": EchoReply(payload="echo: hello").model_dump(),
         }
@@ -232,6 +260,7 @@ class TestMultiplexRouting(WebsocketTestCase):
 
     async def test_unenveloped_message_falls_through_to_demultiplexer(self) -> None:
         await self.auth_communicator.connect()
+        await self.auth_communicator.receive_multiplex_ready()
 
         await self.auth_communicator.send_message(PingMessage())
 
@@ -240,6 +269,7 @@ class TestMultiplexRouting(WebsocketTestCase):
 
     async def test_unknown_consumer_key_errors_without_closing(self) -> None:
         await self.auth_communicator.connect()
+        await self.auth_communicator.receive_multiplex_ready()
 
         await self.auth_communicator.send_json_to(
             {"consumer": "nope", "message": {"action": "echo", "payload": "hi"}}
@@ -258,6 +288,7 @@ class TestMultiplexRouting(WebsocketTestCase):
 
     async def test_malformed_envelope_reports_validation_error(self) -> None:
         await self.auth_communicator.connect()
+        await self.auth_communicator.receive_multiplex_ready()
 
         await self.auth_communicator.send_json_to({"consumer": "echo"})
 
@@ -267,10 +298,39 @@ class TestMultiplexRouting(WebsocketTestCase):
             error.get("loc") == ["message"] for error in response["payload"]
         ), response["payload"]
 
+    async def test_unsupported_envelope_version_is_rejected(self) -> None:
+        await self.auth_communicator.connect()
+        await self.auth_communicator.receive_multiplex_ready()
+
+        await self.auth_communicator.send_json_to(
+            {
+                "version": 99,
+                "consumer": "echo",
+                "message": {"action": "echo", "payload": "hi"},
+            }
+        )
+
+        response = await self.auth_communicator.receive_json_from()
+        assert response["action"] == "error"
+        assert response["payload"]["version"] == 1
+
+    async def test_envelope_without_version_is_accepted(self) -> None:
+        await self.auth_communicator.connect()
+        await self.auth_communicator.receive_multiplex_ready()
+
+        await self.auth_communicator.send_json_to(
+            {"consumer": "echo", "message": {"action": "echo", "payload": "hi"}}
+        )
+
+        response = await self.auth_communicator.receive_json_from()
+        assert response["consumer"] == "echo"
+        assert response["message"] == EchoReply(payload="echo: hi").model_dump()
+
     async def test_unknown_action_inside_envelope_errors_from_sub_consumer(
         self,
     ) -> None:
         await self.auth_communicator.connect()
+        await self.auth_communicator.receive_multiplex_ready()
 
         await self.auth_communicator.send_json_to(
             {"consumer": "echo", "message": {"action": "nonexistent", "payload": 1}}
@@ -283,6 +343,7 @@ class TestMultiplexRouting(WebsocketTestCase):
     @override_chanx_settings(CAMELIZE=True)
     async def test_inner_message_is_camelized(self) -> None:
         await self.auth_communicator.connect()
+        await self.auth_communicator.receive_multiplex_ready()
 
         await self.auth_communicator.send_message(
             NestedMessage(payload=NestedPayload(first_field="a", other_field=2)),
@@ -297,6 +358,7 @@ class TestMultiplexRouting(WebsocketTestCase):
     @override_chanx_settings(SEND_COMPLETION=True)
     async def test_completion_is_enveloped_per_consumer(self) -> None:
         await self.auth_communicator.connect()
+        await self.auth_communicator.receive_multiplex_ready()
 
         await self.auth_communicator.send_message(
             EchoMessage(payload="hello"), consumer="echo"
@@ -304,6 +366,7 @@ class TestMultiplexRouting(WebsocketTestCase):
 
         messages = await self.auth_communicator.receive_all_json()
         assert messages[-1] == {
+            "version": 1,
             "consumer": "echo",
             "message": {"action": "complete", "payload": None},
         }
@@ -318,6 +381,7 @@ class TestMultiplexCustomEnvelopeFields(WebsocketTestCase):
 
     async def test_custom_field_names_are_used_on_the_wire(self) -> None:
         await self.auth_communicator.connect()
+        await self.auth_communicator.receive_multiplex_ready()
 
         await self.auth_communicator.send_message(
             EchoMessage(payload="hello"), consumer="echo"
@@ -325,6 +389,7 @@ class TestMultiplexCustomEnvelopeFields(WebsocketTestCase):
 
         response = await self.auth_communicator.receive_json_from()
         assert response == {
+            "v": 1,
             "stream": "echo",
             "data": EchoReply(payload="echo: hello").model_dump(),
         }
@@ -355,6 +420,11 @@ class TestMultiplexChildIsolation(WebsocketTestCase):
         assert notice["action"] == "error"
         assert notice["payload"]["consumer"] == "denied"
 
+        # The handshake reports the same thing, authoritatively.
+        ready = await self.auth_communicator.receive_multiplex_ready()
+        assert ready.payload.ready == ["echo"]
+        assert ready.payload.unavailable == ["denied"]
+
         # The denied key is no longer routable.
         await self.auth_communicator.send_message(SecretMessage(), consumer="denied")
         response = await self.auth_communicator.receive_json_from()
@@ -367,9 +437,32 @@ class TestMultiplexChildIsolation(WebsocketTestCase):
         )
         follow_up = await self.auth_communicator.receive_json_from()
         assert follow_up == {
+            "version": 1,
             "consumer": "echo",
             "message": EchoReply(payload="echo: alive").model_dump(),
         }
+
+
+class TestMultiplexChildCrash(WebsocketTestCase):
+    """Test that a sub-consumer dying during connect does not stall the route."""
+
+    ws_path = "/crashing-mux/"
+    router = URLRouter([path("crashing-mux/", CrashingDemultiplexer.as_asgi())])
+    consumer = CrashingDemultiplexer
+
+    async def test_crashed_consumer_is_reported_unavailable(self) -> None:
+        await self.auth_communicator.connect()
+
+        ready = await self.auth_communicator.receive_multiplex_ready()
+        assert ready.payload.ready == ["echo"]
+        assert ready.payload.unavailable == ["crash"]
+
+        # The healthy sub-consumer is unaffected.
+        await self.auth_communicator.send_message(
+            EchoMessage(payload="alive"), consumer="echo"
+        )
+        response = await self.auth_communicator.receive_json_from()
+        assert response["consumer"] == "echo"
 
 
 class TestMultiplexGroupsAndEvents(WebsocketTestCase):
@@ -386,13 +479,14 @@ class TestMultiplexGroupsAndEvents(WebsocketTestCase):
     @staticmethod
     async def drain(communicator: Any) -> None:
         """
-        Round-trip a message through the chat sub-consumer.
+        Wait until the sub-consumers have joined their groups.
 
         Chanx accepts a connection before joining groups, so a test that wants to
-        observe group traffic has to wait until the sub-consumer is subscribed.
+        observe group traffic has to wait until the sub-consumer is subscribed. The
+        handshake is exactly that point: the demultiplexer only sends it once every
+        sub-consumer has signalled that its own connect handling finished.
         """
-        await communicator.send_message(PingMessage(), consumer="chat")
-        await communicator.receive_all_envelopes(stop_consumer="chat")
+        await communicator.receive_multiplex_ready()
 
     async def test_broadcast_reaches_every_connection_enveloped(self) -> None:
         first = self.auth_communicator

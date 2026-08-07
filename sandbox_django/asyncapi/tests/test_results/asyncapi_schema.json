@@ -80,6 +80,9 @@
       "title": "discussion_multiplex",
       "description": "Demultiplexer serving the discussion list and group chat consumers",
       "messages": {
+        "multiplexReadyMessage": {
+          "$ref": "#/components/messages/multiplexReadyMessage"
+        },
         "pingMessage": {
           "$ref": "#/components/messages/pingMessage"
         },
@@ -123,6 +126,8 @@
       "x-chanx-multiplex": {
         "consumerField": "consumer",
         "messageField": "message",
+        "versionField": "version",
+        "version": 1,
         "consumerKey": "topics"
       }
     },
@@ -150,6 +155,8 @@
       "x-chanx-multiplex": {
         "consumerField": "consumer",
         "messageField": "message",
+        "versionField": "version",
+        "version": 1,
         "consumerKey": "group_chat"
       }
     },
@@ -797,6 +804,11 @@
           "$ref": "#/components/schemas/MemberRemovedMessage"
         }
       },
+      "multiplexReadyMessage": {
+        "payload": {
+          "$ref": "#/components/schemas/MultiplexReadyMessage"
+        }
+      },
       "newAssistantMessage": {
         "payload": {
           "$ref": "#/components/schemas/NewAssistantMessage"
@@ -1144,6 +1156,55 @@
           "email"
         ],
         "title": "MemberRemovedPayload",
+        "type": "object"
+      },
+      "MultiplexReadyMessage": {
+        "description": "Handshake message closing a multiplexed connection's setup.\n\nSent unwrapped by a demultiplexer once every sub-consumer has finished\nconnecting, so a client knows which envelope keys it may address before it\nstarts sending.\n\nAttributes:\n    payload: MultiplexReadyPayload listing the route's consumers",
+        "properties": {
+          "action": {
+            "const": "multiplex_ready",
+            "default": "multiplex_ready",
+            "title": "Action",
+            "type": "string"
+          },
+          "payload": {
+            "$ref": "#/components/schemas/MultiplexReadyPayload"
+          }
+        },
+        "required": [
+          "payload"
+        ],
+        "title": "MultiplexReadyMessage",
+        "type": "object"
+      },
+      "MultiplexReadyPayload": {
+        "description": "Payload announcing the state of a multiplexed route's consumers.\n\nAttributes:\n    version: Envelope version the route speaks\n    ready: Envelope keys that are connected and accepting messages\n    unavailable: Envelope keys that failed to connect, most often because their\n                 own authenticator denied the request",
+        "properties": {
+          "version": {
+            "title": "Version",
+            "type": "integer"
+          },
+          "ready": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Ready",
+            "type": "array"
+          },
+          "unavailable": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Unavailable",
+            "type": "array"
+          }
+        },
+        "required": [
+          "version",
+          "ready",
+          "unavailable"
+        ],
+        "title": "MultiplexReadyPayload",
         "type": "object"
       },
       "NewAssistantMessage": {

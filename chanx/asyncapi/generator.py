@@ -200,6 +200,8 @@ class AsyncAPIGenerator:
                 channel["x-chanx-multiplex"] = {
                     "consumerField": route.demultiplexer.envelope_consumer_field,
                     "messageField": route.demultiplexer.envelope_message_field,
+                    "versionField": route.demultiplexer.envelope_version_field,
+                    "version": route.demultiplexer.envelope_version,
                     "consumerKey": route.consumer_key,
                 }
 

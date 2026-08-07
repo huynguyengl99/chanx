@@ -6,8 +6,11 @@ single WebSocket route serve several consumers at once. Client frames carry a
 small envelope naming the target sub-consumer, and the demultiplexer routes them
 accordingly; frames produced by a sub-consumer are enveloped on the way back out.
 
+    <- {"action": "multiplex_ready", "payload": {"version": 1, "ready": ["echo"], ...}}
     -> {"consumer": "echo", "message": {"action": "echo", "payload": {...}}}
-    <- {"consumer": "echo", "message": {"action": "echo_reply", "payload": {...}}}
+    <- {"version": 1, "consumer": "echo", "message": {"action": "echo_reply", ...}}
+
+The full wire contract is specified in ``docs/user-guide/multiplex-protocol.rst``.
 
 Each sub-consumer runs as a real consumer instance driven through the ASGI
 protocol: it receives from a private queue owned by the demultiplexer and sends
@@ -32,7 +35,11 @@ from typing_extensions import TypeVar
 from chanx.constants import CONNECT_COMPLETE_SCOPE_KEY
 from chanx.core.websocket import ChanxWebsocketConsumerMixin
 from chanx.messages.base import BaseMessage
-from chanx.messages.outgoing import ErrorMessage
+from chanx.messages.outgoing import (
+    ErrorMessage,
+    MultiplexReadyMessage,
+    MultiplexReadyPayload,
+)
 from chanx.utils.asyncio import create_task
 from chanx.utils.logging import logger
 
@@ -152,6 +159,14 @@ class ChanxDemultiplexerMixin(ChanxWebsocketConsumerMixin[ReceiveEvent]):
     # Envelope field names, overridable per demultiplexer.
     envelope_consumer_field: ClassVar[str] = "consumer"
     envelope_message_field: ClassVar[str] = "message"
+    envelope_version_field: ClassVar[str] = "version"
+
+    # Envelope version this demultiplexer speaks. Stamped on every outgoing
+    # envelope; an incoming envelope may omit it, but may not disagree with it.
+    envelope_version: ClassVar[int] = 1
+
+    # Announced to the client once every sub-consumer has connected.
+    extra_output_messages: ClassVar[list[type[BaseMessage]]] = [MultiplexReadyMessage]
 
     # Seconds to wait for sub-consumers to finish connecting before serving traffic.
     child_connect_timeout: ClassVar[float] = 5.0
@@ -185,10 +200,16 @@ class ChanxDemultiplexerMixin(ChanxWebsocketConsumerMixin[ReceiveEvent]):
         Validate the configured envelope field names.
 
         Raises:
-            TypeError: If either field name is not a valid identifier, or if both
+            TypeError: If a field name is not a valid identifier, or if two
                        envelope fields use the same name.
         """
-        for attr_name in ("envelope_consumer_field", "envelope_message_field"):
+        attr_names = (
+            "envelope_consumer_field",
+            "envelope_message_field",
+            "envelope_version_field",
+        )
+
+        for attr_name in attr_names:
             value = getattr(cls, attr_name)
             if not isinstance(value, str) or not value.isidentifier():
                 raise TypeError(
@@ -196,11 +217,11 @@ class ChanxDemultiplexerMixin(ChanxWebsocketConsumerMixin[ReceiveEvent]):
                     f" got {value!r}."
                 )
 
-        if cls.envelope_consumer_field == cls.envelope_message_field:
+        field_names = [getattr(cls, attr_name) for attr_name in attr_names]
+        if len(set(field_names)) != len(field_names):
             raise TypeError(
                 f"{cls.__name__} must use different names for"
-                f" envelope_consumer_field and envelope_message_field,"
-                f" got {cls.envelope_consumer_field!r} for both."
+                f" {', '.join(attr_names)}, got {field_names!r}."
             )
 
     @classmethod
@@ -239,11 +260,13 @@ class ChanxDemultiplexerMixin(ChanxWebsocketConsumerMixin[ReceiveEvent]):
 
         The model is generated from the configured field names so that malformed
         envelopes raise a regular ValidationError and reuse the existing
-        ``handle_validation_error`` response path.
+        ``handle_validation_error`` response path. The version is optional: a client
+        that omits it is taken to mean the version this demultiplexer speaks.
         """
         field_definitions = {
             cls.envelope_consumer_field: (str, ...),
             cls.envelope_message_field: (dict[str, Any], ...),
+            cls.envelope_version_field: (int | None, None),
         }
         envelope_model = cast(
             type[BaseModel],
@@ -276,6 +299,9 @@ class ChanxDemultiplexerMixin(ChanxWebsocketConsumerMixin[ReceiveEvent]):
         """
         Accept and authenticate the shared connection, then start sub-consumers.
 
+        Ends by sending a ``multiplex_ready`` frame telling the client which
+        envelope keys it may address.
+
         Args:
             message: The connection message from the framework
         """
@@ -286,6 +312,7 @@ class ChanxDemultiplexerMixin(ChanxWebsocketConsumerMixin[ReceiveEvent]):
             return
 
         await self._start_children()
+        await self._send_ready()
 
     async def websocket_disconnect(self, message: Any) -> None:
         """
@@ -376,6 +403,49 @@ class ChanxDemultiplexerMixin(ChanxWebsocketConsumerMixin[ReceiveEvent]):
                 consumer_keys=unready,
             )
 
+    async def _send_ready(self) -> None:
+        """
+        Announce which sub-consumers the client may address.
+
+        Sent unwrapped, like every demultiplexer-level message. A sub-consumer that
+        was denied has already sent its own isolation error by now, but that error
+        is per-key and easy to miss; this frame is the single authoritative
+        statement of what the route serves.
+        """
+        if self._closed:
+            return
+
+        ready: list[str] = []
+        unavailable: list[str] = []
+        for key, connection in self._children.items():
+            target = unavailable if self._is_unavailable(connection) else ready
+            target.append(key)
+
+        await self.send_message(
+            MultiplexReadyMessage(
+                payload=MultiplexReadyPayload(
+                    version=self.envelope_version,
+                    ready=ready,
+                    unavailable=unavailable,
+                )
+            )
+        )
+
+    @staticmethod
+    def _is_unavailable(connection: ChildConnection) -> bool:
+        """
+        Report whether a sub-consumer can no longer be addressed.
+
+        Args:
+            connection: The sub-consumer connection to inspect
+
+        Returns:
+            True if the sub-consumer closed or its task has already ended
+        """
+        return connection.closed or (
+            connection.task is not None and connection.task.done()
+        )
+
     async def _stop_children(self, code: int) -> None:
         """
         Ask every live sub-consumer to disconnect and wait for it to finish.
@@ -434,6 +504,20 @@ class ChanxDemultiplexerMixin(ChanxWebsocketConsumerMixin[ReceiveEvent]):
             envelope = self.envelope_adapter.validate_python(content)
         except ValidationError as e:
             await self.handle_validation_error(e)
+            return
+
+        version = cast(int | None, getattr(envelope, self.envelope_version_field))
+        if version is not None and version != self.envelope_version:
+            await self.send_message(
+                ErrorMessage(
+                    payload={
+                        "detail": f"Unsupported envelope version {version}",
+                        # Mirrors the unknown-key error: name the offending field
+                        # and give the value this demultiplexer expects there.
+                        self.envelope_version_field: self.envelope_version,
+                    }
+                )
+            )
             return
 
         key = cast(str, getattr(envelope, self.envelope_consumer_field))
@@ -510,6 +594,7 @@ class ChanxDemultiplexerMixin(ChanxWebsocketConsumerMixin[ReceiveEvent]):
             return
 
         envelope = {
+            self.envelope_version_field: self.envelope_version,
             self.envelope_consumer_field: key,
             self.envelope_message_field: json.loads(text),
         }

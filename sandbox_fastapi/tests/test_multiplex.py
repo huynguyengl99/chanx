@@ -133,7 +133,7 @@ async def test_multiplexed_sub_consumer_keeps_its_channel_layer() -> None:
 
         # Enveloped on the multiplexed route...
         on_mux = await drain(muxed)
-        assert {"consumer": "chat", "message": expected} in on_mux
+        assert {"version": 1, "consumer": "chat", "message": expected} in on_mux
 
         # ...and plain on the consumer's own route.
         assert expected in await drain(direct)

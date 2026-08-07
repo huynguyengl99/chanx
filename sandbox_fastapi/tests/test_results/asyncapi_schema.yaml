@@ -144,6 +144,8 @@ channels:
     title: multiplex
     description: Demultiplexer serving the system, chat and notification consumers
     messages:
+      multiplex_ready_message:
+        $ref: '#/components/messages/multiplex_ready_message'
       ping_message:
         $ref: '#/components/messages/ping_message'
       pong_message:
@@ -169,6 +171,8 @@ channels:
     x-chanx-multiplex:
       consumerField: consumer
       messageField: message
+      versionField: version
+      version: 1
       consumerKey: system
   multiplex_chat:
     address: /ws/mux
@@ -199,6 +203,8 @@ channels:
     x-chanx-multiplex:
       consumerField: consumer
       messageField: message
+      versionField: version
+      version: 1
       consumerKey: chat
   multiplex_notifications:
     address: /ws/mux
@@ -219,6 +225,8 @@ channels:
     x-chanx-multiplex:
       consumerField: consumer
       messageField: message
+      versionField: version
+      version: 1
       consumerKey: notifications
 operations:
   handle_chat:
@@ -677,6 +685,9 @@ components:
     job_status_message:
       payload:
         $ref: '#/components/schemas/JobStatusMessage'
+    multiplex_ready_message:
+      payload:
+        $ref: '#/components/schemas/MultiplexReadyMessage'
     notification_broadcast_message:
       payload:
         $ref: '#/components/schemas/NotificationBroadcastMessage'
@@ -895,6 +906,49 @@ components:
       - FAILED
       title: MessageStatus
       type: string
+    MultiplexReadyMessage:
+      description: "Handshake message closing a multiplexed connection's setup.\n\n\
+        Sent unwrapped by a demultiplexer once every sub-consumer has finished\nconnecting,\
+        \ so a client knows which envelope keys it may address before it\nstarts sending.\n\
+        \nAttributes:\n    payload: MultiplexReadyPayload listing the route's consumers"
+      properties:
+        action:
+          const: multiplex_ready
+          default: multiplex_ready
+          title: Action
+          type: string
+        payload:
+          $ref: '#/components/schemas/MultiplexReadyPayload'
+      required:
+      - payload
+      title: MultiplexReadyMessage
+      type: object
+    MultiplexReadyPayload:
+      description: "Payload announcing the state of a multiplexed route's consumers.\n\
+        \nAttributes:\n    version: Envelope version the route speaks\n    ready:\
+        \ Envelope keys that are connected and accepting messages\n    unavailable:\
+        \ Envelope keys that failed to connect, most often because their\n       \
+        \          own authenticator denied the request"
+      properties:
+        version:
+          title: Version
+          type: integer
+        ready:
+          items:
+            type: string
+          title: Ready
+          type: array
+        unavailable:
+          items:
+            type: string
+          title: Unavailable
+          type: array
+      required:
+      - version
+      - ready
+      - unavailable
+      title: MultiplexReadyPayload
+      type: object
     NotificationBroadcastMessage:
       description: Notification broadcast message.
       properties:

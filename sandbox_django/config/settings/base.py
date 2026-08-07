@@ -438,11 +438,24 @@ structlog.configure(
 # =========================================================================
 
 ASGI_APPLICATION = "config.asgi.application"
+
+# RedisChannelLayer receives with `BZPOPMIN <key> <brpop_timeout>` (5s by default).
+# Since redis-py 8.0 the client's own socket_timeout defaults to 5s too, so the
+# socket read deadline races the server-side block and the idle receive loop dies
+# with `redis.exceptions.TimeoutError`. Keep socket_timeout above brpop_timeout.
+# Not imported from channels_redis: settings must not pull in the layer package.
+CHANNEL_LAYER_SOCKET_TIMEOUT = 10
+
 CHANNEL_LAYERS = {
     "default": {
         "BACKEND": "channels_redis.core.RedisChannelLayer",
         "CONFIG": {
-            "hosts": [REDIS_URL],
+            "hosts": [
+                {
+                    "address": REDIS_URL,
+                    "socket_timeout": CHANNEL_LAYER_SOCKET_TIMEOUT,
+                }
+            ],
         },
     },
 }

@@ -4,6 +4,7 @@ This file centralizes all channel layer configuration for the application.
 """
 
 import os
+from typing import Any
 
 from fast_channels.layers import (
     InMemoryChannelLayer,
@@ -16,6 +17,17 @@ from fast_channels.layers.redis import (
 )
 
 base_redis_url = os.getenv("REDIS_URL", "redis://localhost:6363")
+
+# RedisChannelLayer receives with `BZPOPMIN <key> <brpop_timeout>` (5s by default).
+# Since redis-py 8.0 the client's own socket_timeout defaults to 5s too, so the
+# socket read deadline races the server-side block and the idle receive loop dies
+# with `redis.exceptions.TimeoutError`. Keep socket_timeout above brpop_timeout.
+QUEUE_SOCKET_TIMEOUT = RedisChannelLayer.brpop_timeout * 2
+
+
+def queue_host(url: str) -> dict[str, Any]:
+    """Host config for the BZPOPMIN-based queue layers."""
+    return {"address": url, "socket_timeout": QUEUE_SOCKET_TIMEOUT}
 
 
 def setup_layers(force: bool = False, worker_id: int | None = None) -> None:
@@ -41,7 +53,7 @@ def setup_layers(force: bool = False, worker_id: int | None = None) -> None:
         "chat": RedisPubSubChannelLayer(hosts=[redis_url], prefix=f"chat{post_fix}"),
         # Redis Queue layer for reliable messaging
         "queue": RedisChannelLayer(
-            hosts=[redis_url],
+            hosts=[queue_host(redis_url)],
             prefix=f"queue{post_fix}",
             expiry=900,  # 15 minutes
             capacity=1000,
@@ -52,7 +64,7 @@ def setup_layers(force: bool = False, worker_id: int | None = None) -> None:
         ),
         # Analytics layer for metrics/events
         "analytics": RedisChannelLayer(
-            hosts=[redis_url],
+            hosts=[queue_host(redis_url)],
             prefix=f"analytics{post_fix}",
             expiry=3600,  # 1 hour
             capacity=5000,

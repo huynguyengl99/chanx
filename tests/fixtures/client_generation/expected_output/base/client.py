@@ -92,14 +92,7 @@ class BaseClient:
                             data.decode("utf-8") if isinstance(data, bytes) else data
                         )
                         py_object = json.loads(decoded_data)
-                        try:
-                            message = self.incoming_message_adapter.validate_python(
-                                py_object
-                            )
-                            await self.handle_message(message)
-                        except ValidationError:
-                            # Valid JSON but doesn't match schema
-                            await self.handle_invalid_message(py_object)
+                        await self.dispatch(py_object)
                     except (json.JSONDecodeError, UnicodeDecodeError):
                         # Not JSON, handle as raw
                         await self.handle_raw_data(data)
@@ -113,6 +106,26 @@ class BaseClient:
             return
 
         await self.after_handle()
+
+    async def dispatch(self, py_object: Any) -> None:
+        """
+        Validate one decoded frame and route it to a handler.
+
+        Kept separate from the read loop so a client speaking a framing protocol
+        on top of this one -- the multiplexing demultiplexer client -- can unwrap
+        the frame first without reimplementing connection handling.
+
+        Args:
+            py_object: The decoded JSON frame received from the server
+        """
+        try:
+            message = self.incoming_message_adapter.validate_python(py_object)
+        except ValidationError:
+            # Valid JSON but doesn't match schema
+            await self.handle_invalid_message(py_object)
+            return
+
+        await self.handle_message(message)
 
     async def disconnect(self, code: int = 1000, reason: str = "") -> None:
         """

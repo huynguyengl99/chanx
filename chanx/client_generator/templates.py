@@ -40,6 +40,114 @@ class {{ class_name }}(BaseClient):
 
 
 # ============================================================================
+# MULTIPLEXED SUB-CLIENT TEMPLATE
+# ============================================================================
+
+SUB_CLIENT_TEMPLATE = '''"""{{ channel_title }} multiplexed sub-client."""
+
+from ..base.demultiplexer import BaseSubClient
+from .messages import IncomingMessage{% if has_outgoing %}, OutgoingMessage{% endif %}
+
+
+class {{ class_name }}(BaseSubClient):
+    """
+    WebSocket sub-client for {{ channel_title }}.
+
+    {{ channel_description }}
+
+    Reached under the envelope key "{{ consumer_key }}" on {{ channel_address }};
+    it has no connection of its own. Register it on the demultiplexer client and
+    override handle_message as usual.
+    """
+
+    consumer_key = "{{ consumer_key }}"
+    incoming_message = IncomingMessage
+{% if has_outgoing %}
+
+    async def send_message(self, message: OutgoingMessage) -> None:
+        """
+        Send a message to this consumer.
+
+        Args:
+            message: The message to send
+        """
+        await super().send_message(message)
+{% endif %}
+
+    async def handle_message(self, message: IncomingMessage) -> None:
+        pass
+
+'''
+
+
+# ============================================================================
+# DEMULTIPLEXER CLIENT TEMPLATE
+# ============================================================================
+
+DEMULTIPLEXER_CLIENT_TEMPLATE = '''"""{{ channel_title }} demultiplexer client."""
+
+from ..base.demultiplexer import BaseDemultiplexerClient
+{% for sub in sub_clients %}
+from ..{{ sub.module }} import {{ sub.class_name }}
+{% endfor %}
+from .messages import IncomingMessage{% if has_outgoing %}, OutgoingMessage{% endif %}
+
+
+class {{ class_name }}(BaseDemultiplexerClient):
+    """
+    WebSocket client for {{ channel_title }}, serving several consumers at once.
+
+    {{ channel_description }}
+
+    Channel: {{ channel_address }}
+
+    Each consumer is a sub-client on this instance, reached through
+    ``self.consumers["<key>"]``:
+{% for sub in sub_clients %}
+    - "{{ sub.consumer_key }}" -> {{ sub.class_name }}
+{% endfor %}
+
+    Override on_ready() to learn which consumers are addressable and to replay
+    per-key subscriptions, and on_stream_unavailable() to react to one going away.
+    """
+
+    path = "{{ channel_address }}"
+    incoming_message = IncomingMessage
+
+    consumer_field = "{{ consumer_field }}"
+    message_field = "{{ message_field }}"
+    version_field = "{{ version_field }}"
+    envelope_version = {{ envelope_version }}
+
+    sub_client_classes = {
+{% for sub in sub_clients %}
+        "{{ sub.consumer_key }}": {{ sub.class_name }},
+{% endfor %}
+    }
+{% if has_outgoing %}
+
+    async def send_message(
+        self, message: OutgoingMessage, *, consumer: str | None = None
+    ) -> None:
+        """
+        Send a message to one consumer, or to the demultiplexer itself.
+
+        Args:
+            message: The message to send
+            consumer: Envelope key to address; omit for the demultiplexer's own
+                      handlers
+        """
+        await super().send_message(message, consumer=consumer)
+{% endif %}
+
+    async def handle_message(self, message: IncomingMessage) -> None:
+        """Handle a message the demultiplexer sent on its own behalf."""
+        pass
+
+'''
+
+
+# ============================================================================
 # CHANNEL __INIT__.PY TEMPLATE
 # ============================================================================
 
@@ -175,6 +283,33 @@ class My{{ first_class }}({{ first_class }}):
         response = OutgoingMessage(...)  # Create your message
         await self.send_message(response)
 ```
+{% for demultiplexer, subs in multiplex_groups.items() %}{% if loop.first %}
+## Multiplexed Routes
+
+These routes serve several consumers over a single connection. The demultiplexer
+client owns the connection; each consumer is a sub-client on it.
+{% endif %}
+### `{{ demultiplexer }}`
+{% for sub in subs %}
+- `self.consumers["{{ sub.consumer_key }}"]` -> `{{ sub.class_name }}` (`{{ package_name }}.{{ sub.module }}`)
+{% endfor %}
+
+```python
+from {{ package_name }}.{{ demultiplexer }} import {{ demultiplexer | pascal_case }}Client
+
+class My{{ demultiplexer | pascal_case }}Client({{ demultiplexer | pascal_case }}Client):
+    async def on_ready(self, ready: list[str], unavailable: list[str]) -> None:
+        # Called once per connection, first and reconnect alike. Replay any
+        # per-consumer subscriptions here, for the keys reported ready.
+        print("ready:", ready, "unavailable:", unavailable)
+
+    async def on_stream_unavailable(self, consumer: str) -> None:
+        # That consumer cannot be reached again on this connection.
+        print("lost:", consumer)
+
+await My{{ demultiplexer | pascal_case }}Client("localhost:8000").handle()
+```
+{% endfor %}
 """
 
 

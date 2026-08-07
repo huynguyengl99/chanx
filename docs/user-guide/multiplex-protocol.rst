@@ -37,7 +37,9 @@ A frame **without** the ``consumer`` field is not an envelope: it belongs to the
 
 That distinction is the whole routing rule, in both directions. Anything the demultiplexer sends on its own behalf — the handshake, its errors, replies from its own handlers — is unwrapped. Anything a sub-consumer sends is enveloped.
 
-The three field names are configurable per demultiplexer (``envelope_consumer_field``, ``envelope_message_field``, ``envelope_version_field``); a generated client reads them from the ``x-chanx-multiplex`` extension in the AsyncAPI document rather than assuming the defaults.
+The three field names are configurable per demultiplexer (``envelope_consumer_field``, ``envelope_message_field``, ``envelope_version_field``); a generated client reads them from the ``x-chanx-multiplex`` extension in the AsyncAPI document rather than assuming the defaults. Every channel of a multiplexed route carries that extension; the one without a ``consumerKey`` is the demultiplexer's own.
+
+Everything on this page is implemented for you by the clients :doc:`client-generator` produces. Read it if you are writing a client by hand, or in another language.
 
 Versioning
 ----------

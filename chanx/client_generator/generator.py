@@ -18,8 +18,10 @@ from chanx.client_generator.loader import SchemaLoader
 from chanx.client_generator.templates import (
     CHANNEL_CLIENT_TEMPLATE,
     CHANNEL_INIT_TEMPLATE,
+    DEMULTIPLEXER_CLIENT_TEMPLATE,
     PACKAGE_INIT_TEMPLATE,
     README_TEMPLATE,
+    SUB_CLIENT_TEMPLATE,
     get_template,
 )
 
@@ -150,26 +152,18 @@ class ClientGenerator:
 
     def _generate_channel_clients(self) -> None:
         """Generate client classes for each channel."""
+        sub_clients_by_demultiplexer = self._group_multiplexed_channels()
+
         for channel in self.schema.channels.values():
             # Generate message models and collect exported names
             assert channel.messages
             channel_messages = cast(list[MessageObject], channel.messages.values())
             message_exports = self._generate_channel_messages(channel, channel_messages)
 
-            # Extract path parameter names (just for documentation)
-            path_params = (
-                list(channel.parameters.keys()) if channel.parameters else None
-            )
-
-            # Generate channel client class
-            class_name = humps.pascalize(channel.title) + "Client"
-            template = get_template(CHANNEL_CLIENT_TEMPLATE)
-            code = template.render(
-                channel_title=channel.title,
-                channel_description=channel.description,
-                channel_address=channel.address,
-                class_name=class_name,
-                path_params=path_params,
+            code = self._render_channel_client(
+                channel,
+                has_outgoing="OutgoingMessage" in message_exports,
+                sub_clients=sub_clients_by_demultiplexer.get(channel.title, []),
             )
 
             # Write client file
@@ -178,6 +172,104 @@ class ClientGenerator:
 
             # Create __init__.py
             self._generate_channel_init(channel.title, message_exports)
+
+    def _group_multiplexed_channels(self) -> dict[str, list[dict[str, str]]]:
+        """
+        Map each demultiplexer channel to the sub-clients it serves.
+
+        Channels of one multiplexed route share an address, and exactly one of
+        them -- the demultiplexer's -- has no consumer key. That is what ties a
+        group together.
+
+        Returns:
+            Dict mapping demultiplexer channel title to its sub-client descriptors
+        """
+        assert self.schema.channels
+        multiplexed = [c for c in self.schema.channels.values() if c.multiplex]
+
+        demultiplexer_titles = {
+            channel.address: channel.title
+            for channel in multiplexed
+            if channel.multiplex and channel.multiplex.consumerKey is None
+        }
+
+        groups: dict[str, list[dict[str, str]]] = {
+            title: [] for title in demultiplexer_titles.values()
+        }
+        for channel in multiplexed:
+            assert channel.multiplex
+            consumer_key = channel.multiplex.consumerKey
+            if consumer_key is None:
+                continue
+
+            title = demultiplexer_titles.get(channel.address)
+            if title is None:
+                # No demultiplexer channel documented at this address; nothing can
+                # connect the sub-client, so leave it out rather than emit a client
+                # that cannot be reached.
+                continue
+
+            groups[title].append(
+                {
+                    "consumer_key": consumer_key,
+                    "module": channel.title,
+                    "class_name": humps.pascalize(channel.title) + "Client",
+                }
+            )
+
+        return groups
+
+    def _render_channel_client(
+        self,
+        channel: ChannelObject,
+        has_outgoing: bool,
+        sub_clients: list[dict[str, str]],
+    ) -> str:
+        """
+        Render the client class for one channel.
+
+        A multiplexed route produces two kinds: a demultiplexer client owning the
+        socket, and one sub-client per consumer that borrows it.
+
+        Args:
+            channel: The channel to render a client for
+            has_outgoing: Whether the channel's messages module defines OutgoingMessage
+            sub_clients: Sub-client descriptors, for a demultiplexer channel
+
+        Returns:
+            The rendered client module source
+        """
+        class_name = humps.pascalize(channel.title) + "Client"
+        common = {
+            "channel_title": channel.title,
+            "channel_description": channel.description,
+            "channel_address": channel.address,
+            "class_name": class_name,
+            "has_outgoing": has_outgoing,
+        }
+
+        extension = channel.multiplex
+        if extension is None:
+            return get_template(CHANNEL_CLIENT_TEMPLATE).render(
+                **common,
+                path_params=(
+                    list(channel.parameters.keys()) if channel.parameters else None
+                ),
+            )
+
+        if extension.consumerKey is not None:
+            return get_template(SUB_CLIENT_TEMPLATE).render(
+                **common, consumer_key=extension.consumerKey
+            )
+
+        return get_template(DEMULTIPLEXER_CLIENT_TEMPLATE).render(
+            **common,
+            consumer_field=extension.consumerField,
+            message_field=extension.messageField,
+            version_field=extension.versionField,
+            envelope_version=extension.version,
+            sub_clients=sub_clients,
+        )
 
     def _generate_channel_messages(
         self, channel: ChannelObject, messages: list[MessageObject]
@@ -202,7 +294,12 @@ class ClientGenerator:
                 exported_classes.append(schema.title)
 
         # Generate message union types
-        incoming_messages, outgoing_messages = self.channel_messages[channel.title]
+        incoming_messages, outgoing_messages = self.channel_messages.get(
+            channel.title, ([], [])
+        )
+        incoming_messages = self._with_operationless_messages(
+            channel, messages, incoming_messages, outgoing_messages
+        )
 
         lines: list[str] = []
         if incoming_messages:
@@ -235,6 +332,37 @@ class ClientGenerator:
         output_path.write_text(code, encoding="utf-8")
 
         return exported_classes
+
+    @staticmethod
+    def _with_operationless_messages(
+        channel: ChannelObject,
+        messages: list[MessageObject],
+        incoming: list[MessageObject],
+        outgoing: list[MessageObject],
+    ) -> list[MessageObject]:
+        """
+        Count a demultiplexer channel's handler-less messages as incoming.
+
+        Incoming and outgoing are otherwise derived from operations, and the
+        multiplex_ready handshake has no operation: no handler produces it. A
+        demultiplexer that declares no top-level handlers would end up with no
+        IncomingMessage at all, and its client would have nothing to validate
+        against. A message a client cannot send can only be one it receives.
+
+        Args:
+            channel: The channel the messages belong to
+            messages: Every message documented on the channel
+            incoming: Messages already known to be incoming
+            outgoing: Messages already known to be outgoing
+
+        Returns:
+            The incoming list, extended for a demultiplexer channel
+        """
+        if channel.multiplex is None or channel.multiplex.consumerKey is not None:
+            return incoming
+
+        known = {id(message) for message in incoming + outgoing}
+        return incoming + [m for m in messages if id(m) not in known]
 
     def _generate_channel_init(
         self, channel_name: str, message_exports: list[str]
@@ -292,7 +420,13 @@ class ClientGenerator:
                 "path_params": path_params,
             }
 
-            if first_channel is None:
+            # A sub-client cannot be connected on its own, so it would make a
+            # misleading opening example.
+            is_sub_client = (
+                channel.multiplex is not None
+                and channel.multiplex.consumerKey is not None
+            )
+            if first_channel is None and not is_sub_client:
                 first_channel = channel.title
                 first_class = class_name
                 if channel.parameters:
@@ -310,6 +444,7 @@ class ClientGenerator:
             first_class=first_class,
             first_params=first_params,
             has_shared=bool(self.shared_schemas),
+            multiplex_groups=self._group_multiplexed_channels(),
         )
 
         # Write README

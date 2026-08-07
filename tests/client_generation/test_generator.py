@@ -1,10 +1,64 @@
 """Tests for the ClientGenerator class."""
 
+import asyncio
+import importlib
+import json
+import subprocess
+import sys
 from pathlib import Path
+from typing import Any
 from unittest import TestCase
 
 import pytest
 from chanx.client_generator.generator import ClientGenerator
+
+
+def compare_directories(
+    dir1: Path, dir2: Path, exclude: list[str] | None = None
+) -> None:
+    """
+    Recursively compare two directories.
+
+    Args:
+        dir1: First directory to compare
+        dir2: Second directory to compare
+        exclude: List of filenames to exclude from comparison
+    """
+    exclude = exclude or []
+
+    # Get all files in both directories
+    files1: set[Path] = set()
+    files2: set[Path] = set()
+
+    for f in dir1.rglob("*"):
+        # Skip __pycache__ directories and excluded files
+        if "__pycache__" in f.parts:
+            continue
+        if f.is_file() and f.name not in exclude:
+            files1.add(f.relative_to(dir1))
+
+    for f in dir2.rglob("*"):
+        # Skip __pycache__ directories and excluded files
+        if "__pycache__" in f.parts:
+            continue
+        if f.is_file() and f.name not in exclude:
+            files2.add(f.relative_to(dir2))
+
+    # Check that all files exist in both directories
+    assert (
+        files1 == files2
+    ), f"File mismatch:\nOnly in {dir1}: {files1 - files2}\nOnly in {dir2}: {files2 - files1}"
+
+    # Compare file contents
+    file_path: Path
+    for file_path in files1:
+        file1: Path = dir1 / file_path
+        file2: Path = dir2 / file_path
+
+        content1: str = file1.read_text(encoding="utf-8")
+        content2: str = file2.read_text(encoding="utf-8")
+
+        assert content1 == content2, f"Content mismatch in {file_path}"
 
 
 class TestClientGenerator(TestCase):
@@ -94,8 +148,6 @@ class TestClientGenerator(TestCase):
 
     def test_generated_output_matches_expected(self) -> None:
         """Test that generated output matches the expected output (snapshot test)."""
-        import subprocess
-
         output_dir = self.tmp_path / "output"
 
         generator = ClientGenerator(
@@ -119,9 +171,7 @@ class TestClientGenerator(TestCase):
 
         # Compare all generated files with expected output
         # Exclude README.md from comparison as it may have dynamic content
-        self._compare_directories(
-            output_dir, self.expected_output_dir, exclude=["README.md"]
-        )
+        compare_directories(output_dir, self.expected_output_dir, exclude=["README.md"])
 
     def test_shared_messages_detection(self) -> None:
         """Test that shared messages are correctly detected."""
@@ -316,49 +366,107 @@ class TestClientGenerator(TestCase):
         assert (output_dir / "base").exists()
         assert (output_dir / "base" / "client.py").exists()
 
-    def _compare_directories(
-        self, dir1: Path, dir2: Path, exclude: list[str] | None = None
-    ) -> None:
-        """
-        Recursively compare two directories.
 
-        Args:
-            dir1: First directory to compare
-            dir2: Second directory to compare
-            exclude: List of filenames to exclude from comparison
-        """
-        exclude = exclude or []
+class TestMultiplexedClientGenerator(TestCase):
+    """Test generation for a route that serves several consumers over one socket."""
 
-        # Get all files in both directories
-        files1: set[Path] = set()
-        files2: set[Path] = set()
+    @pytest.fixture(autouse=True)
+    def setup(self, tmp_path: Path) -> None:
+        """Set up test fixtures."""
+        self.tmp_path = tmp_path
+        self.fixtures_dir = (
+            Path(__file__).parent.parent / "fixtures" / "client_generation"
+        )
+        self.schema_path = self.fixtures_dir / "multiplex_schema.json"
+        self.expected_output_dir = self.fixtures_dir / "multiplex_expected_output"
 
-        for f in dir1.rglob("*"):
-            # Skip __pycache__ directories and excluded files
-            if "__pycache__" in f.parts:
-                continue
-            if f.is_file() and f.name not in exclude:
-                files1.add(f.relative_to(dir1))
+    def generate(self) -> Path:
+        """Generate the multiplexed client and format it like the fixture."""
+        output_dir = self.tmp_path / "output"
+        ClientGenerator(
+            schema_path=str(self.schema_path),
+            output_dir=str(output_dir),
+            generate_readme=False,
+        ).generate()
 
-        for f in dir2.rglob("*"):
-            # Skip __pycache__ directories and excluded files
-            if "__pycache__" in f.parts:
-                continue
-            if f.is_file() and f.name not in exclude:
-                files2.add(f.relative_to(dir2))
+        subprocess.run(
+            ["ruff", "check", str(output_dir), "--fix"],
+            capture_output=True,
+            check=False,
+        )
+        subprocess.run(["black", str(output_dir)], capture_output=True, check=False)
+        return output_dir
 
-        # Check that all files exist in both directories
-        assert (
-            files1 == files2
-        ), f"File mismatch:\nOnly in {dir1}: {files1 - files2}\nOnly in {dir2}: {files2 - files1}"
+    def test_extension_survives_being_read_back(self) -> None:
+        """The generator only knows a route is multiplexed from the extension."""
+        generator = ClientGenerator(
+            schema_path=str(self.schema_path),
+            output_dir=str(self.tmp_path / "output"),
+        )
 
-        # Compare file contents
-        file_path: Path
-        for file_path in files1:
-            file1: Path = dir1 / file_path
-            file2: Path = dir2 / file_path
+        demultiplexer = generator.schema.channels["mux"].multiplex
+        sub_consumer = generator.schema.channels["mux_echo"].multiplex
 
-            content1: str = file1.read_text(encoding="utf-8")
-            content2: str = file2.read_text(encoding="utf-8")
+        assert demultiplexer is not None
+        assert demultiplexer.consumerKey is None
+        assert demultiplexer.versionField == "version"
+        assert demultiplexer.version == 1
+        assert sub_consumer is not None
+        assert sub_consumer.consumerKey == "echo"
 
-            assert content1 == content2, f"Content mismatch in {file_path}"
+    def test_sub_clients_are_grouped_under_their_demultiplexer(self) -> None:
+        generator = ClientGenerator(
+            schema_path=str(self.schema_path),
+            output_dir=str(self.tmp_path / "output"),
+        )
+
+        groups = generator._group_multiplexed_channels()
+
+        assert list(groups) == ["mux"]
+        assert [sub["consumer_key"] for sub in groups["mux"]] == ["echo", "chat"]
+        assert [sub["class_name"] for sub in groups["mux"]] == [
+            "MuxEchoClient",
+            "MuxChatClient",
+        ]
+
+    def test_generated_output_matches_expected(self) -> None:
+        """Snapshot test for the generated multiplexed client."""
+        compare_directories(self.generate(), self.expected_output_dir)
+
+    def test_generated_client_is_importable_and_frames_envelopes(self) -> None:
+        """The point of the feature: the generated client can address a consumer."""
+        output_dir = self.generate()
+
+        sys.path.insert(0, str(output_dir.parent))
+        try:
+            client_module = importlib.import_module(f"{output_dir.name}.mux")
+            echo_module = importlib.import_module(f"{output_dir.name}.mux_echo")
+
+            client = client_module.MuxClient("localhost:8000")
+            sent: list[dict[str, Any]] = []
+            client.send_raw = lambda data: _record(sent, data)  # type: ignore[method-assign]
+
+            asyncio.run(
+                client.consumers["echo"].send_message(
+                    echo_module.EchoMessage(payload="hi")
+                )
+            )
+        finally:
+            sys.path.remove(str(output_dir.parent))
+            for name in list(sys.modules):
+                if name.startswith(output_dir.name):
+                    del sys.modules[name]
+
+        assert client.path == "/ws/mux"
+        assert sent == [
+            {
+                "version": 1,
+                "consumer": "echo",
+                "message": {"action": "echo", "payload": "hi"},
+            }
+        ]
+
+
+async def _record(sink: list[dict[str, Any]], data: str | bytes) -> None:
+    """Capture what a generated client would have put on the wire."""
+    sink.append(json.loads(data))

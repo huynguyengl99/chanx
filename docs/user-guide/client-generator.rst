@@ -371,6 +371,46 @@ Each channel gets its own client class with typed message unions:
         async def handle_message(self, message: IncomingMessage) -> None:
             """Handle incoming message (type-safe union)."""
 
+Multiplexed Routes
+~~~~~~~~~~~~~~~~~~
+
+A route served by a :doc:`demultiplexer <multiplexing>` documents one channel per consumer, all sharing an address. The generator turns that group into one **demultiplexer client** owning the connection and one **sub-client** per consumer borrowing it:
+
+.. code-block:: text
+
+    my_client/
+    ├── mux/            # demultiplexer client, owns the socket
+    ├── mux_chat/       # sub-client, envelope key "chat"
+    └── mux_system/     # sub-client, envelope key "system"
+
+Sub-clients are written exactly like channel clients - override ``handle_message``, call ``send_message`` - and the envelope is added and stripped for you:
+
+.. code-block:: python
+
+    from my_client.mux import MuxClient
+    from my_client.mux_chat import MuxChatClient, ChatMessage
+
+    class MyChat(MuxChatClient):
+        async def handle_message(self, message) -> None:
+            print("chat says", message)
+
+    class MyMux(MuxClient):
+        sub_client_classes = {**MuxClient.sub_client_classes, "chat": MyChat}
+
+        async def on_ready(self, ready: list[str], unavailable: list[str]) -> None:
+            """Called once per connection, when the route reports what it serves."""
+            if "chat" in ready:
+                await self.consumers["chat"].send_message(ChatMessage(payload="hi"))
+
+        async def on_stream_unavailable(self, consumer: str) -> None:
+            print(f"{consumer} is not usable on this connection")
+
+    await MyMux("localhost:8000").handle()
+
+``on_ready()`` is the hook to build a client around. It fires on every connection, first and reconnect alike, which is what makes replaying per-key subscriptions there the only version of that code you need. Sending to a consumer the server reported unavailable raises ``StreamUnavailableError`` locally rather than round-tripping.
+
+See :doc:`multiplex-protocol` for the rules these hooks implement.
+
 Message Types
 ~~~~~~~~~~~~~
 

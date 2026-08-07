@@ -7,10 +7,12 @@ A **demultiplexer** serves many consumers over one connection. Each frame carrie
 
 .. code-block:: text
 
-    -> {"consumer": "chat",   "message": {"action": "chat", "payload": {"message": "hi"}}}
-    <- {"consumer": "chat",   "message": {"action": "chat_notification", "payload": {...}}}
-    -> {"consumer": "system", "message": {"action": "ping", "payload": null}}
-    <- {"consumer": "system", "message": {"action": "pong", "payload": null}}
+    -> {"version": 1, "consumer": "chat",   "message": {"action": "chat", "payload": {"message": "hi"}}}
+    <- {"version": 1, "consumer": "chat",   "message": {"action": "chat_notification", "payload": {...}}}
+    -> {"version": 1, "consumer": "system", "message": {"action": "ping", "payload": null}}
+    <- {"version": 1, "consumer": "system", "message": {"action": "pong", "payload": null}}
+
+This page is the how-to. :doc:`multiplex-protocol` is the wire contract a client implements against — envelope, versioning, reconnect and per-stream state.
 
 Declaring a demultiplexer
 -------------------------
@@ -60,6 +62,20 @@ or as a WebSocket route on FastAPI:
     ws_router.add_websocket_route("/mux", MainDemultiplexer.as_asgi())
 
 Sub-consumers need no changes at all. The same consumer class can serve a dedicated route and be multiplexed at the same time.
+
+Knowing when the route is open
+------------------------------
+
+Once every sub-consumer has finished connecting — groups joined included — the demultiplexer sends a single unwrapped handshake:
+
+.. code-block:: text
+
+    <- {"action": "multiplex_ready",
+        "payload": {"version": 1, "ready": ["chat", "notifications"], "unavailable": []}}
+
+``ready`` lists the keys a client may address; ``unavailable`` lists those that failed to connect, most often because their own authenticator denied the request. A client that waits for this frame before sending cannot race ahead of the sub-consumers joining their groups.
+
+Readiness is not guesswork on the demultiplexer's part: the Chanx base consumer invokes a callback the demultiplexer puts in each sub-consumer's scope under ``chanx_connect_complete``, once, when ``websocket_connect`` returns. Consumers on their own route never carry the key. See :doc:`multiplex-protocol` for the full contract.
 
 What sub-consumers keep
 -----------------------
@@ -132,6 +148,12 @@ Configuration
     * - ``envelope_message_field``
       - ``"message"``
       - Envelope field holding the inner message.
+    * - ``envelope_version_field``
+      - ``"version"``
+      - Envelope field carrying the protocol version.
+    * - ``envelope_version``
+      - ``1``
+      - Version stamped on outgoing envelopes and required of incoming ones that declare a version.
     * - ``child_connect_timeout``
       - ``5.0``
       - Seconds to wait for sub-consumers to finish connecting before routing traffic.
@@ -147,12 +169,13 @@ To match an existing client protocol, rename the envelope fields:
         consumers = {"chat": ChatConsumer}
         envelope_consumer_field = "stream"
         envelope_message_field = "data"
+        envelope_version_field = "v"
 
 .. code-block:: text
 
-    -> {"stream": "chat", "data": {"action": "chat", "payload": {...}}}
+    -> {"v": 1, "stream": "chat", "data": {"action": "chat", "payload": {...}}}
 
-Keep custom names single words, or already camelCase: when ``camelize`` is enabled the envelope is camelized along with everything else, and ``consumer``/``message`` are unaffected by that transformation.
+Envelope field names are used verbatim on the wire in both directions: unlike the inner messages, the envelope is never camelized. Keeping custom names single words still saves confusion.
 
 Testing
 -------
@@ -177,6 +200,16 @@ Pass the demultiplexer as the communicator's ``consumer`` and the usual helpers 
 
 Every sub-consumer sends its own completion message, so a bare ``stop_action`` stops at whichever arrives first. Pass ``stop_consumer`` to wait for a particular sub-consumer's completion instead.
 
+The collecting helpers skip the ``multiplex_ready`` handshake, so tests that do not care about it need no changes. ``receive_multiplex_ready()`` returns it when you do — either to assert on it, or as the point where the sub-consumers are known to have joined their groups:
+
+.. code-block:: python
+
+    ready = await comm.receive_multiplex_ready()
+    assert ready.payload.unavailable == []
+
+    # Group traffic broadcast from here on is guaranteed to reach the sub-consumers.
+    await ChatConsumer.broadcast_event(NewMessageEvent(...), groups=["room_1"])
+
 AsyncAPI documentation
 ----------------------
 
@@ -189,11 +222,13 @@ A multiplexed route is documented as one channel per sub-consumer, all sharing t
       "x-chanx-multiplex": {
         "consumerField": "consumer",
         "messageField": "message",
+        "versionField": "version",
+        "version": 1,
         "consumerKey": "chat"
       }
     }
 
-The demultiplexer gets a channel of its own when it declares top-level handlers.
+The demultiplexer also gets a channel of its own, carrying the ``multiplex_ready`` handshake and any top-level handlers it declares.
 
 .. note::
 

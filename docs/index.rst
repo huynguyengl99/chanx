@@ -23,6 +23,7 @@ Contents
    user-guide/consumers-decorators
    user-guide/mixins
    user-guide/multiplexing
+   user-guide/multiplex-protocol
    user-guide/asyncapi
    user-guide/testing
    user-guide/framework-integration

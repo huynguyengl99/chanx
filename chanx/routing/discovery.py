@@ -8,9 +8,10 @@ the previous duplicated implementations.
 
 import re
 from abc import ABC, abstractmethod
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from typing import Any
 
+from chanx.core.topic import Topic
 from chanx.core.websocket import ChanxWebsocketConsumerMixin
 
 
@@ -35,6 +36,8 @@ class RouteInfo:
     base_url: str
     consumer: type[ChanxWebsocketConsumerMixin]
     path_params: dict[str, str] | None = None
+    topic: type[Topic[Any]] | None = None
+    host: type[ChanxWebsocketConsumerMixin] | None = None
 
     @property
     def channel_path(self) -> str:
@@ -54,6 +57,38 @@ class RouteInfo:
             # Also handle Django-style path parameters
             path = re.sub(rf"<\w+:{param_name}>", f"{{{param_name}}}", path)
         return path
+
+
+def expand_topic_routes(routes: list[RouteInfo]) -> list[RouteInfo]:
+    """
+    Document each mounted topic as its own route at the same address.
+
+    Tools that work per consumer, AsyncAPI in particular, need one entry per
+    topic. ``host`` records which consumer mounted it, so the same topic served
+    from two routes stays distinguishable.
+    """
+    expanded: list[RouteInfo] = []
+    for route in routes:
+        topics = getattr(route.consumer, "topics", None)
+        if not topics:
+            expanded.append(route)
+            continue
+
+        # A route dedicated to one topic is that topic, not a host for it.
+        standalone = getattr(route.consumer, "default_topic", None)
+        if standalone is not None:
+            expanded.append(replace(route, consumer=standalone, topic=standalone))
+            continue
+
+        if route.consumer._MESSAGE_HANDLER_INFO_MAP:
+            expanded.append(route)
+
+        expanded.extend(
+            replace(route, consumer=topic, topic=topic, host=route.consumer)
+            for topic in topics
+        )
+
+    return expanded
 
 
 class RouteDiscovery(ABC):

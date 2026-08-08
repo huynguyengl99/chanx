@@ -45,3 +45,14 @@ Registry
 
 .. autoclass:: chanx.core.registry.MessageRegistry
    :members:
+
+
+Topics
+------
+.. module:: chanx.core.topic
+
+.. autoclass:: chanx.core.topic.Topic
+   :members:
+
+.. autoclass:: chanx.core.envelope.Envelope
+   :members:

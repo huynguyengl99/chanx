@@ -22,6 +22,7 @@ Contents
    user-guide/prerequisites
    user-guide/consumers-decorators
    user-guide/mixins
+   user-guide/topics
    user-guide/asyncapi
    user-guide/testing
    user-guide/framework-integration

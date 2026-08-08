@@ -128,6 +128,11 @@ A mixin whose ``@event_handler`` methods rely on a channel group needs that grou
 
 ``GatewayConsumer`` joins ``static_group``, ``health_group``, and ``echo_group``. Duplicates are collapsed, and ``groups`` keeps its usual behaviour, so a subclass can still replace an inherited group list outright.
 
+When to use a topic instead
+---------------------------
+
+Mixins compose handlers onto one consumer, so every action shares one namespace and one authenticator. When two things need the *same* action name, their own authorization, or to be addressed per resource (``run:01HX``, ``room:42``), use :doc:`topics` instead - they are listed on a consumer rather than inherited, so none of that has to be shared.
+
 How It Works
 ------------
 

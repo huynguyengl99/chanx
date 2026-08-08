@@ -10,7 +10,7 @@ from typing import Any
 from starlette.applications import Starlette
 from starlette.routing import Mount, WebSocketRoute
 
-from chanx.routing.discovery import RouteDiscovery, RouteInfo
+from chanx.routing.discovery import RouteDiscovery, RouteInfo, expand_topic_routes
 
 
 class FastAPIRouteDiscovery(RouteDiscovery):
@@ -37,7 +37,7 @@ class FastAPIRouteDiscovery(RouteDiscovery):
             # Fallback: create routes from discovered consumers
             self._discover_from_consumers(routes, base_url)
 
-        return routes
+        return expand_topic_routes(routes)
 
     def _discover_from_consumers(self, routes: list[RouteInfo], base_url: str) -> None:
         """

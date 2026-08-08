@@ -8,7 +8,7 @@ handlers (@ws_handler, @event_handler, @channel).
 
 from textwrap import dedent
 from types import UnionType
-from typing import Any, cast, get_args
+from typing import Any, TypeAlias, cast, get_args
 
 import humps
 
@@ -24,6 +24,9 @@ from chanx.core.websocket import ChanxWebsocketConsumerMixin
 from chanx.messages.base import BaseMessage
 from chanx.routing.discovery import RouteInfo
 from chanx.type_defs import AsyncAPIHandlerInfo, ChannelInfo
+
+# Path plus consumer name: topics share an address, so the path is not unique.
+RouteKey: TypeAlias = tuple[str, str]
 
 
 class AsyncAPIGenerator:
@@ -67,7 +70,7 @@ class AsyncAPIGenerator:
 
         self.channels: dict[str, dict[str, Any]] = {}
 
-        self._route_channel_mapping: dict[str, str] = {}
+        self._route_channel_mapping: dict[RouteKey, str] = {}
 
         self.operations: dict[str, dict[str, Any]] = {}
 
@@ -138,6 +141,11 @@ class AsyncAPIGenerator:
 
         return "production"
 
+    @staticmethod
+    def _route_key(route: RouteInfo) -> RouteKey:
+        """Identify a route's channel, distinguishing topics sharing an address."""
+        return route.path, route.consumer.__name__
+
     def build_channels(self) -> dict[str, dict[str, Any]]:
         """
         Build AsyncAPI channels from WebSocket routes.
@@ -156,8 +164,11 @@ class AsyncAPIGenerator:
                 consumer, "_channel_info", {}
             )
 
-            # Use decorator metadata or fallback to defaults
+            # Use decorator metadata or fallback to defaults. A hosted topic is
+            # qualified, so the same topic served from two routes stays distinct.
             channel_name: str = channel_info.get("name") or route.consumer.snake_name
+            if route.host is not None and not channel_info.get("name"):
+                channel_name = f"{route.host.snake_name}_{channel_name}"
             channel_description = channel_info.get(
                 "description", dedent(str(route.consumer.__doc__))
             )
@@ -183,6 +194,15 @@ class AsyncAPIGenerator:
                         exclude_none=True, by_alias=True
                     )
 
+            if route.topic is not None:
+                # Topics share the route address, so the extension is what tells
+                # a client which stream a channel describes and how to address it.
+                channel["x-topic"] = {
+                    "name": route.topic.snake_name,
+                    "pattern": route.topic.pattern,
+                    "parameters": list(route.topic.param_names),
+                }
+
             channel["messages"] = self.get_channel_messages(consumer)
 
             # Add tags if specified in decorator
@@ -194,7 +214,7 @@ class AsyncAPIGenerator:
 
             # Use the resolved channel_name (which may be overridden by decorator)
             self.channels[channel_name] = channel
-            self._route_channel_mapping[route.path] = channel_name
+            self._route_channel_mapping[self._route_key(route)] = channel_name
 
         return self.channels
 
@@ -269,7 +289,7 @@ class AsyncAPIGenerator:
         if action_name in self._operation_names:
             action_name = "_".join((consumer.snake_name, action_name))
 
-        channel_name = self._route_channel_mapping[route.path]
+        channel_name = self._route_channel_mapping[self._route_key(route)]
         operation: dict[str, Any] = {
             "action": "receive" if not is_event else "send",
             "channel": {"$ref": f"#/channels/{channel_name}"},

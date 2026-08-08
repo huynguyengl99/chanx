@@ -11,7 +11,7 @@ from channels.routing import URLRouter
 from django.http import HttpRequest
 
 from chanx.channels.websocket import AsyncJsonWebsocketConsumer
-from chanx.routing.discovery import RouteDiscovery, RouteInfo
+from chanx.routing.discovery import RouteDiscovery, RouteInfo, expand_topic_routes
 from chanx.routing.patterns import get_pattern_string_and_params
 from chanx.routing.traversal import traverse_middleware_stack
 from chanx.utils.logging import logger
@@ -61,7 +61,7 @@ class DjangoRouteDiscovery(RouteDiscovery):
                 ws_app, "", routes, base_url, self.extract_routes_from_router
             )
 
-        return routes
+        return expand_topic_routes(routes)
 
     def get_websocket_application(self) -> Any:
         """Get the Django Channels WebSocket application."""

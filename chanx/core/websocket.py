@@ -9,10 +9,11 @@ authentication, group broadcasting, and channel event handling capabilities.
 import asyncio
 import inspect
 import uuid
-from collections.abc import Callable, Collection, MutableMapping
+from collections.abc import Callable, Collection, Mapping, MutableMapping
 from functools import reduce
 from types import UnionType
 from typing import (
+    TYPE_CHECKING,
     Annotated,
     Any,
     ClassVar,
@@ -32,6 +33,13 @@ from chanx.constants import COMPLETE_ACTIONS
 from chanx.core.authenticator import BaseAuthenticator
 from chanx.core.config import config
 from chanx.core.decorators import event_handler
+from chanx.core.envelope import (
+    Envelope,
+    TopicErrorReason,
+    current_ref,
+    current_seq,
+    strip_envelope,
+)
 from chanx.core.registry import message_registry
 from chanx.messages.base import BaseMessage
 from chanx.messages.outgoing import (
@@ -40,9 +48,19 @@ from chanx.messages.outgoing import (
     EventCompleteMessage,
     GroupCompleteMessage,
 )
+from chanx.messages.topic import (
+    SubscribedMessage,
+    SubscribeMessage,
+    UnsubscribedMessage,
+    UnsubscribeMessage,
+)
 from chanx.type_defs import AsyncAPIHandlerInfo, EventPayload, GroupMessageEvent
 from chanx.utils.asyncio import create_task
 from chanx.utils.logging import logger
+from chanx.utils.scope import path_params
+
+if TYPE_CHECKING:
+    from chanx.core.topic import Topic
 
 ReceiveEvent = TypeVar("ReceiveEvent", bound=BaseMessage, default=BaseMessage)
 
@@ -72,6 +90,13 @@ class ChanxWebsocketConsumerMixin(Generic[ReceiveEvent]):
     # forwarded to the WebSocket client without any processing.
     passthrough_events: ClassVar[list[type[BaseMessage]]] = []
     passthrough_method_prefix: ClassVar[str] = "handle_passthrough_"
+
+    # Topics this connection serves. Empty means the consumer behaves exactly as a
+    # consumer without topics.
+    topics: ClassVar[list[type["Topic[Any]"]]] = []
+
+    # Subscribed from the URL parameters on connect; un-addressed frames are its.
+    default_topic: ClassVar[type["Topic[Any]"] | None] = None
 
     # Groups contributed by mixins, merged across the MRO. Kept separate from
     # ``groups``, which the underlying framework owns and shadows as usual.
@@ -450,6 +475,9 @@ class ChanxWebsocketConsumerMixin(Generic[ReceiveEvent]):
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         super().__init__(*args, **kwargs)
 
+        self.subscriptions: dict[str, Topic[Any]] = {}
+        self._closed = False
+
         # Copy: a class-level ``groups`` list is shared by every instance.
         groups = list(self.groups)
         groups.extend(g for g in self._merged_extra_groups if g not in groups)
@@ -520,7 +548,7 @@ class ChanxWebsocketConsumerMixin(Generic[ReceiveEvent]):
             auth_result = await self.authenticator.authenticate(self.scope)
 
             if not auth_result:
-                await self.close()  # type: ignore
+                await self.close()
                 return
 
         try:
@@ -537,15 +565,25 @@ class ChanxWebsocketConsumerMixin(Generic[ReceiveEvent]):
 
         await self.post_authentication()
 
+        # A route dedicated to one topic subscribes it from the URL parameters.
+        if not self._closed and self.default_topic is not None:
+            await self._subscribe(self.default_topic.pattern.format(**self.url_params))
+
     async def websocket_disconnect(self, message: Any) -> None:
         """
         Handle WebSocket disconnection.
 
-        Cleans up context variables and logs the disconnection.
+        Leaves every subscribed topic, cleans up context variables and logs it.
 
         Args:
             message: The disconnection message from the framework
         """
+        for topic, subscription in list(self.subscriptions.items()):
+            await subscription.on_unsubscribe()
+            group = type(subscription).group_name(topic)
+            await self.channel_layer.group_discard(group, self.channel_name)
+        self.subscriptions.clear()
+
         await logger.ainfo("Disconnecting websocket")
         structlog.contextvars.clear_contextvars()
         await super().websocket_disconnect(message)  # type: ignore
@@ -559,9 +597,9 @@ class ChanxWebsocketConsumerMixin(Generic[ReceiveEvent]):
         """
         pass
 
-    async def receive_json(self, content: dict[str, Any], **kwargs: Any) -> None:
+    async def _receive_own_json(self, content: dict[str, Any], **kwargs: Any) -> None:
         """
-        Receive and process JSON data from WebSocket.
+        Receive and process JSON data addressed to this consumer.
 
         Logs messages, assigns ID, and creates task for async processing. Also enhances
         asyncio context with message id and message action.
@@ -937,6 +975,163 @@ class ChanxWebsocketConsumerMixin(Generic[ReceiveEvent]):
 
         if self.should_send_completion:
             await self.send_message(EventCompleteMessage())
+
+    @property
+    def url_params(self) -> Mapping[str, Any]:
+        """Path parameters, however the framework exposes them."""
+        return path_params(self.scope)
+
+    async def close(self, code: int | None = None, reason: str | None = None) -> None:
+        """Close the connection, recording that it is gone."""
+        self._closed = True
+        await super().close(code, reason)  # type: ignore[misc]
+
+    async def receive_json(self, content: dict[str, Any], **kwargs: Any) -> None:
+        """Route a frame to its topic, or to this consumer's own handlers."""
+        try:
+            envelope = Envelope.model_validate(content)
+        except ValidationError as e:
+            await self.handle_validation_error(e)
+            return
+
+        message_data = strip_envelope(content)
+        topic = envelope.topic
+
+        if topic is None and self.default_topic is not None:
+            # A standalone route serves one topic, so clients need no envelope.
+            topic = self.default_topic.pattern.format(**self.url_params)
+            envelope = envelope.model_copy(update={"topic": topic})
+
+        if topic is None:
+            await self._receive_own_json(message_data, **kwargs)
+            return
+
+        create_task(self._route_to_topic(envelope, message_data))
+
+    async def _route_to_topic(
+        self, envelope: Envelope, message_data: dict[str, Any]
+    ) -> None:
+        """Dispatch one topic-addressed frame, with its ref bound for replies."""
+        topic = cast(str, envelope.topic)
+        token = current_ref.set(envelope.ref)
+        try:
+            action = message_data.get("action")
+            if action == SubscribeMessage.model_fields["action"].default:
+                await self._subscribe(topic)
+            elif action == UnsubscribeMessage.model_fields["action"].default:
+                await self._unsubscribe(topic)
+            else:
+                await self._dispatch(topic, message_data)
+        finally:
+            current_ref.reset(token)
+
+    async def _dispatch(self, topic: str, message_data: dict[str, Any]) -> None:
+        """Hand a frame to a subscribed topic."""
+        subscription = self.subscriptions.get(topic)
+        if subscription is None:
+            await self.send_topic_error(
+                topic,
+                TopicErrorReason.NOT_SUBSCRIBED,
+                f"Not subscribed to '{topic}'",
+            )
+            return
+        await subscription.handle_json(message_data)
+
+    async def _subscribe(self, topic: str) -> None:
+        """Authorize a topic, join its group, and confirm."""
+        if topic in self.subscriptions:
+            await self.send_topic_message(topic, SubscribedMessage())
+            return
+
+        topic_class = self._match(topic)
+        if topic_class is None:
+            await self.send_topic_error(
+                topic, TopicErrorReason.UNKNOWN_TOPIC, f"Unknown topic '{topic}'"
+            )
+            return
+
+        subscription = topic_class(self, topic)
+        if not await subscription.authorize(**subscription.params):
+            await self.send_topic_error(
+                topic,
+                TopicErrorReason.UNAUTHORIZED,
+                f"Not allowed to subscribe to '{topic}'",
+            )
+            return
+
+        group = topic_class.group_name(topic)
+        await self.channel_layer.group_add(group, self.channel_name)
+        self.groups.append(group)
+        self.subscriptions[topic] = subscription
+        await self.send_topic_message(topic, SubscribedMessage())
+
+        # Anything the topic pushes now is state, not a reply to the request.
+        token = current_ref.set(None)
+        try:
+            await subscription.on_subscribe()
+        finally:
+            current_ref.reset(token)
+
+    async def _unsubscribe(self, topic: str) -> None:
+        """Leave a topic's group and confirm."""
+        subscription = self.subscriptions.pop(topic, None)
+        if subscription is not None:
+            await subscription.on_unsubscribe()
+            group = type(subscription).group_name(topic)
+            await self.channel_layer.group_discard(group, self.channel_name)
+            if group in self.groups:
+                self.groups.remove(group)
+        await self.send_topic_message(topic, UnsubscribedMessage())
+
+    @classmethod
+    def _match(cls, topic: str) -> type["Topic[Any]"] | None:
+        """Find the mounted topic class whose pattern matches."""
+        for topic_class in cls.topics:
+            if topic_class.parse(topic) is not None:
+                return topic_class
+        return None
+
+    async def handle_topic_event(self, event: dict[str, Any]) -> None:
+        """Route a channel layer event to the topic it was published to."""
+        topic = event.get("topic")
+        subscription = self.subscriptions.get(cast(str, topic))
+        if subscription is None:
+            return
+
+        ref_token = current_ref.set(None)
+        seq_token = current_seq.set(event.get("seq"))
+        try:
+            await subscription.handle_channel_event(event)  # type: ignore[arg-type]
+        finally:
+            current_ref.reset(ref_token)
+            current_seq.reset(seq_token)
+
+    async def send_topic_json(self, topic: str, content: dict[str, Any]) -> None:
+        """Write a frame stamped with its topic, plus the ref or seq in flight."""
+        envelope: dict[str, Any] = {
+            "version": Envelope.model_fields["version"].default,
+            "topic": topic,
+        }
+        ref = current_ref.get()
+        if ref is not None:
+            envelope["ref"] = ref
+        seq = current_seq.get()
+        if seq is not None:
+            envelope["seq"] = seq
+        await super().send_json(content | envelope)  # type: ignore[misc]
+
+    async def send_topic_message(self, topic: str, message: BaseMessage) -> None:
+        """Send a Chanx message on a topic."""
+        await self.send_topic_json(topic, message.model_dump(mode="json"))
+
+    async def send_topic_error(
+        self, topic: str, reason: TopicErrorReason, detail: str
+    ) -> None:
+        """Report a topic-level failure, with a reason the client can branch on."""
+        await logger.awarning("Topic error", topic=topic, reason=reason, detail=detail)
+        await self.send_topic_message(
+            topic, ErrorMessage(payload={"reason": reason, "detail": detail})
+        )
 
     async def handle_validation_error(self, error: ValidationError) -> None:
         """

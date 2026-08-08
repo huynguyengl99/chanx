@@ -249,6 +249,14 @@ class ParameterObject(BaseModel):
     model_config = ConfigDict(validate_by_name=True)
 
 
+class TopicObject(BaseModel):
+    """How a channel's topic is addressed: its pattern and that pattern's parameters."""
+
+    name: str = ""
+    pattern: str
+    parameters: list[str] = Field(default_factory=list)
+
+
 class ChannelObject(BaseModel):
     """AsyncAPI Channel Object describing a communication channel."""
 
@@ -264,6 +272,9 @@ class ChannelObject(BaseModel):
     publish: OperationObject | None = None
     tags: list[TagObject] | None = None
     externalDocs: ExternalDocumentationObject | None = None
+    topic: TopicObject | None = Field(default=None, alias="x-topic")
+
+    model_config = ConfigDict(validate_by_name=True, validate_by_alias=True)
 
 
 # -------------------------

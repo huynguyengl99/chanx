@@ -2,7 +2,7 @@
 
 import shutil
 from pathlib import Path
-from typing import cast
+from typing import Any, cast
 
 import humps
 
@@ -20,6 +20,8 @@ from chanx.client_generator.templates import (
     CHANNEL_INIT_TEMPLATE,
     PACKAGE_INIT_TEMPLATE,
     README_TEMPLATE,
+    TOPIC_CONNECTION_TEMPLATE,
+    TOPIC_HANDLE_TEMPLATE,
     get_template,
 )
 
@@ -148,6 +150,29 @@ class ClientGenerator:
         init_path = self.output_dir / "shared" / "__init__.py"
         init_path.touch()
 
+    def _handles_for(self, channel: ChannelObject) -> list[dict[str, Any]]:
+        """
+        Describe the topic handles a connection channel should hand out.
+
+        Topics share their connection's address, which is what groups them onto
+        the channel that owns the socket.
+        """
+        assert self.schema.channels
+        handles: list[dict[str, Any]] = []
+        for other in self.schema.channels.values():
+            if other.topic is None or other.address != channel.address:
+                continue
+            handles.append(
+                {
+                    "module": other.title,
+                    "class_name": humps.pascalize(other.title) + "Client",
+                    "method_name": other.topic.name or other.title,
+                    "pattern": other.topic.pattern,
+                    "parameters": other.topic.parameters,
+                }
+            )
+        return handles
+
     def _generate_channel_clients(self) -> None:
         """Generate client classes for each channel."""
         for channel in self.schema.channels.values():
@@ -163,14 +188,36 @@ class ClientGenerator:
 
             # Generate channel client class
             class_name = humps.pascalize(channel.title) + "Client"
-            template = get_template(CHANNEL_CLIENT_TEMPLATE)
-            code = template.render(
-                channel_title=channel.title,
-                channel_description=channel.description,
-                channel_address=channel.address,
-                class_name=class_name,
-                path_params=path_params,
-            )
+            has_outgoing = bool(self.channel_messages[channel.title][1])
+            if channel.topic is not None:
+                template = get_template(TOPIC_HANDLE_TEMPLATE)
+                code = template.render(
+                    channel_title=channel.title,
+                    channel_description=channel.description,
+                    channel_address=channel.address,
+                    class_name=class_name,
+                    topic_pattern=channel.topic.pattern,
+                    has_outgoing=has_outgoing,
+                )
+            elif self._handles_for(channel):
+                template = get_template(TOPIC_CONNECTION_TEMPLATE)
+                code = template.render(
+                    channel_title=channel.title,
+                    channel_description=channel.description,
+                    channel_address=channel.address,
+                    class_name=class_name,
+                    handles=self._handles_for(channel),
+                    has_outgoing=has_outgoing,
+                )
+            else:
+                template = get_template(CHANNEL_CLIENT_TEMPLATE)
+                code = template.render(
+                    channel_title=channel.title,
+                    channel_description=channel.description,
+                    channel_address=channel.address,
+                    class_name=class_name,
+                    path_params=path_params,
+                )
 
             # Write client file
             output_path = self.output_dir / channel.title / "client.py"

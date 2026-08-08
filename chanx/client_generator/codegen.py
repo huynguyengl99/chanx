@@ -58,8 +58,10 @@ def generate_pydantic_code(
                 schema_class_name = getattr(schema, "title")
                 reused_schemas.append(schema_class_name)
 
-        schemas_to_import = ", ".join(reused_schemas)
-        lines.append(f"from ..shared.messages import {schemas_to_import}")
+        # A channel can reuse nothing while others do, which would leave an
+        # import with no names behind it.
+        if reused_schemas:
+            lines.append(f"from ..shared.messages import {', '.join(reused_schemas)}")
 
     lines.append("")
 

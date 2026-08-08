@@ -33,6 +33,10 @@ from sandbox_fastapi.apps.showcase.consumer import (  # Multiple channel layer t
 from sandbox_fastapi.apps.system_chat.consumer import (
     SystemMessageConsumer,  # Direct WebSocket (no layers)
 )
+from sandbox_fastapi.apps.topics.consumer import (
+    RoomTopicConsumer,
+    TopicHubConsumer,
+)
 
 # Setup channel layers configuration
 from sandbox_fastapi.layers import setup_layers
@@ -173,8 +177,10 @@ ws_router.add_websocket_route(
 ws_router.add_websocket_route(
     "/background_jobs", BackgroundJobConsumer.as_asgi()
 )  # RQ background job processing
+ws_router.add_websocket_route("/room/{room_name}", RoomChatConsumer.as_asgi())
+ws_router.add_websocket_route("/topics", TopicHubConsumer.as_asgi())
 ws_router.add_websocket_route(
-    "/room/{room_name}", RoomChatConsumer.as_asgi()
+    "/topics/room/{room_name}", RoomTopicConsumer.as_asgi()
 )  # Dynamic room connections (now using chanx!)
 
 app.mount("/ws", ws_router)

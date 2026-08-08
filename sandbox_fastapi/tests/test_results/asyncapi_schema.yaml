@@ -139,6 +139,68 @@ channels:
     tags:
     - name: chat
     - name: rooms
+  topic_hub:
+    address: /ws/topics
+    title: topic_hub
+    description: Several topics multiplexed over a single connection
+    messages:
+      ping_message:
+        $ref: '#/components/messages/ping_message'
+      pong_message:
+        $ref: '#/components/messages/pong_message'
+    tags:
+    - name: topics
+  topic_hub_room_topic:
+    address: /ws/topics
+    title: topic_hub_room_topic
+    description: A chat room, addressed as room:<room_name>.
+    x-topic:
+      name: room_topic
+      pattern: room:{room_name}
+      parameters:
+      - room_name
+    messages:
+      echo_message:
+        $ref: '#/components/messages/echo_message'
+      post_message:
+        $ref: '#/components/messages/post_message'
+      posted_message:
+        $ref: '#/components/messages/posted_message'
+      room_event:
+        $ref: '#/components/messages/room_event'
+  topic_hub_presence_topic:
+    address: /ws/topics
+    title: topic_hub_presence_topic
+    description: Presence for one user, addressed as presence:<user>.
+    x-topic:
+      name: presence_topic
+      pattern: presence:{user}
+      parameters:
+      - user
+    messages:
+      presence_changed:
+        $ref: '#/components/messages/presence_changed'
+  room_topic:
+    address: /ws/topics/room/{room_name}
+    title: room_topic
+    description: A chat room, addressed as room:<room_name>.
+    parameters:
+      room_name:
+        description: Path parameter for room_name (str)
+    x-topic:
+      name: room_topic
+      pattern: room:{room_name}
+      parameters:
+      - room_name
+    messages:
+      echo_message:
+        $ref: '#/components/messages/echo_message'
+      post_message:
+        $ref: '#/components/messages/post_message'
+      posted_message:
+        $ref: '#/components/messages/posted_message'
+      room_event:
+        $ref: '#/components/messages/room_event'
 operations:
   handle_chat:
     action: receive
@@ -415,6 +477,85 @@ operations:
         $ref: '#/channels/room_chat'
       messages:
       - $ref: '#/channels/room_chat/messages/room_notification_message'
+  topic_hub_handle_ping:
+    action: receive
+    channel:
+      $ref: '#/channels/topic_hub'
+    description: ''
+    summary: Handle ping requests
+    messages:
+    - $ref: '#/channels/topic_hub/messages/ping_message'
+    reply:
+      channel:
+        $ref: '#/channels/topic_hub'
+      messages:
+      - $ref: '#/channels/topic_hub/messages/pong_message'
+  handle_echo:
+    action: receive
+    channel:
+      $ref: '#/channels/topic_hub_room_topic'
+    description: ''
+    summary: Acknowledge without broadcasting
+    messages:
+    - $ref: '#/channels/topic_hub_room_topic/messages/echo_message'
+    reply:
+      channel:
+        $ref: '#/channels/topic_hub_room_topic'
+      messages:
+      - $ref: '#/channels/topic_hub_room_topic/messages/posted_message'
+  handle_post:
+    action: receive
+    channel:
+      $ref: '#/channels/topic_hub_room_topic'
+    description: ''
+    summary: Post to a room
+    messages:
+    - $ref: '#/channels/topic_hub_room_topic/messages/post_message'
+  handle_passthrough_room_event:
+    action: send
+    channel:
+      $ref: '#/channels/topic_hub_room_topic'
+    description: Passthrough handler for RoomEvent
+    summary: ''
+    messages:
+    - $ref: '#/channels/topic_hub_room_topic/messages/room_event'
+  handle_passthrough_presence_changed:
+    action: send
+    channel:
+      $ref: '#/channels/topic_hub_presence_topic'
+    description: Passthrough handler for PresenceChanged
+    summary: ''
+    messages:
+    - $ref: '#/channels/topic_hub_presence_topic/messages/presence_changed'
+  room_topic_handle_echo:
+    action: receive
+    channel:
+      $ref: '#/channels/room_topic'
+    description: ''
+    summary: Acknowledge without broadcasting
+    messages:
+    - $ref: '#/channels/room_topic/messages/echo_message'
+    reply:
+      channel:
+        $ref: '#/channels/room_topic'
+      messages:
+      - $ref: '#/channels/room_topic/messages/posted_message'
+  room_topic_handle_post:
+    action: receive
+    channel:
+      $ref: '#/channels/room_topic'
+    description: ''
+    summary: Post to a room
+    messages:
+    - $ref: '#/channels/room_topic/messages/post_message'
+  room_topic_handle_passthrough_room_event:
+    action: send
+    channel:
+      $ref: '#/channels/room_topic'
+    description: Passthrough handler for RoomEvent
+    summary: ''
+    messages:
+    - $ref: '#/channels/room_topic/messages/room_event'
 components:
   messages:
     analytics_message:
@@ -429,6 +570,9 @@ components:
     chat_notification_message:
       payload:
         $ref: '#/components/schemas/ChatNotificationMessage'
+    echo_message:
+      payload:
+        $ref: '#/components/schemas/EchoMessage'
     extra_passthrough_message:
       payload:
         $ref: '#/components/schemas/ExtraPassthroughMessage'
@@ -456,6 +600,15 @@ components:
     pong_message:
       payload:
         $ref: '#/components/schemas/PongMessage'
+    post_message:
+      payload:
+        $ref: '#/components/schemas/PostMessage'
+    posted_message:
+      payload:
+        $ref: '#/components/schemas/PostedMessage'
+    presence_changed:
+      payload:
+        $ref: '#/components/schemas/PresenceChanged'
     reliable_chat_message:
       payload:
         $ref: '#/components/schemas/ReliableChatMessage'
@@ -465,6 +618,9 @@ components:
     room_chat_message:
       payload:
         $ref: '#/components/schemas/RoomChatMessage'
+    room_event:
+      payload:
+        $ref: '#/components/schemas/RoomEvent'
     room_notification_message:
       payload:
         $ref: '#/components/schemas/RoomNotificationMessage'
@@ -557,6 +713,20 @@ components:
       required:
       - message
       title: ChatPayload
+      type: object
+    EchoMessage:
+      description: Ask for an acknowledgement without broadcasting.
+      properties:
+        action:
+          const: echo
+          default: echo
+          title: Action
+          type: string
+        payload:
+          $ref: '#/components/schemas/PostPayload'
+      required:
+      - payload
+      title: EchoMessage
       type: object
     ExtraPassthroughMessage:
       description: Event forwarded straight to the client by a mixin's passthrough_events.
@@ -731,6 +901,74 @@ components:
           type: 'null'
       title: PongMessage
       type: object
+    PostMessage:
+      description: Post something to a room.
+      properties:
+        action:
+          const: post
+          default: post
+          title: Action
+          type: string
+        payload:
+          $ref: '#/components/schemas/PostPayload'
+      required:
+      - payload
+      title: PostMessage
+      type: object
+    PostPayload:
+      properties:
+        body:
+          title: Body
+          type: string
+        author:
+          default: anonymous
+          title: Author
+          type: string
+      required:
+      - body
+      title: PostPayload
+      type: object
+    PostedMessage:
+      description: Confirm a post.
+      properties:
+        action:
+          const: posted
+          default: posted
+          title: Action
+          type: string
+        payload:
+          $ref: '#/components/schemas/PostPayload'
+      required:
+      - payload
+      title: PostedMessage
+      type: object
+    PresenceChanged:
+      description: A user's presence changed.
+      properties:
+        action:
+          const: presence_changed
+          default: presence_changed
+          title: Action
+          type: string
+        payload:
+          $ref: '#/components/schemas/PresencePayload'
+      required:
+      - payload
+      title: PresenceChanged
+      type: object
+    PresencePayload:
+      properties:
+        user:
+          title: User
+          type: string
+        online:
+          title: Online
+          type: boolean
+      required:
+      - user
+      - online
+      title: PresencePayload
+      type: object
     ReliableChatMessage:
       description: Reliable chat message.
       properties:
@@ -781,6 +1019,20 @@ components:
       required:
       - payload
       title: RoomChatMessage
+      type: object
+    RoomEvent:
+      description: Something happened in a room.
+      properties:
+        action:
+          const: room_event
+          default: room_event
+          title: Action
+          type: string
+        payload:
+          $ref: '#/components/schemas/PostPayload'
+      required:
+      - payload
+      title: RoomEvent
       type: object
     RoomMessagePayload:
       properties:

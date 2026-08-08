@@ -31,3 +31,10 @@ COMPLETE_ACTIONS = {
 }
 
 CHANX_ACTIONS = COMPLETE_ACTIONS | {"error"}
+
+# Reserved topic-envelope frame keys. Single words, so camelization leaves them
+# untouched.
+ENVELOPE_FIELDS = frozenset({"version", "topic", "ref", "seq"})
+
+# Channel layers reject group names at or above this length.
+MAX_GROUP_NAME_LENGTH = 99

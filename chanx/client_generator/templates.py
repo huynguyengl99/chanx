@@ -40,6 +40,93 @@ class {{ class_name }}(BaseClient):
 
 
 # ============================================================================
+# TOPIC HANDLE TEMPLATE
+# ============================================================================
+
+TOPIC_HANDLE_TEMPLATE = '''"""{{ channel_title }} topic handle."""
+
+from ..base.topic_client import BaseTopicHandle
+from .messages import IncomingMessage{% if has_outgoing %}, OutgoingMessage{% endif %}
+
+
+class {{ class_name }}(BaseTopicHandle):
+    """
+    Handle for the {{ topic_pattern }} topic.
+
+    {{ channel_description }}
+
+    Shares the connection at {{ channel_address }}.
+    """
+
+    pattern = "{{ topic_pattern }}"
+    incoming_message = IncomingMessage
+{% if has_outgoing %}
+    async def send_message(self, message: OutgoingMessage) -> None:
+        """
+        Send a message on this topic.
+
+        Args:
+            message: The message to send
+        """
+        await super().send_message(message)
+{% endif %}
+    async def handle_message(self, message: IncomingMessage) -> None:
+        pass
+
+'''
+
+
+# ============================================================================
+# TOPIC CONNECTION CLIENT TEMPLATE
+# ============================================================================
+
+TOPIC_CONNECTION_TEMPLATE = '''"""{{ channel_title }} connection client."""
+
+from typing import Any
+
+from ..base.topic_client import BaseTopicConnection
+{% for handle in handles %}
+from ..{{ handle.module }}.client import {{ handle.class_name }}
+{% endfor %}
+from .messages import IncomingMessage{% if has_outgoing %}, OutgoingMessage{% endif %}
+
+
+class {{ class_name }}(BaseTopicConnection):
+    """
+    WebSocket client for {{ channel_title }}.
+
+    {{ channel_description }}
+
+    Owns the connection at {{ channel_address }} and hands out topic handles.
+    """
+
+    path = "{{ channel_address }}"
+    incoming_message = IncomingMessage
+
+{% for handle in handles %}
+    def {{ handle.method_name }}(self{% for param in handle.parameters %}, {{ param }}: Any{% endfor %}) -> {{ handle.class_name }}:
+        """Handle for {{ handle.pattern }}."""
+        return self.topic({{ handle.class_name }}{% for param in handle.parameters %}, {{ param }}={{ param }}{% endfor %})
+
+{% endfor %}
+{% if has_outgoing %}
+    async def send_message(self, message: OutgoingMessage) -> None:
+        """
+        Send a message to the server outside any topic.
+
+        Args:
+            message: The message to send
+        """
+        await super().send_message(message)
+{% endif %}
+
+    async def handle_message(self, message: IncomingMessage) -> None:
+        pass
+
+'''
+
+
+# ============================================================================
 # CHANNEL __INIT__.PY TEMPLATE
 # ============================================================================
 

@@ -23,11 +23,60 @@ from asgiref.timeout import timeout as async_timeout
 from chanx.constants import (
     COMPLETE_ACTIONS,
     COMPLETE_ACTIONS_TYPE,
+    ENVELOPE_FIELDS,
     MESSAGE_ACTION_COMPLETE,
 )
 from chanx.core.config import config
 from chanx.core.websocket import ChanxWebsocketConsumerMixin
 from chanx.messages.base import BaseMessage
+
+
+@dataclass
+class CapturedTopicBroadcast:
+    """One publish recorded by :func:`capture_topic_broadcasts`."""
+
+    topic: str
+    event: BaseMessage
+    seq: int | None
+
+
+@contextmanager
+def capture_topic_broadcasts(
+    topic_class: Any, *, suppress: bool = True
+) -> Generator[list[CapturedTopicBroadcast]]:
+    """
+    Record what a topic published, rather than observing it on a second connection.
+
+    Asserting on a broadcast usually means opening another client and reading its
+    messages, which conflates what was *published* with what got *delivered*. This
+    checks the publish side directly.
+
+    Suppressed by default, so the broadcast is recorded and not delivered. Pass
+    ``suppress=False`` to keep delivery working, which also makes the assertion
+    deterministic: reading the delivered message proves the publish already happened.
+
+    Args:
+        topic_class: The Topic whose broadcasts to record
+        suppress: Whether to swallow the broadcast instead of delivering it
+    """
+    captured: list[CapturedTopicBroadcast] = []
+    original = topic_class.broadcast
+    owned = "broadcast" in topic_class.__dict__
+
+    # a classmethod, so an instance calling self.broadcast() still binds the class
+    async def spy(_cls: Any, topic: str, event: Any, *, seq: int | None = None) -> None:
+        captured.append(CapturedTopicBroadcast(topic=topic, event=event, seq=seq))
+        if not suppress:
+            await original(topic, event, seq=seq)
+
+    topic_class.broadcast = classmethod(spy)
+    try:
+        yield captured
+    finally:
+        if owned:
+            topic_class.broadcast = original
+        else:
+            del topic_class.broadcast
 
 
 @dataclass
@@ -207,14 +256,67 @@ class WebsocketCommunicatorMixin:
             pass
         return messages
 
-    async def send_message(self, message: BaseMessage) -> None:
+    async def send_message(
+        self, message: BaseMessage, *, topic: str | None = None, ref: str | None = None
+    ) -> None:
         """
         Sends a Message object as JSON to the WebSocket.
 
         Args:
             message: The Message instance to send
+            topic: Address the message to a topic instead of the consumer
+            ref: Correlate the reply with this request
         """
-        await self.send_json_to(message.model_dump())
+        content = message.model_dump()
+        if topic is not None:
+            content |= {"version": 1, "topic": topic}
+        if ref is not None:
+            content["ref"] = ref
+        await self.send_json_to(content)
+
+    async def subscribe(self, topic: str, ref: str = "1") -> dict[str, Any]:
+        """
+        Subscribe to a topic and return the reply frame.
+
+        Args:
+            topic: The topic to subscribe to
+            ref: Ref to correlate the reply with
+        """
+        await self.send_json_to(
+            {"version": 1, "topic": topic, "ref": ref, "action": "subscribe"}
+        )
+        return cast(dict[str, Any], await self.receive_json_from())
+
+    async def unsubscribe(self, topic: str, ref: str = "1") -> dict[str, Any]:
+        """
+        Unsubscribe from a topic and return the reply frame.
+
+        Args:
+            topic: The topic to unsubscribe from
+            ref: Ref to correlate the reply with
+        """
+        await self.send_json_to(
+            {"version": 1, "topic": topic, "ref": ref, "action": "unsubscribe"}
+        )
+        return cast(dict[str, Any], await self.receive_json_from())
+
+    async def receive_topic_message(
+        self, topic_class: Any, timeout: float = 1
+    ) -> BaseMessage:
+        """
+        Receive one frame and validate it against a topic's own messages.
+
+        Args:
+            topic_class: The Topic whose messages the frame should match
+            timeout: Maximum time to wait
+        """
+        raw = await self.receive_json_from(timeout)
+        return cast(
+            BaseMessage,
+            topic_class.outgoing_message_adapter.validate_python(
+                {k: v for k, v in raw.items() if k not in ENVELOPE_FIELDS}
+            ),
+        )
 
     async def assert_closed(self) -> None:
         """Asserts that the WebSocket has been closed."""

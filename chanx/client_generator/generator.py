@@ -189,6 +189,7 @@ class ClientGenerator:
             # Generate channel client class
             class_name = humps.pascalize(channel.title) + "Client"
             has_outgoing = bool(self.channel_messages[channel.title][1])
+            handles = self._handles_for(channel)
             if channel.topic is not None:
                 template = get_template(TOPIC_HANDLE_TEMPLATE)
                 code = template.render(
@@ -199,14 +200,14 @@ class ClientGenerator:
                     topic_pattern=channel.topic.pattern,
                     has_outgoing=has_outgoing,
                 )
-            elif self._handles_for(channel):
+            elif handles:
                 template = get_template(TOPIC_CONNECTION_TEMPLATE)
                 code = template.render(
                     channel_title=channel.title,
                     channel_description=channel.description,
                     channel_address=channel.address,
                     class_name=class_name,
-                    handles=self._handles_for(channel),
+                    handles=handles,
                     has_outgoing=has_outgoing,
                 )
             else:

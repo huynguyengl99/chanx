@@ -73,6 +73,11 @@ class Topic(ChanxWebsocketConsumerMixin[ReceiveEvent]):
         match = cls._regex.match(topic)
         return match.groupdict() if match else None
 
+    @property
+    def should_camelize(self) -> bool:
+        """Frames share the consumer's connection, so follow its wire format."""
+        return self.consumer.should_camelize
+
     @classmethod
     def group_name(cls, topic: str) -> str:
         """
@@ -96,6 +101,8 @@ class Topic(ChanxWebsocketConsumerMixin[ReceiveEvent]):
     async def send_json(self, content: dict[str, Any], close: bool = False) -> None:
         """Stamp this topic on an outgoing frame and hand it to the consumer."""
         await self.consumer.send_topic_json(self.topic, content)
+        if close:
+            await self.consumer.close()
 
     @classmethod
     def as_consumer(cls) -> Any:

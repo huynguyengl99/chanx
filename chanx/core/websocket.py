@@ -29,7 +29,7 @@ from asgiref.sync import async_to_sync
 from pydantic import Field, TypeAdapter, ValidationError
 from typing_extensions import TypeVar
 
-from chanx.constants import COMPLETE_ACTIONS
+from chanx.constants import COMPLETE_ACTIONS, ENVELOPE_VERSION
 from chanx.core.authenticator import BaseAuthenticator
 from chanx.core.config import config
 from chanx.core.decorators import event_handler
@@ -477,6 +477,7 @@ class ChanxWebsocketConsumerMixin(Generic[ReceiveEvent]):
 
         self.subscriptions: dict[str, Topic[Any]] = {}
         self._closed = False
+        self._default_topic_value: str | None = None
 
         # Copy: a class-level ``groups`` list is shared by every instance.
         groups = list(self.groups)
@@ -567,7 +568,7 @@ class ChanxWebsocketConsumerMixin(Generic[ReceiveEvent]):
 
         # A route dedicated to one topic subscribes it from the URL parameters.
         if not self._closed and self.default_topic is not None:
-            await self._subscribe(self.default_topic.pattern.format(**self.url_params))
+            await self._subscribe(self._resolve_default_topic())
 
     async def websocket_disconnect(self, message: Any) -> None:
         """
@@ -580,8 +581,7 @@ class ChanxWebsocketConsumerMixin(Generic[ReceiveEvent]):
         """
         for topic, subscription in list(self.subscriptions.items()):
             await subscription.on_unsubscribe()
-            group = type(subscription).group_name(topic)
-            await self.channel_layer.group_discard(group, self.channel_name)
+            await self._leave_topic_group(topic, subscription)
         self.subscriptions.clear()
 
         await logger.ainfo("Disconnecting websocket")
@@ -981,6 +981,21 @@ class ChanxWebsocketConsumerMixin(Generic[ReceiveEvent]):
         """Path parameters, however the framework exposes them."""
         return path_params(self.scope)
 
+    def _resolve_default_topic(self) -> str:
+        """Fill the default topic's pattern from the URL, once per connection."""
+        if self._default_topic_value is None:
+            default_topic = cast("type[Topic[Any]]", self.default_topic)
+            params = self.url_params
+            missing = [name for name in default_topic.param_names if name not in params]
+            if missing:
+                raise ValueError(
+                    f"default_topic pattern '{default_topic.pattern}' needs URL "
+                    f"parameters {missing} that this route does not provide "
+                    f"(got {sorted(params)})"
+                )
+            self._default_topic_value = default_topic.pattern.format(**params)
+        return self._default_topic_value
+
     async def close(self, code: int | None = None, reason: str | None = None) -> None:
         """Close the connection, recording that it is gone."""
         self._closed = True
@@ -999,13 +1014,15 @@ class ChanxWebsocketConsumerMixin(Generic[ReceiveEvent]):
 
         if topic is None and self.default_topic is not None:
             # A standalone route serves one topic, so clients need no envelope.
-            topic = self.default_topic.pattern.format(**self.url_params)
+            topic = self._resolve_default_topic()
             envelope = envelope.model_copy(update={"topic": topic})
 
         if topic is None:
             await self._receive_own_json(message_data, **kwargs)
             return
 
+        if self.should_camelize:
+            message_data = humps.decamelize(message_data)
         create_task(self._route_to_topic(envelope, message_data))
 
     async def _route_to_topic(
@@ -1077,11 +1094,15 @@ class ChanxWebsocketConsumerMixin(Generic[ReceiveEvent]):
         subscription = self.subscriptions.pop(topic, None)
         if subscription is not None:
             await subscription.on_unsubscribe()
-            group = type(subscription).group_name(topic)
-            await self.channel_layer.group_discard(group, self.channel_name)
-            if group in self.groups:
-                self.groups.remove(group)
+            await self._leave_topic_group(topic, subscription)
         await self.send_topic_message(topic, UnsubscribedMessage())
+
+    async def _leave_topic_group(self, topic: str, subscription: "Topic[Any]") -> None:
+        """Drop a subscription's group, both in the layer and on this consumer."""
+        group = type(subscription).group_name(topic)
+        await self.channel_layer.group_discard(group, self.channel_name)
+        if group in self.groups:
+            self.groups.remove(group)
 
     @classmethod
     def _match(cls, topic: str) -> type["Topic[Any]"] | None:
@@ -1109,7 +1130,7 @@ class ChanxWebsocketConsumerMixin(Generic[ReceiveEvent]):
     async def send_topic_json(self, topic: str, content: dict[str, Any]) -> None:
         """Write a frame stamped with its topic, plus the ref or seq in flight."""
         envelope: dict[str, Any] = {
-            "version": Envelope.model_fields["version"].default,
+            "version": ENVELOPE_VERSION,
             "topic": topic,
         }
         ref = current_ref.get()
@@ -1118,6 +1139,8 @@ class ChanxWebsocketConsumerMixin(Generic[ReceiveEvent]):
         seq = current_seq.get()
         if seq is not None:
             envelope["seq"] = seq
+        if self.should_camelize:
+            content = humps.camelize(content)
         await super().send_json(content | envelope)  # type: ignore[misc]
 
     async def send_topic_message(self, topic: str, message: BaseMessage) -> None:

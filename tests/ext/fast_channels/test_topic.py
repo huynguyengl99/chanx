@@ -9,6 +9,7 @@ from chanx.fast_channels.testing import WebsocketCommunicator
 from chanx.fast_channels.websocket import AsyncJsonWebsocketConsumer
 from chanx.messages.base import BaseMessage
 from fastapi import FastAPI
+from pydantic import BaseModel
 
 from fast_channels.layers import InMemoryChannelLayer, register_channel_layer
 
@@ -257,6 +258,22 @@ async def test_standalone_route_subscribes_without_an_envelope() -> None:
         assert pushed["action"] == "reply_created"
 
 
+misrouted_app = FastAPI()
+misrouted_app.add_websocket_route(
+    "/ws/misrouted", DiscussionTopic.as_consumer().as_asgi()
+)
+
+
+@pytest.mark.asyncio
+async def test_default_topic_missing_url_param_fails_with_a_clear_error() -> None:
+    """A route that lacks the pattern's parameters is a configuration error."""
+    consumer = DiscussionTopic.as_consumer()
+    comm = WebsocketCommunicator(misrouted_app, "/ws/misrouted", consumer=consumer)
+    await comm.connect()
+    with pytest.raises(ValueError, match=r"needs URL parameters \['pk'\]"):
+        await comm.wait(timeout=1)
+
+
 @pytest.mark.asyncio
 async def test_broadcast_seq_reaches_the_client() -> None:
     async with WebsocketCommunicator(app, "/ws/hub", consumer=MainConsumer) as comm:
@@ -350,3 +367,98 @@ async def test_disconnect_runs_the_unsubscribe_hook() -> None:
         await comm.receive_json_from(timeout=2)
 
     assert LifecycleTopic.events == ["subscribe:b", "unsubscribe:b"]
+
+
+class ReplyPayload(BaseModel):
+    reply_text: str
+
+
+class PostReplyMessage(BaseMessage):
+    action: Literal["post_reply"] = "post_reply"
+    payload: ReplyPayload
+
+
+class ReplyPostedMessage(BaseMessage):
+    action: Literal["reply_posted"] = "reply_posted"
+    payload: ReplyPayload
+
+
+class CamelTopic(Topic[NewReplyEvent]):
+    pattern = "camel:{pk}"
+    channel_layer_alias = LAYER_ALIAS
+
+    @ws_handler
+    async def handle_post_reply(self, message: PostReplyMessage) -> ReplyPostedMessage:
+        return ReplyPostedMessage(payload=message.payload)
+
+    @event_handler
+    async def handle_new_reply(self, event: NewReplyEvent) -> ReplyPostedMessage:
+        return ReplyPostedMessage(payload=ReplyPayload(reply_text=event.payload))
+
+
+class CamelConsumer(AsyncJsonWebsocketConsumer[NewReplyEvent]):
+    camelize = True
+    channel_layer_alias = LAYER_ALIAS
+    topics: ClassVar[list[type[Topic[Any]]]] = [CamelTopic]
+
+
+camel_app = FastAPI()
+camel_app.add_websocket_route("/ws/camel", CamelConsumer.as_asgi())
+
+
+@pytest.mark.asyncio
+async def test_camelized_consumer_round_trips_topic_frames() -> None:
+    """Topic frames follow the consumer's camelize setting in both directions."""
+    async with WebsocketCommunicator(
+        camel_app, "/ws/camel", consumer=CamelConsumer
+    ) as comm:
+        confirmed = await _send(
+            comm, {"topic": "camel:1", "ref": "1", "action": "subscribe"}
+        )
+        assert confirmed["action"] == "subscribed"
+
+        # a camelized client sends camelCase keys and gets them back
+        reply = await _send(
+            comm,
+            {
+                "topic": "camel:1",
+                "ref": "2",
+                "action": "post_reply",
+                "payload": {"replyText": "hello"},
+            },
+        )
+        assert reply == {
+            "action": "reply_posted",
+            "payload": {"replyText": "hello"},
+            "version": 1,
+            "topic": "camel:1",
+            "ref": "2",
+        }
+
+        # the communicator helper camelizes the same way a generated client does
+        await comm.send_message(
+            PostReplyMessage(payload=ReplyPayload(reply_text="via helper")),
+            topic="camel:1",
+            ref="3",
+        )
+        helper_reply = await comm.receive_json_from(timeout=2)
+        assert helper_reply["payload"] == {"replyText": "via helper"}
+        assert helper_reply["ref"] == "3"
+
+
+@pytest.mark.asyncio
+async def test_camelized_consumer_broadcasts_camelcase_frames() -> None:
+    async with WebsocketCommunicator(
+        camel_app, "/ws/camel", consumer=CamelConsumer
+    ) as comm:
+        await _send(comm, {"topic": "camel:7", "ref": "1", "action": "subscribe"})
+
+        await CamelTopic.broadcast("camel:7", NewReplyEvent(payload="from-broadcast"))
+
+        pushed = await comm.receive_json_from(timeout=2)
+        assert pushed == {
+            "action": "reply_posted",
+            "payload": {"replyText": "from-broadcast"},
+            "version": 1,
+            "topic": "camel:7",
+        }

@@ -36,5 +36,8 @@ CHANX_ACTIONS = COMPLETE_ACTIONS | {"error"}
 # untouched.
 ENVELOPE_FIELDS = frozenset({"version", "topic", "ref", "seq"})
 
+# Generated clients carry their own copy, since they cannot import chanx.
+ENVELOPE_VERSION = 1
+
 # Channel layers reject group names at or above this length.
 MAX_GROUP_NAME_LENGTH = 99

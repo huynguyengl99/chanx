@@ -11,7 +11,7 @@ from typing import Any
 
 from pydantic import BaseModel
 
-from chanx.constants import ENVELOPE_FIELDS
+from chanx.constants import ENVELOPE_FIELDS, ENVELOPE_VERSION
 
 TOPIC_EVENT_TYPE = "handle_topic_event"
 
@@ -24,7 +24,7 @@ current_seq: ContextVar[int | None] = ContextVar("chanx_current_seq", default=No
 class Envelope(BaseModel):
     """Routing metadata carried alongside a message on the same flat frame."""
 
-    version: int = 1
+    version: int = ENVELOPE_VERSION
     topic: str | None = None
     ref: str | None = None
     seq: int | None = None

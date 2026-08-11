@@ -24,6 +24,7 @@ from chanx.constants import (
     COMPLETE_ACTIONS,
     COMPLETE_ACTIONS_TYPE,
     ENVELOPE_FIELDS,
+    ENVELOPE_VERSION,
     MESSAGE_ACTION_COMPLETE,
 )
 from chanx.core.config import config
@@ -65,6 +66,7 @@ def capture_topic_broadcasts(
 
     # a classmethod, so an instance calling self.broadcast() still binds the class
     async def spy(_cls: Any, topic: str, event: Any, *, seq: int | None = None) -> None:
+        """Record the publish, then forward it unless suppressed."""
         captured.append(CapturedTopicBroadcast(topic=topic, event=event, seq=seq))
         if not suppress:
             await original(topic, event, seq=seq)
@@ -237,7 +239,7 @@ class WebsocketCommunicatorMixin:
                 while True:
                     raw_message = await self.receive_json_from(timeout)
 
-                    if getattr(self.consumer, "camelize", False) or config.camelize:
+                    if self._should_camelize:
                         raw_message = humps.decamelize(raw_message)
 
                     message_action = raw_message.get(self.action_key)
@@ -256,6 +258,11 @@ class WebsocketCommunicatorMixin:
             pass
         return messages
 
+    @property
+    def _should_camelize(self) -> bool:
+        """Whether the consumer under test speaks camelCase on the wire."""
+        return getattr(self.consumer, "camelize", False) or config.camelize
+
     async def send_message(
         self, message: BaseMessage, *, topic: str | None = None, ref: str | None = None
     ) -> None:
@@ -268,8 +275,10 @@ class WebsocketCommunicatorMixin:
             ref: Correlate the reply with this request
         """
         content = message.model_dump()
+        if self._should_camelize:
+            content = humps.camelize(content)
         if topic is not None:
-            content |= {"version": 1, "topic": topic}
+            content |= {"version": ENVELOPE_VERSION, "topic": topic}
         if ref is not None:
             content["ref"] = ref
         await self.send_json_to(content)
@@ -283,7 +292,12 @@ class WebsocketCommunicatorMixin:
             ref: Ref to correlate the reply with
         """
         await self.send_json_to(
-            {"version": 1, "topic": topic, "ref": ref, "action": "subscribe"}
+            {
+                "version": ENVELOPE_VERSION,
+                "topic": topic,
+                "ref": ref,
+                "action": "subscribe",
+            }
         )
         return cast(dict[str, Any], await self.receive_json_from())
 
@@ -296,7 +310,12 @@ class WebsocketCommunicatorMixin:
             ref: Ref to correlate the reply with
         """
         await self.send_json_to(
-            {"version": 1, "topic": topic, "ref": ref, "action": "unsubscribe"}
+            {
+                "version": ENVELOPE_VERSION,
+                "topic": topic,
+                "ref": ref,
+                "action": "unsubscribe",
+            }
         )
         return cast(dict[str, Any], await self.receive_json_from())
 
@@ -311,6 +330,8 @@ class WebsocketCommunicatorMixin:
             timeout: Maximum time to wait
         """
         raw = await self.receive_json_from(timeout)
+        if self._should_camelize:
+            raw = humps.decamelize(raw)
         return cast(
             BaseMessage,
             topic_class.outgoing_message_adapter.validate_python(

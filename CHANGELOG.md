@@ -1,3 +1,18 @@
+## v2.10.0 (2026-08-12)
+
+### Feat
+
+- **sandbox**: demo topics in the FastAPI sandbox
+- **client-generator**: generate one connection client with topic handles
+- **asyncapi**: document each topic as its own channel
+- **topic**: add topic subscriptions multiplexed over one connection
+- **utils**: add group naming, scope, framework and streaming helpers
+
+### Fix
+
+- **topic**: follow consumer camelize on topic frames and tighten lifecycle
+- **asyncapi**: keep channel extensions across a document round-trip
+
 ## v2.9.0 (2026-08-06)
 
 ### Feat

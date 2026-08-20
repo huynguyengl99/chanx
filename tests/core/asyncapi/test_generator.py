@@ -433,6 +433,42 @@ class TestAsyncAPIGenerator:
         for msg in operation["reply"]["messages"]:
             assert "$ref" in msg
 
+    def test_operation_with_optional_union_output_type(self) -> None:
+        """A `X | None` reply must not reference a non-existent none_type message."""
+
+        class OptionalMessage(BaseMessage):
+            action: Literal["optional_input"] = "optional_input"
+            payload: str
+
+        class OptionalConsumer(AsyncJsonWebsocketConsumer):
+            @ws_handler
+            async def handle_optional(
+                self, message: OptionalMessage
+            ) -> DummyResponse | None:
+                return None
+
+        route = RouteInfo(
+            path="/ws/optional",
+            handler=Mock(),
+            base_url="ws://localhost:8000",
+            consumer=OptionalConsumer,
+        )
+
+        generator = AsyncAPIGenerator([route])
+        spec = generator.generate()
+
+        operation = spec["operations"]["handle_optional"]
+        refs = [msg["$ref"] for msg in operation["reply"]["messages"]]
+
+        # Only the message arm is referenced; None has no message definition.
+        assert refs == ["#/channels/optional/messages/dummy_response"]
+
+        # Every reference in the document must resolve.
+        channel_messages = spec["channels"]["optional"]["messages"]
+        assert "none_type" not in channel_messages
+        for ref in refs:
+            assert ref.rsplit("/", 1)[1] in channel_messages
+
     def test_operation_with_list_output_type(self) -> None:
         """Test operation creation with list output type."""
 

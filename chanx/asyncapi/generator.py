@@ -7,8 +7,7 @@ handlers (@ws_handler, @event_handler, @channel).
 """
 
 from textwrap import dedent
-from types import UnionType
-from typing import Any, TypeAlias, cast, get_args
+from typing import Any, TypeAlias, cast, get_args, get_origin
 
 import humps
 
@@ -19,7 +18,8 @@ from chanx.asyncapi.constants import (
     DEFAULT_SERVER_URL,
 )
 from chanx.asyncapi.type_defs import ChannelObject, ParameterObject
-from chanx.core.registry import message_registry
+from chanx.core.decorators import OutputType
+from chanx.core.registry import UNION_TYPES, message_registry
 from chanx.core.websocket import ChanxWebsocketConsumerMixin
 from chanx.messages.base import BaseMessage
 from chanx.routing.discovery import RouteInfo
@@ -317,22 +317,10 @@ class AsyncAPIGenerator:
             ]
 
         # Add reply if there's an output type
-        if handler_info["output_type"]:
-            output_type = handler_info["output_type"]
-
-            output_messages: list[dict[str, Any]] = []
-            if isinstance(output_type, list | tuple):
-                # Handle list/tuple of message types
-                for sub in output_type:
-                    output_messages.append(self.build_output(channel_name, sub))
-            elif isinstance(output_type, UnionType):
-                # Handle UnionType
-                for sub in get_args(output_type):
-                    output_messages.append(self.build_output(channel_name, sub))
-            else:
-                # Handle single message type
-                output_messages.append(self.build_output(channel_name, output_type))
-
+        output_messages = self._build_output_messages(
+            channel_name, handler_info["output_type"]
+        )
+        if output_messages:
             if not is_event:
                 operation["reply"] = {
                     "channel": {"$ref": f"#/channels/{channel_name}"},
@@ -343,6 +331,39 @@ class AsyncAPIGenerator:
 
         self.operations[action_name] = operation
         self._operation_names.add(action_name)
+
+    def _build_output_messages(
+        self, channel_name: str, output_type: OutputType
+    ) -> list[dict[str, Any]]:
+        """
+        Build the message references a handler's output type resolves to.
+
+        Args:
+            channel_name: The channel name containing the messages
+            output_type: Handler output: a single message type, a union of them,
+                a list/tuple of them, or None
+
+        Returns:
+            One message reference per BaseMessage the handler can send
+        """
+        if not output_type:
+            return []
+
+        if isinstance(output_type, list | tuple):
+            return [self.build_output(channel_name, sub) for sub in output_type]
+
+        if get_origin(output_type) in UNION_TYPES:
+            # Arms that are not messages - most commonly the None of an
+            # `X | None` handler that may reply with nothing - have no message
+            # definition in the registry, so referencing them would produce a
+            # dangling $ref.
+            return [
+                self.build_output(channel_name, sub)
+                for sub in get_args(output_type)
+                if isinstance(sub, type) and issubclass(sub, BaseMessage)
+            ]
+
+        return [self.build_output(channel_name, cast(type[BaseMessage], output_type))]
 
     def build_output(
         self, channel_name: str, output_type: type[BaseMessage]

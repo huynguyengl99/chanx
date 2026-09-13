@@ -30,7 +30,8 @@ VARIANT_B = SchemaObject(
     required=["value_b"],
 )
 
-DISCRIMINATOR = {"propertyName": "kind", "mapping": {"a": "VariantA", "b": "VariantB"}}
+# AsyncAPI takes the property name on its own, not OpenAPI's object form.
+DISCRIMINATOR = "kind"
 
 
 class TestGetPythonTypeOneOf:

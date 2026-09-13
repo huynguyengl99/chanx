@@ -13,7 +13,7 @@ from typing import Any, TypeAlias, Union, cast, get_args, get_origin, get_type_h
 import humps
 from pydantic import BaseModel
 
-from chanx.asyncapi.type_defs import SchemaObject
+from chanx.asyncapi.type_defs import SchemaObject, normalize_discriminators
 from chanx.messages.base import BaseMessage
 
 MessageSchema: TypeAlias = dict[str, Any]
@@ -327,6 +327,7 @@ class MessageRegistry:
 
         # Generate base schema
         model_schema = concrete_type.model_json_schema()
+        normalize_discriminators(model_schema)
         self._update_schema_title(model_schema, concrete_type, consumer_name)
 
         # Process field types

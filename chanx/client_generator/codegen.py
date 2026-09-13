@@ -121,7 +121,7 @@ def _get_discriminator_info(
     if one_of and discriminator:
         types = [t for opt in one_of if (t := _get_python_type(opt)) != "None"]
         if types:
-            return discriminator["propertyName"], " | ".join(types)
+            return discriminator, " | ".join(types)
 
     # Nested: anyOf contains one sub-schema with oneOf + discriminator, plus null
     any_of = field_schema.anyOf
@@ -134,7 +134,7 @@ def _get_discriminator_info(
                     t for opt in nested_one_of if (t := _get_python_type(opt)) != "None"
                 ]
                 if types:
-                    return nested_disc["propertyName"], " | ".join(types)
+                    return nested_disc, " | ".join(types)
 
     return None
 

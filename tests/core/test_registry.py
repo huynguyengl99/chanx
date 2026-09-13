@@ -477,10 +477,9 @@ class TestMessageRegistry:
         assert "#/components/schemas/VariantA" in refs
         assert "#/components/schemas/VariantB" in refs
 
-        # discriminator mapping values should also point to components/schemas
-        mapping = one_of_wrapper["discriminator"]["mapping"]
-        assert mapping["a"] == "#/components/schemas/VariantA"
-        assert mapping["b"] == "#/components/schemas/VariantB"
+        # AsyncAPI takes the property name on its own. The mapping it replaces was
+        # redundant beside oneOf, whose refs are asserted above.
+        assert one_of_wrapper["discriminator"] == "kind"
 
         # Second anyOf entry should be null
         assert variant_field["anyOf"][1] == {"type": "null"}

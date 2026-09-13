@@ -96,8 +96,9 @@ class SchemaObject(BaseModel):
     anyOf: list[SchemaObject] | None = None
     oneOf: list[SchemaObject] | None = None
 
-    # discriminator (for oneOf tagged unions)
-    discriminator: dict[str, Any] | None = None
+    # discriminator (for oneOf tagged unions). A property name: the AsyncAPI Schema
+    # Object takes the string form, not OpenAPI's {propertyName, mapping} object.
+    discriminator: str | None = None
 
     # JSON Schema keywords that are Python reserved words — use aliases for serialization
     not_: SchemaObject | None = Field(default=None, alias="not")
@@ -623,3 +624,27 @@ ServerObject.model_rebuild()
 ParameterObject.model_rebuild()
 InfoObject.model_rebuild()
 AsyncAPIDocument.model_rebuild()
+
+
+def normalize_discriminators(schema: Any) -> None:
+    """Rewrite Pydantic's discriminators into the form AsyncAPI accepts, in place.
+
+    A discriminated union comes out of Pydantic in OpenAPI's shape,
+    ``{"propertyName": ..., "mapping": {...}}``. The AsyncAPI Schema Object takes
+    the property name on its own, and a document carrying the object form fails
+    validation on every union it contains. The mapping is dropped: ``oneOf``
+    already lists the variants, and each carries the constant that selects it.
+    """
+    if isinstance(schema, dict):
+        discriminator = schema.get("discriminator")
+        if isinstance(discriminator, dict):
+            property_name = discriminator.get("propertyName")
+            if isinstance(property_name, str):
+                schema["discriminator"] = property_name
+            else:
+                del schema["discriminator"]
+        for value in schema.values():
+            normalize_discriminators(value)
+    elif isinstance(schema, list):
+        for value in schema:
+            normalize_discriminators(value)

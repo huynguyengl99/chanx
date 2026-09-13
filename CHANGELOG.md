@@ -1,3 +1,9 @@
+## v2.10.2 (2026-09-13)
+
+### Fix
+
+- **asyncapi**: emit the discriminator in the form AsyncAPI accepts
+
 ## v2.10.1 (2026-09-04)
 
 ### Fix

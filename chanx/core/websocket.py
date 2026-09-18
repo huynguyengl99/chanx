@@ -601,8 +601,8 @@ class ChanxWebsocketConsumerMixin(Generic[ReceiveEvent]):
         """
         Receive and process JSON data addressed to this consumer.
 
-        Logs messages, assigns ID, and creates task for async processing. Also enhances
-        asyncio context with message id and message action.
+        Creates task for async processing. When message logging is enabled, also assigns a
+        message id and enhances the asyncio context with it and the message action.
 
         Args:
             content: The JSON content received from the client
@@ -613,19 +613,18 @@ class ChanxWebsocketConsumerMixin(Generic[ReceiveEvent]):
 
         message_action = content.get(self.discriminator_field)
 
-        message_id = str(uuid.uuid4())[:8]
-        token = structlog.contextvars.bind_contextvars(
-            message_id=message_id, received_action=message_action
-        )
-
-        if (
-            self.log_websocket_message
-            and message_action not in self.all_log_ignored_actions
-        ):
-            await logger.ainfo("Websocket received")
+        token = None
+        if self.log_websocket_message:
+            token = structlog.contextvars.bind_contextvars(
+                message_id=str(uuid.uuid4())[:8], received_action=message_action
+            )
+            if message_action not in self.all_log_ignored_actions:
+                await logger.ainfo("Websocket received")
 
         create_task(self.handle_json(content, **kwargs))
-        structlog.contextvars.reset_contextvars(**token)
+
+        if token is not None:
+            structlog.contextvars.reset_contextvars(**token)
 
     async def handle_json(self, content: dict[str, Any], **kwargs: Any) -> None:
         """

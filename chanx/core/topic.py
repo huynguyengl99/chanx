@@ -12,7 +12,7 @@ from typing import Any, ClassVar
 from chanx.core.envelope import TOPIC_EVENT_TYPE
 from chanx.core.websocket import ChanxWebsocketConsumerMixin, ReceiveEvent
 from chanx.messages.base import BaseMessage
-from chanx.utils.framework import channel_layer, consumer_base
+from chanx.utils.framework import channel_layer, consumer_base, detect_framework
 from chanx.utils.groups import safe_group_name
 
 _PARAM_RE = re.compile(r"\{(\w+)\}")
@@ -141,7 +141,14 @@ class Topic(ChanxWebsocketConsumerMixin[ReceiveEvent]):
         supports gap detection, so a topic with several writers leaves it unset.
         """
         channel_layer = cls.get_channel_layer(cls.channel_layer_alias)
-        assert channel_layer is not None
+        if channel_layer is None:
+            raise LookupError(
+                f"No channel layer registered under alias"
+                f" {cls.channel_layer_alias!r} for the {detect_framework()!r}"
+                " integration. chanx resolves the integration once per process from"
+                " DJANGO_SETTINGS_MODULE, so a single process cannot serve both"
+                " channels and fast_channels."
+            )
         await channel_layer.group_send(
             cls.group_name(topic),
             {

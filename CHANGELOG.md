@@ -1,3 +1,10 @@
+## v2.11.1 (2026-09-18)
+
+### Fix
+
+- **core**: explain missing channel layer instead of asserting
+- **fast_channels**: register websocket routes via app.router
+
 ## v2.11.0 (2026-09-18)
 
 ### Feat

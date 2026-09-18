@@ -74,7 +74,7 @@ Configurable Attributes Reference
 
 - **send_completion** (bool): Whether to send completion message after processing (default: False)
 - **send_message_immediately** (bool | None): Whether to yield control after sending messages (default: True)
-- **log_websocket_message** (bool | None): Whether to log websocket messages (default: True)
+- **log_websocket_message** (bool | None): Whether to log websocket messages (default: False)
 - **log_ignored_actions** (Collection[str]): Message actions to ignore in logs (default: [])
 
 **Message Formatting**

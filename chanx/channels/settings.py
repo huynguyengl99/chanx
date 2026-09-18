@@ -31,7 +31,7 @@ class MySetting:
         SEND_MESSAGE_IMMEDIATELY: Whether to yield control after sending messages (default: True)
         SEND_AUTHENTICATION_MESSAGE: Whether to send auth status after connection (default: True)
         CAMELIZE: Whether to convert keys to camelCase in messages (default: False)
-        LOG_WEBSOCKET_MESSAGE: Whether to log websocket messages (default: True)
+        LOG_WEBSOCKET_MESSAGE: Whether to log websocket messages (default: False)
         LOG_IGNORED_ACTIONS: Message actions that should not be logged (default: empty list)
         WEBSOCKET_BASE_URL: WebSocket URL for overriding (default: None)
         ASYNCAPI_TITLE: Title for generated AsyncAPI documentation (default: "AsyncAPI Documentation")
@@ -48,7 +48,7 @@ class MySetting:
     SEND_AUTHENTICATION_MESSAGE: bool = True
     CAMELIZE: bool = False
 
-    LOG_WEBSOCKET_MESSAGE: bool = True
+    LOG_WEBSOCKET_MESSAGE: bool = False
     LOG_IGNORED_ACTIONS: Iterable[str] = dataclasses.field(default_factory=list[str])
 
     WEBSOCKET_BASE_URL: str | None = None

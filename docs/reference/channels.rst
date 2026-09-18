@@ -184,8 +184,8 @@ Settings Details
      - ``False``
      - Whether to convert message keys to camelCase format using pyhumps. When enabled, requires either installing Chanx with the ``camel-case`` extra (``pip install chanx[camel-case]``) or manually installing the pyhumps package (``pip install pyhumps``).
    * - ``LOG_WEBSOCKET_MESSAGE``
-     - ``True``
-     - Whether to log WebSocket messages (both received and sent)
+     - ``False``
+     - Whether to log WebSocket messages (both received and sent). Enabling this adds a log call per received and sent message, which is significant on high-throughput consumers.
    * - ``LOG_IGNORED_ACTIONS``
      - ``[]``
      - List of message actions that should not be logged (e.g., frequent messages like heartbeats)

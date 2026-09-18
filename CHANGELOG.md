@@ -1,3 +1,13 @@
+## v2.11.0 (2026-09-18)
+
+### Feat
+
+- **channels**: default LOG_WEBSOCKET_MESSAGE to False
+
+### Perf
+
+- **core**: skip building log context when message logging is disabled
+
 ## v2.10.2 (2026-09-13)
 
 ### Fix

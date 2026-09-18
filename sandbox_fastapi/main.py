@@ -161,25 +161,25 @@ app.include_router(home_router)
 ws_router = FastAPI()
 
 # WebSocket routes for different consumer types
-ws_router.add_websocket_route("/chat", ChatConsumer.as_asgi())
-ws_router.add_websocket_route(
+ws_router.router.add_websocket_route("/chat", ChatConsumer.as_asgi())
+ws_router.router.add_websocket_route(
     "/reliable", ReliableChatConsumer.as_asgi()
 )  # Queue-based reliable messaging
-ws_router.add_websocket_route(
+ws_router.router.add_websocket_route(
     "/notifications", NotificationConsumer.as_asgi()
 )  # Real-time notifications
-ws_router.add_websocket_route(
+ws_router.router.add_websocket_route(
     "/analytics", AnalyticsConsumer.as_asgi()
 )  # Analytics events
-ws_router.add_websocket_route(
+ws_router.router.add_websocket_route(
     "/system", SystemMessageConsumer.as_asgi()
 )  # Direct WebSocket (no layers)
-ws_router.add_websocket_route(
+ws_router.router.add_websocket_route(
     "/background_jobs", BackgroundJobConsumer.as_asgi()
 )  # RQ background job processing
-ws_router.add_websocket_route("/room/{room_name}", RoomChatConsumer.as_asgi())
-ws_router.add_websocket_route("/topics", TopicHubConsumer.as_asgi())
-ws_router.add_websocket_route(
+ws_router.router.add_websocket_route("/room/{room_name}", RoomChatConsumer.as_asgi())
+ws_router.router.add_websocket_route("/topics", TopicHubConsumer.as_asgi())
+ws_router.router.add_websocket_route(
     "/topics/room/{room_name}", RoomTopicConsumer.as_asgi()
 )  # Dynamic room connections (now using chanx!)
 

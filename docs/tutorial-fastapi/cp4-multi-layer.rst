@@ -559,10 +559,10 @@ Step 4: Register Routes
    )
 
    # ... later:
-   ws_router.add_websocket_route("/chat", ChatConsumer.as_asgi())
-   ws_router.add_websocket_route("/reliable", ReliableChatConsumer.as_asgi())
-   ws_router.add_websocket_route("/notifications", NotificationConsumer.as_asgi())
-   ws_router.add_websocket_route("/analytics", AnalyticsConsumer.as_asgi())
+   ws_router.router.add_websocket_route("/chat", ChatConsumer.as_asgi())
+   ws_router.router.add_websocket_route("/reliable", ReliableChatConsumer.as_asgi())
+   ws_router.router.add_websocket_route("/notifications", NotificationConsumer.as_asgi())
+   ws_router.router.add_websocket_route("/analytics", AnalyticsConsumer.as_asgi())
 
 Step 5: Test Multi-Layer System
 --------------------------------

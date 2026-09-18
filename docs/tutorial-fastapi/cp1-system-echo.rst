@@ -166,7 +166,7 @@ Step 3: Register the WebSocket Route
    )
 
    # ... later in the file:
-   ws_router.add_websocket_route(
+   ws_router.router.add_websocket_route(
        "/system", SystemMessageConsumer.as_asgi()
    )  # Direct WebSocket (no layers)
 
@@ -288,7 +288,7 @@ Key Concepts Review
 
 **FastAPI Integration:**
 
-- Use ``app.add_websocket_route(path, Consumer.as_asgi())``
+- Use ``app.router.add_websocket_route(path, Consumer.as_asgi())``
 
 What's Next?
 ------------

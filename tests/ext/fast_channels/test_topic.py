@@ -95,7 +95,7 @@ class MainConsumer(AsyncJsonWebsocketConsumer[NewReplyEvent]):
 
 
 app = FastAPI()
-app.add_websocket_route("/ws/hub", MainConsumer.as_asgi())
+app.router.add_websocket_route("/ws/hub", MainConsumer.as_asgi())
 
 
 @pytest.fixture(autouse=True)
@@ -231,7 +231,7 @@ def test_asyncapi_documents_one_channel_per_topic() -> None:
 
 
 standalone_app = FastAPI()
-standalone_app.add_websocket_route(
+standalone_app.router.add_websocket_route(
     "/ws/discussion/{pk}", DiscussionTopic.as_consumer().as_asgi()
 )
 
@@ -259,7 +259,7 @@ async def test_standalone_route_subscribes_without_an_envelope() -> None:
 
 
 misrouted_app = FastAPI()
-misrouted_app.add_websocket_route(
+misrouted_app.router.add_websocket_route(
     "/ws/misrouted", DiscussionTopic.as_consumer().as_asgi()
 )
 
@@ -332,7 +332,7 @@ class LifecycleConsumer(AsyncJsonWebsocketConsumer[NewReplyEvent]):
 
 
 lifecycle_app = FastAPI()
-lifecycle_app.add_websocket_route("/ws/lifecycle", LifecycleConsumer.as_asgi())
+lifecycle_app.router.add_websocket_route("/ws/lifecycle", LifecycleConsumer.as_asgi())
 
 
 @pytest.mark.asyncio
@@ -403,7 +403,7 @@ class CamelConsumer(AsyncJsonWebsocketConsumer[NewReplyEvent]):
 
 
 camel_app = FastAPI()
-camel_app.add_websocket_route("/ws/camel", CamelConsumer.as_asgi())
+camel_app.router.add_websocket_route("/ws/camel", CamelConsumer.as_asgi())
 
 
 @pytest.mark.asyncio
@@ -536,7 +536,7 @@ async def test_a_topic_can_close_its_connection() -> None:
         topics: ClassVar[list[type[Topic[Any]]]] = [ClosingTopic]
 
     closing_app = FastAPI()
-    closing_app.add_websocket_route("/ws/closing", ClosingConsumer.as_asgi())
+    closing_app.router.add_websocket_route("/ws/closing", ClosingConsumer.as_asgi())
 
     async with WebsocketCommunicator(
         closing_app, "/ws/closing", consumer=ClosingConsumer

@@ -112,7 +112,7 @@ Create ``main.py``:
         return {"message": "WebSocket server running"}
 
     # WebSocket routes
-    app.add_websocket_route("/ws/chat", ChatConsumer.as_asgi())
+    app.router.add_websocket_route("/ws/chat", ChatConsumer.as_asgi())
 
 Create a Simple Consumer
 ------------------------

@@ -80,7 +80,7 @@ class GatewayConsumer(HealthMixin, EchoMixin, AsyncJsonWebsocketConsumer[AllEven
 
 
 app = FastAPI()
-app.add_websocket_route("/ws/gateway", GatewayConsumer.as_asgi())
+app.router.add_websocket_route("/ws/gateway", GatewayConsumer.as_asgi())
 
 
 @pytest.fixture(autouse=True)

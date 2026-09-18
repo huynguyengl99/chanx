@@ -358,7 +358,7 @@ Step 4: Register the WebSocket Route
    )
 
    # ... later:
-   ws_router.add_websocket_route(
+   ws_router.router.add_websocket_route(
        "/room/{room_name}", RoomChatConsumer.as_asgi()
    )  # Dynamic room connections
 

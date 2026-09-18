@@ -546,7 +546,7 @@ Step 4: Register the WebSocket Route
    )
 
    # ... later:
-   ws_router.add_websocket_route(
+   ws_router.router.add_websocket_route(
        "/background_jobs", BackgroundJobConsumer.as_asgi()
    )  # ARQ background job processing
 

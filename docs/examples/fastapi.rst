@@ -341,10 +341,10 @@ WebSocket consumers are mounted as ASGI applications:
    ws_router = FastAPI()
 
    # Mount WebSocket consumers
-   ws_router.add_websocket_route("/chat", ChatConsumer.as_asgi())
-   ws_router.add_websocket_route("/analytics", AnalyticsConsumer.as_asgi())
-   ws_router.add_websocket_route("/notifications", NotificationConsumer.as_asgi())
-   ws_router.add_websocket_route("/room/{room_name}", RoomChatConsumer.as_asgi())
+   ws_router.router.add_websocket_route("/chat", ChatConsumer.as_asgi())
+   ws_router.router.add_websocket_route("/analytics", AnalyticsConsumer.as_asgi())
+   ws_router.router.add_websocket_route("/notifications", NotificationConsumer.as_asgi())
+   ws_router.router.add_websocket_route("/room/{room_name}", RoomChatConsumer.as_asgi())
 
    # Mount WebSocket sub-app
    app.mount("/ws", ws_router)

@@ -10,7 +10,7 @@ from __future__ import annotations
 
 from typing import Any, cast
 
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, JsonValue, model_validator
 
 
 # -------------------------
@@ -626,7 +626,7 @@ InfoObject.model_rebuild()
 AsyncAPIDocument.model_rebuild()
 
 
-def normalize_discriminators(schema: Any) -> None:
+def normalize_discriminators(schema: JsonValue) -> None:
     """Rewrite Pydantic's discriminators into the form AsyncAPI accepts, in place.
 
     A discriminated union comes out of Pydantic in OpenAPI's shape,

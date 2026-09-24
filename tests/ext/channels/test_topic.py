@@ -95,6 +95,21 @@ class TestTopicsOverChannels(WebsocketTestCase):
         assert joined["payload"] == "lobby"
         assert joined["ref"] == "2"
 
+    async def test_untopiced_reply_echoes_the_ref(self) -> None:
+        await self.auth_communicator.connect()
+
+        await self.auth_communicator.send_message(PingMessage(), ref="3")
+        reply = await self.auth_communicator.receive_json_from()
+        assert reply["action"] == "pong"
+        assert reply["ref"] == "3"
+
+    async def test_untopiced_reply_without_a_ref_is_unchanged(self) -> None:
+        await self.auth_communicator.connect()
+
+        await self.auth_communicator.send_message(PingMessage())
+        reply = await self.auth_communicator.receive_json_from()
+        assert reply == {"action": "pong", "payload": None}
+
     async def test_authorize_denies_per_topic(self) -> None:
         await self.auth_communicator.connect()
 

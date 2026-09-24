@@ -65,6 +65,7 @@ Routing metadata travels flat, alongside the message, so ``action`` remains the 
     <- {"version": 1, "topic": "discussion:5", "ref": "2", "action": "reply_created", "payload": {...}}
     <- {"version": 1, "topic": "discussion:5", "seq": 142, "action": "new_reply", "payload": {...}}
     -> {"version": 1, "ref": "3", "action": "ping"}          # no topic: the consumer's own handlers
+    <- {"version": 1, "ref": "3", "action": "pong"}
 
 ===========  ===========================================================
 Field        Meaning

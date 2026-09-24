@@ -180,6 +180,41 @@ async def test_untopiced_frame_falls_through_to_the_consumer() -> None:
 
 
 @pytest.mark.asyncio
+async def test_untopiced_reply_echoes_the_ref() -> None:
+    async with WebsocketCommunicator(app, "/ws/hub", consumer=MainConsumer) as comm:
+        reply = await _send(comm, {"version": 1, "ref": "3", "action": "ping"})
+        assert reply == {"action": "pong", "payload": None, "version": 1, "ref": "3"}
+
+
+@pytest.mark.asyncio
+async def test_untopiced_reply_without_a_ref_is_unchanged() -> None:
+    async with WebsocketCommunicator(app, "/ws/hub", consumer=MainConsumer) as comm:
+        reply = await _send(comm, {"action": "ping", "payload": None})
+        assert reply == {"action": "pong", "payload": None}
+
+
+@pytest.mark.asyncio
+async def test_untopiced_validation_error_echoes_the_ref() -> None:
+    async with WebsocketCommunicator(app, "/ws/hub", consumer=MainConsumer) as comm:
+        error = await _send(comm, {"version": 1, "ref": "4", "action": "unknown"})
+        assert error["action"] == "error"
+        assert error["ref"] == "4"
+
+
+@pytest.mark.asyncio
+async def test_untopiced_ref_does_not_leak_into_a_later_push() -> None:
+    async with WebsocketCommunicator(app, "/ws/hub", consumer=MainConsumer) as comm:
+        await _send(comm, {"topic": "discussion:5", "ref": "1", "action": "subscribe"})
+        await _send(comm, {"version": 1, "ref": "3", "action": "ping"})
+
+        await DiscussionTopic.broadcast("discussion:5", NewReplyEvent(payload="hello"))
+
+        pushed = await comm.receive_json_from(timeout=2)
+        assert pushed["action"] == "reply_created"
+        assert "ref" not in pushed
+
+
+@pytest.mark.asyncio
 async def test_unknown_topic_and_unsubscribed_topic_report_errors() -> None:
     async with WebsocketCommunicator(app, "/ws/hub", consumer=MainConsumer) as comm:
         unknown = await _send(

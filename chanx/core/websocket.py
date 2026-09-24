@@ -730,6 +730,9 @@ class ChanxWebsocketConsumerMixin(Generic[ReceiveEvent]):
             content: The JSON data to send
             close: Whether to close the connection after sending
         """
+        ref = current_ref.get()
+        if ref is not None:
+            content = content | {"version": ENVELOPE_VERSION, "ref": ref}
         await super().send_json(content, close)  # type: ignore
 
         message_action = content.get(self.discriminator_field)
@@ -1017,7 +1020,12 @@ class ChanxWebsocketConsumerMixin(Generic[ReceiveEvent]):
             envelope = envelope.model_copy(update={"topic": topic})
 
         if topic is None:
-            await self._receive_own_json(message_data, **kwargs)
+            # The handler task copies this context, so its replies carry the ref.
+            token = current_ref.set(envelope.ref)
+            try:
+                await self._receive_own_json(message_data, **kwargs)
+            finally:
+                current_ref.reset(token)
             return
 
         if self.should_camelize:

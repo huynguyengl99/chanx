@@ -1,3 +1,9 @@
+## v2.11.2 (2026-09-24)
+
+### Fix
+
+- **core**: echo the ref on replies to untopiced frames
+
 ## v2.11.1 (2026-09-18)
 
 ### Fix

@@ -1,3 +1,10 @@
+## v2.11.3 (2026-09-27)
+
+### Docs
+
+- **readme**: show typed JavaScript/TypeScript clients via chanx-js
+- add an ecosystem page for chanx-js and chanx-kit
+
 ## v2.11.2 (2026-09-24)
 
 ### Fix

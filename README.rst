@@ -97,7 +97,7 @@ Why Use Chanx?
 - Inconsistent implementations → Enforced patterns via decorators and type-safe messages
 - Painful code reviews → Clean, declarative handlers instead of nested if-else chains
 - Slow onboarding → Self-documenting code with AsyncAPI specs as single source of truth
-- No API contract → Auto-generated AsyncAPI documentation for frontend teams
+- No API contract → Auto-generated AsyncAPI documentation and typed clients for frontend teams
 - Fragile tests → Built-in testing utilities with standardized patterns
 - Debugging hell → Structured logging with automatic request/response tracing
 
@@ -390,8 +390,8 @@ Key Features
 **AsyncAPI 3.0 Generation**
   Auto-generate interactive documentation and OpenAPI-style specs from decorated handlers
 
-**Type-Safe Client Generator**
-  Generate Python WebSocket clients from AsyncAPI schemas with full type safety and IDE support
+**Type-Safe Clients**
+  Generate Python clients with the built-in generator, and JavaScript/TypeScript clients with React, Vue, Svelte and Solid bindings via `chanx-js <https://huynguyengl99.github.io/chanx-js/>`_
 
 **Authentication System**
   Built-in ``DjangoAuthenticator`` with DRF permission support, extensible ``BaseAuthenticator`` for custom flows
@@ -408,10 +408,12 @@ Key Features
 **Configuration Management**
   Django settings integration via ``CHANX`` dict, class-level config for FastAPI consumers
 
-Client Generator
-----------------
+Clients
+-------
 
-Generate type-safe Python clients from your AsyncAPI schema:
+Clients are generated from the AsyncAPI schema, so they always match the server.
+
+**Python**, with the built-in generator:
 
 .. code-block:: bash
 
@@ -433,6 +435,36 @@ Generate type-safe Python clients from your AsyncAPI schema:
         ChatMessage(payload=ChatPayload(message="Hello!"))
     )
 
+**JavaScript and TypeScript**, with `chanx-js <https://huynguyengl99.github.io/chanx-js/>`_:
+
+.. code-block:: bash
+
+    pnpm add @chanx-js/client
+    pnpm add -D @chanx-js/codegen
+    npx @chanx-js/codegen http://localhost:8000/asyncapi.json -o src/generated
+
+.. code-block:: tsx
+
+    import { useChannel } from '@chanx-js/client/react';
+    import { chat } from './generated';
+
+    function Chat() {
+      const { lastMessage, send } = useChannel(chat);
+
+      // Narrowed by `action`, so the payload is ChatNotificationMessage's.
+      const latest =
+        lastMessage?.action === 'chat_notification' ? lastMessage.payload.message : '';
+
+      // `send` only accepts messages the server declares, such as ChatMessage.
+      return (
+        <button onClick={() => send({ action: 'chat', payload: { message: 'Hello!' } })}>
+          {latest || 'Say hello'}
+        </button>
+      );
+    }
+
+It also covers topics, requests, reconnection, and Vue, Svelte, Solid or plain JS.
+
 Learn More
 ----------
 
@@ -442,3 +474,5 @@ Learn More
 * `User Guide <https://chanx.readthedocs.io/en/latest/user-guide/prerequisites.html>`_ - In-depth features and patterns
 * `Client Generator Guide <https://chanx.readthedocs.io/en/latest/user-guide/client-generator.html>`_ - Generate type-safe clients
 * `Examples <https://chanx.readthedocs.io/en/latest/examples/django.html>`_ - Real-world implementation examples
+* `chanx-js <https://huynguyengl99.github.io/chanx-js/>`_ - Typed JavaScript and TypeScript clients
+* `chanx-kit <https://huynguyengl99.github.io/chanx-kit/>`_ - Copy-in WebSocket components built on Chanx

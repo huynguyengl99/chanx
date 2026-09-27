@@ -27,6 +27,7 @@ Contents
    user-guide/testing
    user-guide/framework-integration
    user-guide/client-generator
+   ecosystem
    comparison
 
 .. toctree::

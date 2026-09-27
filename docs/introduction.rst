@@ -155,7 +155,9 @@ How Chanx Solves This
         ChatMessage(payload=ChatPayload(message="Hello!"))
     )
 
-See :doc:`user-guide/client-generator` for complete client generation guide.
+See :doc:`user-guide/client-generator` for complete client generation guide. For
+JavaScript and TypeScript frontends, see `chanx-js <https://huynguyengl99.github.io/chanx-js/>`_
+in the :doc:`ecosystem`.
 
 **4. Multi-Framework Support - Works Everywhere**
 

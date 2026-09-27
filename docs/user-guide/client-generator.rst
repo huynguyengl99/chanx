@@ -3,6 +3,10 @@ Client Generator
 
 The Chanx client generator automatically creates type-safe Python WebSocket clients from AsyncAPI 3.0 schemas. This eliminates the need to manually write and maintain client code, ensuring your client always stays in sync with your server's API.
 
+.. tip::
+
+   For JavaScript and TypeScript clients, use `chanx-js <https://huynguyengl99.github.io/chanx-js/>`_. See :doc:`../ecosystem`.
+
 Why Use the Client Generator?
 ------------------------------
 

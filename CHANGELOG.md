@@ -1,3 +1,9 @@
+## v2.11.4 (2026-09-29)
+
+### Fix
+
+- **core**: camelize group broadcasts, not just direct sends
+
 ## v2.11.3 (2026-09-27)
 
 ### Docs

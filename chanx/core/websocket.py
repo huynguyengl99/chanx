@@ -714,13 +714,7 @@ class ChanxWebsocketConsumerMixin(Generic[ReceiveEvent]):
                 raise
 
         # Convert message to JSON and send
-        json_data = message.model_dump(mode="json")
-
-        # Apply camelization if enabled
-        if self.should_camelize:
-            json_data = humps.camelize(json_data)
-
-        await self.send_json(json_data)
+        await self.send_json(message.model_dump(mode="json"))
 
     async def send_json(self, content: dict[str, Any], close: bool = False) -> None:
         """
@@ -730,6 +724,9 @@ class ChanxWebsocketConsumerMixin(Generic[ReceiveEvent]):
             content: The JSON data to send
             close: Whether to close the connection after sending
         """
+        if self.should_camelize:
+            content = humps.camelize(content)
+
         ref = current_ref.get()
         if ref is not None:
             content = content | {"version": ENVELOPE_VERSION, "ref": ref}

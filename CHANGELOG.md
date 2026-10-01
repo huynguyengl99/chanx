@@ -1,3 +1,9 @@
+## v2.11.5 (2026-10-01)
+
+### Fix
+
+- **client-generator**: send the headers the client was given
+
 ## v2.11.4 (2026-09-29)
 
 ### Fix

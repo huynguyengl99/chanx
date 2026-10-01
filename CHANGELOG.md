@@ -1,3 +1,10 @@
+## v2.11.6 (2026-10-01)
+
+### Fix
+
+- **tests**: annotate the fake connect as the async iterator it is
+- **tests**: declare groups the way every other consumer does
+
 ## v2.11.5 (2026-10-01)
 
 ### Fix

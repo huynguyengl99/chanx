@@ -1,5 +1,6 @@
 """Simple tests for BaseClient initialization."""
 
+from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from typing import Any, Literal
 from unittest.mock import patch
@@ -92,14 +93,17 @@ def test_init_path_params_with_string() -> None:
 class _FakeConnection:
     """Closes immediately, so `handle()` just establishes and returns."""
 
-    async def __aiter__(self) -> Any:
+    def __aiter__(self) -> AsyncIterator[str]:
+        return self._no_frames()
+
+    async def _no_frames(self) -> AsyncIterator[str]:
         return
         yield
 
 
 def _capturing_connect(calls: list[dict[str, Any]]) -> Any:
     @asynccontextmanager
-    async def fake_connect(url: str, **kwargs: Any) -> Any:
+    async def fake_connect(url: str, **kwargs: Any) -> AsyncIterator[_FakeConnection]:
         calls.append({"url": url, **kwargs})
         yield _FakeConnection()
 

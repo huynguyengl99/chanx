@@ -1,7 +1,10 @@
 """Simple tests for BaseClient initialization."""
 
+from contextlib import asynccontextmanager
 from typing import Any, Literal
+from unittest.mock import patch
 
+import pytest
 from chanx.client_generator.base.client import BaseClient
 from pydantic import BaseModel
 
@@ -84,3 +87,52 @@ def test_init_path_params_with_string() -> None:
     client = RoomClient("localhost:8000", path_params={"room_name": "lobby"})
 
     assert client.url == "ws://localhost:8000/ws/lobby"
+
+
+class _FakeConnection:
+    """Closes immediately, so `handle()` just establishes and returns."""
+
+    async def __aiter__(self) -> Any:
+        return
+        yield
+
+
+def _capturing_connect(calls: list[dict[str, Any]]) -> Any:
+    @asynccontextmanager
+    async def fake_connect(url: str, **kwargs: Any) -> Any:
+        calls.append({"url": url, **kwargs})
+        yield _FakeConnection()
+
+    return fake_connect
+
+
+@pytest.mark.asyncio
+async def test_headers_are_sent_on_the_handshake() -> None:
+    """They were accepted and stored but never passed to connect(), so a client
+    given an auth header was rejected by the server."""
+
+    class TestClient(BaseClient):
+        path = "/ws/test"
+        incoming_message = SimpleTestMessage
+
+    calls: list[dict[str, Any]] = []
+    client = TestClient("localhost:8000", headers={"x-token": "s3cret"})
+
+    with patch("chanx.client_generator.base.client.connect", _capturing_connect(calls)):
+        await client.handle()
+
+    assert calls[0]["additional_headers"] == {"x-token": "s3cret"}
+
+
+@pytest.mark.asyncio
+async def test_no_headers_sends_none_rather_than_an_empty_dict() -> None:
+    class TestClient(BaseClient):
+        path = "/ws/test"
+        incoming_message = SimpleTestMessage
+
+    calls: list[dict[str, Any]] = []
+
+    with patch("chanx.client_generator.base.client.connect", _capturing_connect(calls)):
+        await TestClient("localhost:8000").handle()
+
+    assert calls[0]["additional_headers"] is None

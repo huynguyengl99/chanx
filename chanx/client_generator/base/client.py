@@ -80,7 +80,9 @@ class BaseClient:
 
         try:
             # Create new WebSocket connection for this request
-            async with connect(self.url) as websocket:
+            async with connect(
+                self.url, additional_headers=self.headers or None
+            ) as websocket:
                 self.websocket = websocket
                 # Send initial message with full config
                 await self.send_init_message()

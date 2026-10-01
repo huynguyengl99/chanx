@@ -1,6 +1,6 @@
 """Camelization applies to every send path, not just direct sends."""
 
-from typing import ClassVar, Literal
+from typing import Literal
 
 import pytest
 from chanx.core.decorators import ws_handler
@@ -41,7 +41,7 @@ SAMPLE = EventRes(
 class CamelPathsConsumer(AsyncJsonWebsocketConsumer[BaseMessage]):
     camelize = True
     channel_layer_alias = LAYER_ALIAS
-    groups: ClassVar[list[str]] = [GROUP]
+    groups = [GROUP]
 
     @ws_handler(output_type=EventRes)
     async def handle_how(self, message: HowReq) -> None:

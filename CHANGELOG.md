@@ -1,3 +1,10 @@
+## v2.11.7 (2026-10-02)
+
+### Fix
+
+- **client-generator**: run the init message alongside the read loop
+- **client-generator**: make the topic accessor generic in its handle
+
 ## v2.11.6 (2026-10-01)
 
 ### Fix

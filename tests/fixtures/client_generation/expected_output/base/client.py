@@ -1,6 +1,8 @@
 """Base WebSocket client for AsyncAPI."""
 
+import asyncio
 import json
+from contextlib import suppress
 from traceback import print_exc
 from types import UnionType
 from typing import Annotated, Any
@@ -77,6 +79,7 @@ class BaseClient:
         """
 
         await self.before_handle()
+        init: asyncio.Future[None] | None = None
 
         try:
             # Create new WebSocket connection for this request
@@ -84,8 +87,9 @@ class BaseClient:
                 self.url, additional_headers=self.headers or None
             ) as websocket:
                 self.websocket = websocket
-                # Send initial message with full config
-                await self.send_init_message()
+                # Not awaited here: a subscribe sent from `send_init_message`
+                # waits for a reply that arrives through the loop below.
+                init = asyncio.ensure_future(self.send_init_message())
 
                 # Stream responses back to channel layer
                 async for data in websocket:
@@ -106,6 +110,8 @@ class BaseClient:
         except Exception as e:
             await self.handle_websocket_connection_error(e)
             return
+        finally:
+            await _settle(init)
 
         await self.after_handle()
 
@@ -237,3 +243,20 @@ class BaseClient:
         """
         print(f"Received invalid message that failed validation: {invalid_message}")
         print_exc()
+
+
+async def _settle(task: "asyncio.Future[None] | None") -> None:
+    """Let the init message finish, or stop waiting for it.
+
+    Its exception is retrieved either way, so asyncio does not report it later
+    at garbage collection.
+    """
+    if task is None or task.done():
+        if task is not None:
+            with suppress(Exception, asyncio.CancelledError):
+                task.result()
+        return
+    task.cancel()
+    # CancelledError is not an Exception, so it needs naming separately.
+    with suppress(Exception, asyncio.CancelledError):
+        await task

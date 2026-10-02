@@ -2,13 +2,15 @@
 
 import asyncio
 from types import UnionType
-from typing import Annotated, Any, Self
+from typing import Annotated, Any, Self, TypeVar
 
 from pydantic import BaseModel, Field, TypeAdapter, ValidationError
 
 from .client import BaseClient
 
 ENVELOPE_VERSION = 1
+
+HandleT = TypeVar("HandleT", bound="BaseTopicHandle")
 
 
 class ProtocolMessage(BaseModel):
@@ -111,7 +113,7 @@ class BaseTopicConnection(BaseClient):
         self._pending: dict[str, asyncio.Future[dict[str, Any]]] = {}
         self._ref = 0
 
-    def topic(self, handle_class: type[BaseTopicHandle], **params: Any) -> Any:
+    def topic(self, handle_class: type[HandleT], **params: Any) -> HandleT:
         """
         Build a handle for a topic and remember it for routing.
 

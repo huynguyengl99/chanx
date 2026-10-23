@@ -510,6 +510,32 @@ async def test_malformed_envelope_reports_a_validation_error() -> None:
         assert reply["action"] == "error"
 
 
+@pytest.mark.parametrize(
+    "frame, detail",
+    [
+        ({"text": "not json"}, "Invalid JSON: Expecting value"),
+        ({"text": ""}, "Invalid JSON: Expecting value"),
+        ({"bytes": b"\x01"}, "Invalid JSON: binary frames are not supported"),
+    ],
+)
+@pytest.mark.asyncio
+async def test_a_frame_that_is_not_json_gets_an_error_and_keeps_the_socket(
+    frame: dict[str, Any], detail: str
+) -> None:
+    async with WebsocketCommunicator(app, "/ws/hub", consumer=MainConsumer) as comm:
+        # Raw input, since send_to() refuses an empty text frame
+        await comm.send_input({"type": "websocket.receive", **frame})
+        reply = await comm.receive_json_from(timeout=2)
+
+        assert reply["action"] == "error"
+        [error] = reply["payload"]
+        assert error["type"] == "json_invalid"
+        assert error["msg"].startswith(detail)
+
+        pong = await _send(comm, {"action": "ping"})
+        assert pong["action"] == "pong"
+
+
 @pytest.mark.asyncio
 async def test_event_for_an_unsubscribed_topic_is_dropped() -> None:
     """A broadcast racing an unsubscribe is dropped rather than blowing up."""

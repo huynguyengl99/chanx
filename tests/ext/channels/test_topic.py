@@ -103,6 +103,23 @@ class TestTopicsOverChannels(WebsocketTestCase):
         assert reply["action"] == "pong"
         assert reply["ref"] == "3"
 
+    async def test_a_frame_that_is_not_json_gets_an_error_and_keeps_the_socket(
+        self,
+    ) -> None:
+        await self.auth_communicator.connect()
+
+        await self.auth_communicator.send_to(text_data="not json")
+        reply = await self.auth_communicator.receive_json_from()
+        assert reply["payload"][0]["type"] == "json_invalid"
+
+        await self.auth_communicator.send_to(bytes_data=b"\x01")
+        reply = await self.auth_communicator.receive_json_from()
+        assert reply["payload"][0]["type"] == "json_invalid"
+
+        await self.auth_communicator.send_message(PingMessage())
+        reply = await self.auth_communicator.receive_json_from()
+        assert reply["action"] == "pong"
+
     async def test_untopiced_reply_without_a_ref_is_unchanged(self) -> None:
         await self.auth_communicator.connect()
 

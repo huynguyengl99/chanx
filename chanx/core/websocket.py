@@ -9,7 +9,7 @@ authentication, group broadcasting, and channel event handling capabilities.
 import asyncio
 import inspect
 import uuid
-from collections.abc import Callable, Collection, Mapping, MutableMapping
+from collections.abc import Awaitable, Callable, Collection, Mapping, MutableMapping
 from functools import reduce
 from types import UnionType
 from typing import (
@@ -1004,6 +1004,44 @@ class ChanxWebsocketConsumerMixin(Generic[ReceiveEvent]):
         """Close the connection, recording that it is gone."""
         self._closed = True
         await super().close(code, reason)  # type: ignore[misc]
+
+    async def receive(
+        self,
+        text_data: str | None = None,
+        bytes_data: bytes | None = None,
+        **kwargs: Any,
+    ) -> None:
+        """Decode a frame, answering one that is not JSON text with an error frame."""
+        if text_data is None:
+            await self._reject_frame(text_data, "binary frames are not supported")
+            return
+        decode_json = cast(
+            Callable[[str], Awaitable[Any]],
+            self.decode_json,  # type: ignore[attr-defined]
+        )
+        try:
+            content = await decode_json(text_data)
+        except Exception as e:
+            await self._reject_frame(text_data, str(e))
+            return
+        await self.receive_json(content, **kwargs)
+
+    async def _reject_frame(self, text_data: str | None, reason: str) -> None:
+        """Report a frame that is not JSON, keeping the connection open."""
+        await logger.awarning("Malformed frame", reason=reason)
+        await self.handle_validation_error(
+            ValidationError.from_exception_data(
+                "Envelope",
+                [
+                    {
+                        "type": "json_invalid",
+                        "loc": (),
+                        "input": text_data,
+                        "ctx": {"error": reason},
+                    }
+                ],
+            )
+        )
 
     async def receive_json(self, content: dict[str, Any], **kwargs: Any) -> None:
         """Route a frame to its topic, or to this consumer's own handlers."""

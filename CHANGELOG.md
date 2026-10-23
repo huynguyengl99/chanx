@@ -1,3 +1,10 @@
+## v2.11.8 (2026-10-23)
+
+### Fix
+
+- **core**: answer non-JSON frames with an error instead of dropping the socket
+- **core**: order discriminated unions by action
+
 ## v2.11.7 (2026-10-02)
 
 ### Fix

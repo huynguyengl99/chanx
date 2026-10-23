@@ -14,6 +14,7 @@ from chanx.channels.websocket import AsyncJsonWebsocketConsumer
 from chanx.core.decorators import event_handler, ws_handler
 from chanx.messages.base import BaseMessage
 from chanx.messages.outgoing import CompleteMessage, ErrorMessage
+from pydantic import ValidationError
 
 
 class DummyMessage(BaseMessage):
@@ -182,6 +183,31 @@ class TestTypeAdapterBuilding:
             {"action": "test_response", "payload": "test"}
         )
         assert isinstance(response_msg, DummyResponse)
+
+    def test_union_tags_are_ordered_by_action(self) -> None:
+        class OrderConsumer(AsyncJsonWebsocketConsumer):
+            @ws_handler
+            async def a_handle(self, _message: DummyMessage) -> DummyResponse:
+                return DummyResponse(payload="handled")
+
+            @ws_handler
+            async def b_handle(self, _message: OtherDummyMessage) -> None:
+                pass
+
+        adapters = [
+            OrderConsumer.incoming_message_adapter,
+            OrderConsumer.outgoing_message_adapter,
+        ]
+        expected = [
+            "'other', 'test'",
+            "'complete', 'error', 'event_complete', 'group_complete', "
+            "'test_response'",
+        ]
+        for adapter, tags in zip(adapters, expected, strict=True):
+            assert adapter is not None
+            with pytest.raises(ValidationError) as exc_info:
+                adapter.validate_python({"action": "unknown"})
+            assert exc_info.value.errors()[0]["msg"].endswith(tags)
 
 
 class TestEmptyConsumerRuntime:

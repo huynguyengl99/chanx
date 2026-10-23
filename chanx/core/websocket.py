@@ -353,7 +353,8 @@ class ChanxWebsocketConsumerMixin(Generic[ReceiveEvent]):
         """
         input_types: list[type[BaseMessage]] = []
         output_types: list[type[BaseMessage]] = []
-        for info in handler_info_map.values():
+        infos = sorted(handler_info_map.values(), key=lambda i: i["message_action"])
+        for info in infos:
             if info["input_type"]:
                 input_types.append(info["input_type"])
             if info["output_type"]:
@@ -434,7 +435,11 @@ class ChanxWebsocketConsumerMixin(Generic[ReceiveEvent]):
         }
 
         outgoing_union = cls._create_discriminated_union(
-            list(all_output_types), cls.discriminator_field
+            sorted(
+                all_output_types,
+                key=lambda t: str(t.model_fields[cls.discriminator_field].default),
+            ),
+            cls.discriminator_field,
         )
         cls.outgoing_message_adapter = cls._create_adapter(
             outgoing_union, cls.discriminator_field

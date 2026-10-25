@@ -1,0 +1,4 @@
+/* The wordmark already spells the name, so hide the theme's text label next to it. */
+.sy-head-brand strong {
+  display: none;
+}

@@ -71,8 +71,13 @@ html_context = {
     "source_docs_path": "/docs/",
 }
 
+html_favicon = "_static/brand/favicon.ico"
+html_css_files = ["brand/brand.css"]
+
 html_theme_options = {
-    "accent_color": "indigo",
+    "light_logo": "_static/brand/chanx-wordmark.svg",
+    "dark_logo": "_static/brand/chanx-wordmark-dark.svg",
+    "accent_color": "blue",
     "github_url": "https://github.com/huynguyengl99/chanx",
     "nav_links": [
         {"title": "Get started", "url": "introduction"},

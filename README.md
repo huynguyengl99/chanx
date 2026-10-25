@@ -1,4 +1,9 @@
-# Chanx
+<h1>
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/huynguyengl99/chanx/main/docs/_static/brand/chanx-wordmark-dark.svg">
+    <img alt="Chanx" src="https://raw.githubusercontent.com/huynguyengl99/chanx/main/docs/_static/brand/chanx-wordmark.svg" height="64">
+  </picture>
+</h1>
 
 [![PyPI](https://img.shields.io/pypi/v/chanx)](https://pypi.org/project/chanx/)
 [![Python](https://img.shields.io/pypi/pyversions/chanx)](https://pypi.org/project/chanx/)

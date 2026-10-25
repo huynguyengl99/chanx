@@ -140,6 +140,10 @@ Create ``messages.py``:
         action: Literal["echo"] = "echo"
         payload: EchoPayload
 
+    class BroadcastMessage(BaseMessage):
+        action: Literal["broadcast"] = "broadcast"
+        payload: EchoPayload
+
     # Server Messages
     class EchoResponseMessage(BaseMessage):
         action: Literal["echo_response"] = "echo_response"
@@ -165,7 +169,7 @@ Create ``consumers.py``:
     from chanx.messages.outgoing import PongMessage
     from base_consumer import BaseConsumer
     from messages import (
-        EchoMessage, EchoResponseMessage, NotificationMessage,
+        BroadcastMessage, EchoMessage, EchoResponseMessage, NotificationMessage,
         SystemNotifyEvent, EchoPayload, NotificationPayload
     )
 
@@ -187,7 +191,7 @@ Create ``consumers.py``:
             summary="Broadcast message to all clients",
             output_type=NotificationMessage,
         )
-        async def handle_broadcast(self, message: EchoMessage) -> None:
+        async def handle_broadcast(self, message: BroadcastMessage) -> None:
             await self.broadcast_message(
                 NotificationMessage(
                     payload=NotificationPayload(

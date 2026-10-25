@@ -125,6 +125,10 @@ Create ``myapp/messages.py``:
         action: Literal["echo"] = "echo"
         payload: EchoPayload
 
+    class BroadcastMessage(BaseMessage):
+        action: Literal["broadcast"] = "broadcast"
+        payload: EchoPayload
+
     # Server Messages
     class EchoResponseMessage(BaseMessage):
         action: Literal["echo_response"] = "echo_response"
@@ -150,7 +154,7 @@ Create ``myapp/consumers.py``:
     from chanx.messages.incoming import PingMessage
     from chanx.messages.outgoing import PongMessage
     from .messages import (
-        EchoMessage, EchoResponseMessage, NotificationMessage,
+        BroadcastMessage, EchoMessage, EchoResponseMessage, NotificationMessage,
         SystemNotifyEvent, EchoPayload, NotificationPayload
     )
 
@@ -175,7 +179,7 @@ Create ``myapp/consumers.py``:
             summary="Broadcast message to all connected clients",
             output_type=NotificationMessage,
         )
-        async def handle_broadcast(self, message: EchoMessage) -> None:
+        async def handle_broadcast(self, message: BroadcastMessage) -> None:
             # Broadcast to all clients in the group
             await self.broadcast_message(
                 NotificationMessage(

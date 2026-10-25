@@ -427,7 +427,7 @@ wheels = [
 
 [[package]]
 name = "chanx"
-version = "2.12.2"
+version = "2.12.3"
 source = { editable = "." }
 dependencies = [
     { name = "pydantic" },

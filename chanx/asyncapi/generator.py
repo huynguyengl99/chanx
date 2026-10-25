@@ -102,7 +102,11 @@ class AsyncAPIGenerator:
             "info": {
                 "title": self.title,
                 "version": self.version,
-                "description": self.description,
+                **(
+                    {"description": self.description}
+                    if self.description is not None
+                    else {}
+                ),
             },
             "servers": {
                 self._get_server_environment_name(): {

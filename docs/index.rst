@@ -28,9 +28,19 @@ Chanx
    pip install "chanx[channels]"        # Django Channels
    pip install "chanx[fast_channels]"   # FastAPI, Starlette and other ASGI frameworks
 
-.. image:: _static/chanx-demo.gif
-   :width: 100%
-   :alt: A typed Python handler, the AsyncAPI docs Chanx generates from it, and a generated TypeScript client catching a typo
+.. raw:: html
+
+   <video class="demo-video" autoplay muted loop playsinline controls preload="metadata"
+          poster="_static/chanx-demo-poster.jpg" width="1600" height="700" aria-label="A typed Python handler, the AsyncAPI docs Chanx generates from it, generating a TypeScript client, and that client catching a typo">
+     <source src="_static/chanx-demo.mp4" type="video/mp4">
+     <img src="_static/chanx-demo.gif" alt="A typed Python handler, the AsyncAPI docs Chanx generates from it, generating a TypeScript client, and that client catching a typo">
+   </video>
+   <script>
+     // Respect reduced motion: show the poster and let the visitor press play.
+     if (matchMedia("(prefers-reduced-motion: reduce)").matches) {
+       document.querySelectorAll("video.demo-video").forEach((v) => { v.removeAttribute("autoplay"); v.pause(); });
+     }
+   </script>
 
 One handler per message
 -----------------------

@@ -23,3 +23,13 @@ section#chanx > h1 {
 .dark .yue img.hero-dark {
   display: block;
 }
+
+/* Landing demo video: full width, framed like a screenshot. */
+.demo-video {
+  display: block;
+  width: 100%;
+  height: auto;
+  margin: 1.5rem 0;
+  border: 1px solid rgba(127, 127, 127, 0.25);
+  border-radius: 12px;
+}

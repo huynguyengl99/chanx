@@ -102,10 +102,10 @@ classifiers = [
 dependencies = [
   "pydantic>=2,<3"
 ]
-description = "The missing toolkit for Channels — auth, logging, consumers, and more."
+description = "Typed WebSocket APIs for Python: routing, validation, broadcasting, AsyncAPI docs and typed clients for Django Channels, FastAPI and ASGI."
 license = {file = "LICENSE"}
 name = "chanx"
-readme = "README.rst"
+readme = "README.md"
 requires-python = ">=3.11,<4.0"
 version = "2.12.0"
 

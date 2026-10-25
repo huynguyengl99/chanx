@@ -5,14 +5,15 @@ This module provides Django views for generating and serving AsyncAPI documentat
 from Chanx WebSocket consumers using the new @channel decorator system.
 """
 
-import json
 from types import ModuleType
 from typing import Any, cast
 
 from django.http import HttpRequest, HttpResponse, JsonResponse
 from django.shortcuts import render
+from django.templatetags.static import static
 from django.views import View
 
+from chanx.asyncapi.docs import docs_assets, schema_script_json
 from chanx.asyncapi.generator import AsyncAPIGenerator
 from chanx.channels.discovery import get_websocket_routes
 from chanx.channels.settings import chanx_settings
@@ -135,11 +136,9 @@ class AsyncAPIDocsView(View):
             # Generate the schema directly
             schema = generate_asyncapi_schema(request)
 
-            # Get the schema as JSON string for the template (for direct injection)
-            schema_json = json.dumps(schema)
-
             context = {
-                "schema_json": schema_json,
+                "schema_json": schema_script_json(schema),
+                **_docs_assets(),
             }
 
             # Use Django's render since we're returning HTML
@@ -150,5 +149,23 @@ class AsyncAPIDocsView(View):
             context = {
                 "error": f"Failed to generate documentation: {str(e)}",
                 "title": "AsyncAPI Documentation - Error",
+                **_docs_assets(),
             }
             return render(request, "channels/asyncapi_docs.html", context, status=500)
+
+
+def _static_url(path: str | None) -> str | None:
+    """Resolve a relative path through Django's static files; URLs pass through."""
+    if not path or path.startswith(("http://", "https://", "//", "/")):
+        return path
+    return static(path)
+
+
+def _docs_assets() -> dict[str, str | None]:
+    """Docs page assets from the CHANX settings."""
+    return docs_assets(
+        js_url=_static_url(chanx_settings.ASYNCAPI_DOCS_JS_URL),
+        css_url=_static_url(chanx_settings.ASYNCAPI_DOCS_CSS_URL),
+        js_integrity=chanx_settings.ASYNCAPI_DOCS_JS_INTEGRITY,
+        css_integrity=chanx_settings.ASYNCAPI_DOCS_CSS_INTEGRITY,
+    )

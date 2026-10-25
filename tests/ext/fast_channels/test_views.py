@@ -5,6 +5,7 @@ from typing import cast
 from unittest.mock import Mock, patch
 
 import pytest
+from chanx.asyncapi.docs import DEFAULT_DOCS_CSS_URL, DEFAULT_DOCS_JS_URL
 from chanx.fast_channels.type_defs import AsyncAPIConfig
 from chanx.fast_channels.views import (
     asyncapi_docs,
@@ -387,3 +388,54 @@ class TestAsyncAPIDocs:
             # Check AsyncAPI React component
             assert "@asyncapi/react-component" in html_content
             assert "AsyncApiStandalone.render" in html_content
+
+    @pytest.mark.asyncio
+    async def test_docs_assets_pinned_with_integrity(self) -> None:
+        """The default assets are pinned and carry their SRI hashes."""
+        with patch(
+            "chanx.fast_channels.views.generate_asyncapi_schema"
+        ) as mock_generate:
+            mock_generate.return_value = {"info": {"title": "Test API"}}
+            response = await asyncapi_docs(self.mock_request, self.app)
+
+        html_content = bytes(response.body).decode()
+        assert f'src="{DEFAULT_DOCS_JS_URL}"' in html_content
+        assert f'href="{DEFAULT_DOCS_CSS_URL}"' in html_content
+        assert html_content.count('crossorigin="anonymous"') == 2
+        assert "@latest" not in html_content
+
+    @pytest.mark.asyncio
+    async def test_docs_self_hosted_assets(self) -> None:
+        """Custom asset URLs replace the CDN and drop the pinned hashes."""
+        config = cast(
+            AsyncAPIConfig,
+            {"docs_js_url": "/static/asyncapi.js", "docs_css_url": "/static/a.css"},
+        )
+        with patch(
+            "chanx.fast_channels.views.generate_asyncapi_schema"
+        ) as mock_generate:
+            mock_generate.return_value = {"info": {"title": "Test API"}}
+            response = await asyncapi_docs(self.mock_request, self.app, config)
+
+        html_content = bytes(response.body).decode()
+        assert '<script src="/static/asyncapi.js"></script>' in html_content
+        assert '<link rel="stylesheet" href="/static/a.css">' in html_content
+        assert "unpkg.com" not in html_content
+
+    @pytest.mark.asyncio
+    async def test_docs_escape_schema_and_error_text(self) -> None:
+        """Schema text and error messages cannot inject markup."""
+        with patch(
+            "chanx.fast_channels.views.generate_asyncapi_schema"
+        ) as mock_generate:
+            mock_generate.return_value = {
+                "info": {"title": "<b>T</b>", "description": "</script>"}
+            }
+            response = await asyncapi_docs(self.mock_request, self.app)
+            mock_generate.side_effect = Exception("<img src=x>")
+            error = await asyncapi_docs(self.mock_request, self.app)
+
+        html_content = bytes(response.body).decode()
+        assert "<title>&lt;b&gt;T&lt;/b&gt;</title>" in html_content
+        assert html_content.count("</script>") == 2
+        assert "&lt;img src=x&gt;" in bytes(error.body).decode()

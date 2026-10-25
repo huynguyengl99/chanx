@@ -2,7 +2,7 @@
 <html>
 <head>
     <title>{{ title }}</title>
-    <link rel="stylesheet" href="https://unpkg.com/@asyncapi/react-component@latest/styles/default.min.css">
+    <link rel="stylesheet" href="{{ css_url }}"{% if css_integrity %} integrity="{{ css_integrity }}" crossorigin="anonymous"{% endif %}>
 </head>
 <body>
     {% if error %}
@@ -13,7 +13,7 @@
     {% else %}
         <div id="asyncapi"></div>
 
-        <script src="https://unpkg.com/@asyncapi/react-component@latest/browser/standalone/index.js"></script>
+        <script src="{{ js_url }}"{% if js_integrity %} integrity="{{ js_integrity }}" crossorigin="anonymous"{% endif %}></script>
         <script>
             AsyncApiStandalone.render({
                 schema: {{ schema_json|safe }},

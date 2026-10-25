@@ -30,6 +30,10 @@ class AsyncAPIConfig(TypedDict, total=False):
         server_url: Server URL for WebSocket connections
         server_protocol: Protocol (ws or wss)
         camelize: Whether to convert all keys to camelCase (default: False)
+        docs_js_url: Docs page script URL (default: pinned CDN)
+        docs_css_url: Docs page stylesheet URL (default: pinned CDN)
+        docs_js_integrity: SRI hash for the script (default: pinned hash for the CDN URL)
+        docs_css_integrity: SRI hash for the stylesheet (default: pinned hash for the CDN URL)
     """
 
     title: NotRequired[str]
@@ -38,6 +42,10 @@ class AsyncAPIConfig(TypedDict, total=False):
     server_url: NotRequired[str]
     server_protocol: NotRequired[str]
     camelize: NotRequired[bool]
+    docs_js_url: NotRequired[str]
+    docs_css_url: NotRequired[str]
+    docs_js_integrity: NotRequired[str]
+    docs_css_integrity: NotRequired[str]
 
 
 # Default configuration using constants

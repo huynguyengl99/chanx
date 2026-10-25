@@ -5,7 +5,7 @@ This module provides simple view functions that can be manually added
 to FastAPI or Starlette applications for AsyncAPI documentation.
 """
 
-import json
+from html import escape
 from types import ModuleType
 from typing import Any, cast
 
@@ -26,6 +26,7 @@ except ImportError:
     yaml = cast(ModuleType, None)
     yaml_available = False
 
+from chanx.asyncapi.docs import docs_assets, integrity_attrs, schema_script_json
 from chanx.asyncapi.generator import AsyncAPIGenerator
 
 from .discovery import FastAPIRouteDiscovery
@@ -144,22 +145,38 @@ async def asyncapi_docs(
     Follows the same template structure as Django's channels extension.
     """
 
+    config = config or {}
+    assets = docs_assets(
+        js_url=config.get("docs_js_url"),
+        css_url=config.get("docs_css_url"),
+        js_integrity=config.get("docs_js_integrity"),
+        css_integrity=config.get("docs_css_integrity"),
+    )
+    css_tag = (
+        f'<link rel="stylesheet" href="{escape(str(assets["css_url"]))}"'
+        f'{integrity_attrs(assets["css_integrity"])}>'
+    )
+    js_tag = (
+        f'<script src="{escape(str(assets["js_url"]))}"'
+        f'{integrity_attrs(assets["js_integrity"])}></script>'
+    )
+
     try:
         # Get the schema directly for injection
         schema = generate_asyncapi_schema(request=request, app=app, config=config)
-        schema_json = json.dumps(schema)
+        schema_json = schema_script_json(schema)
 
         html_content = f"""
         <!DOCTYPE html>
         <html>
             <head>
-                <title>{schema['info']['title']}</title>
-                <link rel="stylesheet" href="https://unpkg.com/@asyncapi/react-component@latest/styles/default.min.css">
+                <title>{escape(str(schema['info']['title']))}</title>
+                {css_tag}
             </head>
             <body>
                 <div id="asyncapi"></div>
 
-                <script src="https://unpkg.com/@asyncapi/react-component@latest/browser/standalone/index.js"></script>
+                {js_tag}
                 <script>
                     AsyncApiStandalone.render({{
                         schema: {schema_json},
@@ -181,12 +198,12 @@ async def asyncapi_docs(
         <html>
             <head>
                 <title>AsyncAPI Schema</title>
-                <link rel="stylesheet" href="https://unpkg.com/@asyncapi/react-component@latest/styles/default.min.css">
+                {css_tag}
             </head>
             <body>
                 <div style="padding: 2rem; background: #fee; border: 1px solid #fcc; margin: 2rem; border-radius: 8px; color: #c33;">
                     <h3>Error</h3>
-                    <p>{str(e)}</p>
+                    <p>{escape(str(e))}</p>
                 </div>
             </body>
         </html>

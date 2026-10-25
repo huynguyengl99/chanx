@@ -157,6 +157,10 @@ Here's an overview of all available settings and their default values:
         'ASYNCAPI_VERSION': '1.0.0',
         'ASYNCAPI_SERVER_URL': None,
         'ASYNCAPI_SERVER_PROTOCOL': None,
+        'ASYNCAPI_DOCS_JS_URL': None,
+        'ASYNCAPI_DOCS_CSS_URL': None,
+        'ASYNCAPI_DOCS_JS_INTEGRITY': None,
+        'ASYNCAPI_DOCS_CSS_INTEGRITY': None,
     }
 
 Settings Details
@@ -207,6 +211,18 @@ Settings Details
    * - ``ASYNCAPI_SERVER_PROTOCOL``
      - ``None``
      - Server protocol for AsyncAPI documentation (auto-detected if not set)
+   * - ``ASYNCAPI_DOCS_JS_URL``
+     - ``None``
+     - Docs page script URL or static path (pinned unpkg release if not set)
+   * - ``ASYNCAPI_DOCS_CSS_URL``
+     - ``None``
+     - Docs page stylesheet URL or static path (pinned unpkg release if not set)
+   * - ``ASYNCAPI_DOCS_JS_INTEGRITY``
+     - ``None``
+     - SRI hash for the script (pinned hash when using the default URL)
+   * - ``ASYNCAPI_DOCS_CSS_INTEGRITY``
+     - ``None``
+     - SRI hash for the stylesheet (pinned hash when using the default URL)
 
 Using Settings in Code
 ~~~~~~~~~~~~~~~~~~~~~~

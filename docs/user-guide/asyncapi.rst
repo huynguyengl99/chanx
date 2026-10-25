@@ -103,6 +103,38 @@ Configuring AsyncAPI Settings
     async def get_asyncapi_spec(request: Request):
         return await asyncapi_spec_json(request, app, config)
 
+Docs Page Assets
+------------------------------
+
+The docs page loads ``@asyncapi/react-component`` from unpkg, pinned to one release
+with `Subresource Integrity <https://developer.mozilla.org/en-US/docs/Web/Security/Subresource_Integrity>`_
+hashes, so a changed or hijacked file is refused by the browser.
+
+To serve it without a third-party CDN, download ``browser/standalone/index.js`` and
+``styles/default.min.css`` from the package and point the settings at your copies.
+A custom URL drops the pinned hash; set your own integrity value to keep the check.
+
+.. code-block:: python
+
+    # Django: a relative path resolves through static files (collectstatic works)
+    CHANX = {
+        'ASYNCAPI_DOCS_JS_URL': 'asyncapi/index.js',
+        'ASYNCAPI_DOCS_CSS_URL': 'asyncapi/default.min.css',
+        'ASYNCAPI_DOCS_JS_INTEGRITY': None,   # optional "sha384-..." value
+        'ASYNCAPI_DOCS_CSS_INTEGRITY': None,
+    }
+
+    # FastAPI
+    config = {
+        "docs_js_url": "/static/asyncapi/index.js",
+        "docs_css_url": "/static/asyncapi/default.min.css",
+    }
+
+**Content Security Policy:** the page runs one inline script that renders the schema,
+plus the component script. With the CDN defaults, allow ``https://unpkg.com`` in
+``script-src`` and ``style-src``; self-hosted, ``'self'`` is enough. The inline script
+also needs ``'unsafe-inline'`` or a nonce/hash in ``script-src``.
+
 CamelCase Naming Convention
 ------------------------------
 

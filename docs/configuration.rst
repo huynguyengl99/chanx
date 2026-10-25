@@ -118,6 +118,10 @@ For Django projects, you can use the ``CHANX`` settings dictionary in addition t
         'ASYNCAPI_VERSION': '1.0.0',
         'ASYNCAPI_SERVER_URL': None,
         'ASYNCAPI_SERVER_PROTOCOL': None,
+        'ASYNCAPI_DOCS_JS_URL': None,  # Docs page script (default: pinned unpkg release)
+        'ASYNCAPI_DOCS_CSS_URL': None,  # Docs page stylesheet (default: pinned unpkg release)
+        'ASYNCAPI_DOCS_JS_INTEGRITY': None,  # SRI hash for a custom script URL
+        'ASYNCAPI_DOCS_CSS_INTEGRITY': None,  # SRI hash for a custom stylesheet URL
     }
 
 **Using Django Settings**

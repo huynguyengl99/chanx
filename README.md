@@ -20,7 +20,7 @@ Runs on Django Channels, FastAPI, or any ASGI framework.
 [TypeScript clients](https://huynguyengl99.github.io/chanx-js/) ·
 [Ready-made kits](https://huynguyengl99.github.io/chanx-kit/)
 
-![Chanx generates AsyncAPI docs from your handlers, and chanx-js generates a typed TypeScript client from them](https://raw.githubusercontent.com/huynguyengl99/chanx/main/docs/_static/chanx-demo.gif)
+![A typed Python handler, the AsyncAPI docs Chanx generates from it, and a generated TypeScript client catching a typo](https://raw.githubusercontent.com/huynguyengl99/chanx/main/docs/_static/chanx-demo.gif)
 
 ## Why Chanx
 

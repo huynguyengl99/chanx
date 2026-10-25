@@ -30,7 +30,7 @@ Chanx
 
 .. image:: _static/chanx-demo.gif
    :width: 100%
-   :alt: Chanx generates AsyncAPI docs from your handlers, and chanx-js generates a typed TypeScript client from them
+   :alt: A typed Python handler, the AsyncAPI docs Chanx generates from it, and a generated TypeScript client catching a typo
 
 One handler per message
 -----------------------

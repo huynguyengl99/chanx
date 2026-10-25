@@ -174,7 +174,10 @@ A custom URL drops the pinned hash; set your own integrity value to keep the che
 **Content Security Policy:** the page runs one inline script that renders the schema,
 plus the component script. With the CDN defaults, allow ``https://unpkg.com`` in
 ``script-src`` and ``style-src``; self-hosted, ``'self'`` is enough. The inline script
-also needs ``'unsafe-inline'`` or a nonce/hash in ``script-src``.
+also needs ``'unsafe-inline'`` or a nonce/hash in ``script-src``, and the component
+compiles code at runtime (`asyncapi-react#741 <https://github.com/asyncapi/asyncapi-react/issues/741>`_),
+so it needs ``'unsafe-eval'`` too. Apply that policy to the docs route only, or keep the
+docs views out of production.
 
 CamelCase Naming Convention
 ------------------------------

@@ -1,15 +1,21 @@
 Ecosystem
 =========
 
-Chanx is the server. Two companion projects build on the AsyncAPI schema it generates.
+Chanx is the Python server. Two companion projects build on the protocol and the AsyncAPI
+schema it generates.
 
-chanx-js: JavaScript and TypeScript clients
--------------------------------------------
+chanx-js: TypeScript clients and servers
+----------------------------------------
 
-`chanx-js <https://huynguyengl99.github.io/chanx-js/>`_ is the client for browsers and
-Node. ``@chanx-js/codegen`` turns your server's AsyncAPI schema into typed channel
-descriptors, and ``@chanx-js/client`` connects with them, with bindings for React, Vue,
-Svelte and Solid.
+`chanx-js <https://huynguyengl99.github.io/chanx-js/>`_ implements the same protocol in
+TypeScript, on both ends:
+
+- **Client**: ``@chanx-js/codegen`` turns your server's AsyncAPI schema into typed channel
+  descriptors, and ``@chanx-js/client`` connects with them, in the browser, React, Vue,
+  Svelte, Solid or a Node service. It works against a Chanx server with no Node server
+  involved.
+- **Server**: ``@chanx-js/server`` runs consumers on Node with ``ws``, Express, Koa,
+  Fastify, Hono, NestJS, Bun and Deno, and its Redis layer can share groups with Chanx.
 
 .. code-block:: bash
 

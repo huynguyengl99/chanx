@@ -1,3 +1,16 @@
+## v2.12.0 (2026-10-25)
+
+### Feat
+
+- **asyncapi**: document servers, security schemes and ws bindings from authenticator credentials
+- **asyncapi**: pin docs page assets with SRI and make their URLs configurable
+- **asyncapi**: mark request/reply messages with a ref correlationId
+- **core**: close with 4000 + status when authentication fails
+
+### Fix
+
+- **asyncapi**: omit info.description when unset
+
 ## v2.11.8 (2026-10-23)
 
 ### Fix

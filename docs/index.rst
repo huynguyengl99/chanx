@@ -20,6 +20,9 @@ Chanx
    pip install "chanx[channels]"        # Django Channels
    pip install "chanx[fast_channels]"   # FastAPI, Starlette and other ASGI frameworks
 
+.. image:: _static/chanx-demo.gif
+   :alt: Chanx generates AsyncAPI docs from your handlers, and chanx-js generates a typed TypeScript client from them
+
 One handler per message
 -----------------------
 

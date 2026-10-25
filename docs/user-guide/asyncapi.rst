@@ -148,7 +148,7 @@ Docs Page Assets
 ------------------------------
 
 The docs page loads ``@asyncapi/react-component`` from unpkg, pinned to one release
-with `Subresource Integrity <https://developer.mozilla.org/en-US/docs/Web/Security/Subresource_Integrity>`_
+with `Subresource Integrity <https://developer.mozilla.org/en-US/docs/Web/Security/Defenses/Subresource_Integrity>`_
 hashes, so a changed or hijacked file is refused by the browser.
 
 To serve it without a third-party CDN, download ``browser/standalone/index.js`` and

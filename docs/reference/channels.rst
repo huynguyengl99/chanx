@@ -98,10 +98,9 @@ Django REST Framework integration for WebSocket authentication.
 
 .. autoclass:: chanx.channels.authenticator.DjangoAuthenticator
    :members:
-   :exclude-members: authenticate
+   :exclude-members: authenticate, auth_view_class
 
    .. automethod:: authenticate(scope: dict[str, Any]) -> bool
-      :async:
 
 .. autoclass:: chanx.channels.authenticator.ChanxAuthView
    :members:

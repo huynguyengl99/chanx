@@ -1015,7 +1015,4 @@ In the next part, you'll add comprehensive integration tests for all WebSocket e
 - Testing Celery task integration
 - Using Chanx testing utilities
 
-.. toctree::
-   :maxdepth: 1
-
-   cp4-integration-tests
+**Next:** :doc:`cp4-integration-tests`

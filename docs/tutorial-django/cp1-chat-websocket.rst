@@ -438,7 +438,4 @@ In the next part, you'll build an AI assistants chat system that demonstrates:
 - Integration with external services (AI APIs)
 - Advanced broadcasting patterns
 
-.. toctree::
-   :maxdepth: 1
-
-   cp2-assistants-websocket
+**Next:** :doc:`cp2-assistants-websocket`

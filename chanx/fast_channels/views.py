@@ -83,18 +83,13 @@ async def asyncapi_spec_json(
     """
     Simple JSON spec endpoint that works with FastAPI, Starlette, etc.
 
-    Usage with FastAPI:
-        @app.get("/asyncapi.json")
-        async def get_spec():
-            return await asyncapi_spec_json(app=app)
+    Example::
 
-    Usage with config:
         @app.get("/asyncapi.json")
-        async def get_spec():
-            return await asyncapi_spec_json(app=app, config={"title": "My API"})
-
-    Usage with Starlette:
-        Route("/asyncapi.json", asyncapi_spec_json)
+        async def spec(request: Request) -> JSONResponse:
+            return await asyncapi_spec_json(
+                request=request, app=app, config={"title": "My API"}
+            )
     """
 
     try:

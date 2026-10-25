@@ -117,7 +117,4 @@ Next Steps
 
 Ready to start? Head to Part 1 to begin setting up Chanx:
 
-.. toctree::
-   :maxdepth: 1
-
-   cp0-initial-setup
+**Next:** :doc:`cp0-initial-setup`

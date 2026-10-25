@@ -680,7 +680,4 @@ In the next part, you'll build a notification system that demonstrates:
 - Event handlers with ``@event_handler``
 - System-wide notifications
 
-.. toctree::
-   :maxdepth: 1
-
-   cp3-system-websocket
+**Next:** :doc:`cp3-system-websocket`

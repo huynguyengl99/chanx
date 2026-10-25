@@ -716,7 +716,4 @@ You've explored the multi-layer showcase! You now understand:
 
 In the final part, you'll learn comprehensive WebSocket testing with pytest.
 
-.. toctree::
-   :maxdepth: 1
-
-   cp5-testing
+**Next:** :doc:`cp5-testing`

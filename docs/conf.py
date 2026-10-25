@@ -29,6 +29,9 @@ version = release
 
 smartquotes = False
 
+# CHANGELOG.md (written by commitizen) starts at ## under the page's own title.
+suppress_warnings = ["myst.header"]
+
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 # -- General configuration ---------------------------------------------------
@@ -97,8 +100,14 @@ html_theme_options = {
 copybutton_prompt_text = r"\$ "
 copybutton_prompt_is_regexp = True
 
+# Show "method()" rather than "Class.method()" in the on-this-page lists.
+toc_object_entries_show_parents = "hide"
+
 ogp_site_url = html_baseurl
 ogp_social_cards = {"enable": False}
+
+# Local URLs in tutorials point at the reader's own server.
+linkcheck_ignore = [r"http://localhost:\d+", r"quick-start\.html\?framework="]
 
 # Old per-framework quick starts now open the matching tab of the merged page.
 redirects = {

@@ -7,7 +7,7 @@ understand the tools and processes used in this project.
 
 Before starting development, ensure you have the following installed:
 
-- [Docker](https://docs.docker.com/get-docker/) and Docker Compose
+- [Docker](https://docs.docker.com/get-started/get-docker/) and Docker Compose
 - [uv](https://docs.astral.sh/uv/getting-started/installation/) for Python package management
 - Python 3.11+ (project supports 3.11, 3.12, and 3.13)
 

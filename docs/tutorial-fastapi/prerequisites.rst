@@ -188,7 +188,4 @@ Next Steps
 
 You're now ready to start building! Head to Part 1 to implement your first WebSocket consumer:
 
-.. toctree::
-   :maxdepth: 1
-
-   cp1-system-echo
+**Next:** :doc:`cp1-system-echo`

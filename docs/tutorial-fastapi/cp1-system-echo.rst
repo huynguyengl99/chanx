@@ -306,7 +306,4 @@ In the next part, you'll build a room-based chat system with:
 - Channel layers for broadcasting
 - Group-based message distribution
 
-.. toctree::
-   :maxdepth: 1
-
-   cp2-room-chat
+**Next:** :doc:`cp2-room-chat`

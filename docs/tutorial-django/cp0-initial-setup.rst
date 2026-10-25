@@ -246,7 +246,7 @@ Edit ``chanx_django/config/urls.py`` to include Chanx's AsyncAPI documentation:
        path("asyncapi/", include("chanx.channels.urls")),  # Add this line
    ]
 
-This makes AsyncAPI documentation available at ``/asyncapi/``.
+This serves the AsyncAPI docs page at ``/asyncapi/docs/`` and the spec at ``/asyncapi/schema/``.
 
 Testing the Setup
 -----------------
@@ -331,7 +331,4 @@ In the next part, you'll build your first WebSocket consumer for the chat applic
 - Broadcast messages to groups
 - See your API automatically documented in AsyncAPI
 
-.. toctree::
-   :maxdepth: 1
-
-   cp1-chat-websocket
+**Next:** :doc:`cp1-chat-websocket`

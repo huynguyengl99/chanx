@@ -503,7 +503,4 @@ In the next part, you'll build a background job system with:
 - Event handlers
 - Job result notifications
 
-.. toctree::
-   :maxdepth: 1
-
-   cp3-background-jobs
+**Next:** :doc:`cp3-background-jobs`

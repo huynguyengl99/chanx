@@ -815,7 +815,4 @@ In the next part, you'll explore multi-layer messaging with:
 - HTTP endpoints triggering WebSocket notifications
 - Cross-consumer communication
 
-.. toctree::
-   :maxdepth: 1
-
-   cp4-multi-layer
+**Next:** :doc:`cp4-multi-layer`

@@ -27,29 +27,35 @@ Django Channels Testing
 -----------------------
 
 .. module:: chanx.channels.testing
+   :no-index:
 
 The Django Channels testing module provides Django-specific testing utilities.
 
 .. autoclass:: chanx.channels.testing.WebsocketCommunicator
    :members:
    :undoc-members:
+   :no-index:
 
 .. autoclass:: chanx.channels.testing.DjangoWebsocketCommunicator
    :members:
    :undoc-members:
+   :no-index:
 
 .. autoclass:: chanx.channels.testing.WebsocketTestCase
    :members:
    :undoc-members:
+   :no-index:
 
 
 FastAPI Testing
 ---------------
 
 .. module:: chanx.fast_channels.testing
+   :no-index:
 
 The FastAPI testing module provides FastAPI-specific testing utilities.
 
 .. autoclass:: chanx.fast_channels.testing.WebsocketCommunicator
    :members:
    :undoc-members:
+   :no-index:

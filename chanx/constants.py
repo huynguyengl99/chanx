@@ -41,3 +41,7 @@ ENVELOPE_VERSION = 1
 
 # Channel layers reject group names at or above this length.
 MAX_GROUP_NAME_LENGTH = 99
+
+# Close code for a failed authentication without a 4xx/5xx status; one with a
+# status closes with 4000 + status.
+CLOSE_UNAUTHENTICATED = 4401

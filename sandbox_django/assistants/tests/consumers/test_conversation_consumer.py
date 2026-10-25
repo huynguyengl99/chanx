@@ -61,7 +61,7 @@ class TestConversationAssistantConsumer(WebsocketTestCase):
         assert auth.payload.status_code == status.HTTP_403_FORBIDDEN
 
         # Connection should be closed
-        await unauthenticated_communicator.assert_closed()
+        await unauthenticated_communicator.assert_closed(code=4403)
 
     async def test_connect_to_nonexistent_conversation(self) -> None:
         """Test connecting to a non-existent conversation returns 404"""
@@ -78,7 +78,7 @@ class TestConversationAssistantConsumer(WebsocketTestCase):
         assert auth.payload.status_code == status.HTTP_404_NOT_FOUND
 
         # Connection should be closed
-        await nonexistent_communicator.assert_closed()
+        await nonexistent_communicator.assert_closed(code=4404)
 
     async def test_connect_to_other_users_conversation(self) -> None:
         """Test connecting to another user's conversation returns 403"""
@@ -99,7 +99,7 @@ class TestConversationAssistantConsumer(WebsocketTestCase):
         assert auth.payload.status_code == status.HTTP_403_FORBIDDEN
 
         # Connection should be closed
-        await unauthorized_communicator.assert_closed()
+        await unauthorized_communicator.assert_closed(code=4403)
 
     async def test_streaming_event_broadcast(self) -> None:
         """Test consumer handles streaming events correctly"""
@@ -354,4 +354,4 @@ class TestAnonymousConversationAssistantConsumer(WebsocketTestCase):
         else:
             # If they can't connect, it should be 403
             assert auth.payload.status_code == status.HTTP_403_FORBIDDEN
-            await self.auth_communicator.assert_closed()
+            await self.auth_communicator.assert_closed(code=4403)

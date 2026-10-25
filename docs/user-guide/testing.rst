@@ -477,6 +477,7 @@ Testing Best Practices
     # Test failed authentication
     auth_msg = await comm.wait_for_auth()
     assert auth_msg.payload.status_code == 403
+    await comm.assert_closed(code=4403)
 
 Next Steps
 ----------

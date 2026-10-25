@@ -238,6 +238,10 @@ Create custom authenticators for non-Django frameworks:
     class SecureChatConsumer(BaseConsumer):
         authenticator_class = TokenAuthenticator
 
+When ``authenticate`` returns ``False``, the socket closes with ``4000 + status_code``
+(``4401`` unauthenticated, ``4403`` forbidden), so clients can stop reconnecting.
+Set ``self.status_code`` to pick the code; left unset, it closes with ``4401``.
+
 ----------
 
 With framework-specific integration utilities, you have all the tools needed to incorporate WebSocket consumers into your Django or FastAPI applications:

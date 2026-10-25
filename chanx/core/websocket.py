@@ -554,7 +554,7 @@ class ChanxWebsocketConsumerMixin(Generic[ReceiveEvent]):
             auth_result = await self.authenticator.authenticate(self.scope)
 
             if not auth_result:
-                await self.close()
+                await self.close(self.authenticator.close_code)
                 return
 
         try:

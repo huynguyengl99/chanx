@@ -66,7 +66,7 @@ class TestDiscussionTopicConsumer(WebsocketTestCase):
         assert auth.payload.status_code == status.HTTP_401_UNAUTHORIZED
 
         # Connection should be closed
-        await unauthenticated_communicator.assert_closed()
+        await unauthenticated_communicator.assert_closed(code=4401)
 
     async def test_connect_to_nonexistent_topic(self) -> None:
         """Test connecting to a non-existent topic returns 404"""
@@ -83,7 +83,7 @@ class TestDiscussionTopicConsumer(WebsocketTestCase):
         assert auth.payload.status_code == status.HTTP_404_NOT_FOUND
 
         # Connection should be closed
-        await nonexistent_communicator.assert_closed()
+        await nonexistent_communicator.assert_closed(code=4404)
 
     async def test_new_reply_event_broadcast(self) -> None:
         """Test consumer handles new reply events correctly"""

@@ -61,7 +61,7 @@ class TestGroupChatConsumer(WebsocketTestCase):
         assert auth.payload.status_code == status.HTTP_401_UNAUTHORIZED
 
         # Connection should be closed
-        await unauthenticated_communicator.assert_closed()
+        await unauthenticated_communicator.assert_closed(code=4401)
 
     async def test_notify_added_to_group_event(self) -> None:
         """Test consumer handles group addition notifications correctly"""

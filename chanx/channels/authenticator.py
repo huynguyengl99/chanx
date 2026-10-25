@@ -180,7 +180,7 @@ class DjangoAuthenticator(BaseAuthenticator):
             self.request = request
 
             # Extract authentication results
-            status_code = response.status_code
+            status_code = self.status_code = response.status_code
             status_text = response.status_text
             is_authenticated = status_code == status.HTTP_200_OK
 
@@ -213,6 +213,7 @@ class DjangoAuthenticator(BaseAuthenticator):
             return is_authenticated
         except Exception as e:
             # Log the exception but don't expose details to the client
+            self.status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
             await logger.aexception(
                 f"Authentication failed with unexpected error: {str(e)}"
             )

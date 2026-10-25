@@ -67,7 +67,7 @@ class TestChatDetailConsumer(WebsocketTestCase):
         assert auth.payload.status_code == status.HTTP_403_FORBIDDEN
 
         # Connection should be closed
-        await non_member_communicator.assert_closed()
+        await non_member_communicator.assert_closed(code=4403)
 
     async def test_notify_member_add_event(self) -> None:
         """Test consumer handles member addition events correctly"""

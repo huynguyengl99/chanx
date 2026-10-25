@@ -157,6 +157,8 @@ class TestDjangoAuthenticator(TestCase):
 
             # Assert the result is a generic error
             assert not result
+            assert self.authenticator.status_code == 500
+            assert self.authenticator.close_code == 4500
 
     @pytest.mark.django_db
     @pytest.mark.asyncio

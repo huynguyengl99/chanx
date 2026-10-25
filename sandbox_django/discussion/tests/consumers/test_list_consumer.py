@@ -64,7 +64,7 @@ class TestDiscussionListConsumer(WebsocketTestCase):
         assert auth.payload.status_code == status.HTTP_401_UNAUTHORIZED
 
         # Connection should be closed
-        await unauthenticated_communicator.assert_closed()
+        await unauthenticated_communicator.assert_closed(code=4401)
 
     async def test_new_topic_event_broadcast(self) -> None:
         """Test consumer handles new topic events correctly"""

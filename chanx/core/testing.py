@@ -339,10 +339,12 @@ class WebsocketCommunicatorMixin:
             ),
         )
 
-    async def assert_closed(self) -> None:
-        """Asserts that the WebSocket has been closed."""
+    async def assert_closed(self, code: int | None = None) -> None:
+        """Asserts that the WebSocket has been closed, with `code` when given."""
         closed_status = await self.receive_output()
-        assert closed_status == {"type": "websocket.close"}
+        assert closed_status["type"] == "websocket.close"
+        if code is not None:
+            assert closed_status.get("code") == code
 
     async def connect(self, timeout: float = 1) -> tuple[bool, int | str | None]:
         """

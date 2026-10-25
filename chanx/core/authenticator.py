@@ -10,6 +10,7 @@ from abc import ABC, abstractmethod
 from collections.abc import MutableMapping
 from typing import Any
 
+from chanx.constants import CLOSE_UNAUTHENTICATED
 from chanx.type_defs import SendMessageFn
 
 
@@ -23,7 +24,12 @@ class BaseAuthenticator(ABC):
 
     Args:
         send_message: Function to send messages back to the client during authentication
+
+    Attributes:
+        status_code: Status of the last attempt; on failure it picks the close code
     """
+
+    status_code: int | None = None
 
     def __init__(self, send_message: SendMessageFn):
         """
@@ -50,3 +56,10 @@ class BaseAuthenticator(ABC):
         Returns:
             True if authentication succeeds, False if it fails
         """
+
+    @property
+    def close_code(self) -> int:
+        """Close code for a failed authentication: 4000 + a 4xx/5xx status, else 4401."""
+        if self.status_code is not None and self.status_code in range(400, 600):
+            return 4000 + self.status_code
+        return CLOSE_UNAUTHENTICATED

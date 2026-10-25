@@ -195,6 +195,8 @@ class Command(BaseCommand):
             server_url=server_url,
             server_protocol=server_protocol,
             camelize=chanx_settings.CAMELIZE,
+            servers=chanx_settings.ASYNCAPI_SERVERS,
+            security_schemes=chanx_settings.ASYNCAPI_SECURITY_SCHEMES,
         )
 
         return generator.generate()

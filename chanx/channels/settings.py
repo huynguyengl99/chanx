@@ -39,6 +39,8 @@ class MySetting:
         ASYNCAPI_VERSION: Version for generated AsyncAPI documentation (default: "1.0.0")
         ASYNCAPI_SERVER_URL: Server URL for AsyncAPI documentation (default: None)
         ASYNCAPI_SERVER_PROTOCOL: Server protocol for AsyncAPI documentation (default: None)
+        ASYNCAPI_SERVERS: AsyncAPI Server Objects by name, replacing SERVER_URL/PROTOCOL (default: None)
+        ASYNCAPI_SECURITY_SCHEMES: AsyncAPI Security Scheme Objects by name (default: None)
         ASYNCAPI_DOCS_JS_URL: Docs page script URL or static path (default: pinned CDN)
         ASYNCAPI_DOCS_CSS_URL: Docs page stylesheet URL or static path (default: pinned CDN)
         ASYNCAPI_DOCS_JS_INTEGRITY: SRI hash for the script (default: pinned hash for the CDN URL)
@@ -63,6 +65,8 @@ class MySetting:
     ASYNCAPI_VERSION: str = "1.0.0"
     ASYNCAPI_SERVER_URL: str | None = None
     ASYNCAPI_SERVER_PROTOCOL: str | None = None
+    ASYNCAPI_SERVERS: dict[str, dict[str, Any]] | None = None
+    ASYNCAPI_SECURITY_SCHEMES: dict[str, dict[str, Any]] | None = None
     ASYNCAPI_DOCS_JS_URL: str | None = None
     ASYNCAPI_DOCS_CSS_URL: str | None = None
     ASYNCAPI_DOCS_JS_INTEGRITY: str | None = None

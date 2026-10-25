@@ -5,7 +5,7 @@ This module provides TypedDict definitions for configuration and other
 typed interfaces used in FastAPI AsyncAPI generation.
 """
 
-from typing import NotRequired, TypedDict
+from typing import Any, NotRequired, TypedDict
 
 from chanx.asyncapi.constants import (
     DEFAULT_ASYNCAPI_DESCRIPTION,
@@ -30,6 +30,8 @@ class AsyncAPIConfig(TypedDict, total=False):
         server_url: Server URL for WebSocket connections
         server_protocol: Protocol (ws or wss)
         camelize: Whether to convert all keys to camelCase (default: False)
+        servers: AsyncAPI Server Objects by name, replacing server_url/server_protocol
+        security_schemes: AsyncAPI Security Scheme Objects by name
         docs_js_url: Docs page script URL (default: pinned CDN)
         docs_css_url: Docs page stylesheet URL (default: pinned CDN)
         docs_js_integrity: SRI hash for the script (default: pinned hash for the CDN URL)
@@ -42,6 +44,8 @@ class AsyncAPIConfig(TypedDict, total=False):
     server_url: NotRequired[str]
     server_protocol: NotRequired[str]
     camelize: NotRequired[bool]
+    servers: NotRequired[dict[str, dict[str, Any]]]
+    security_schemes: NotRequired[dict[str, dict[str, Any]]]
     docs_js_url: NotRequired[str]
     docs_css_url: NotRequired[str]
     docs_js_integrity: NotRequired[str]

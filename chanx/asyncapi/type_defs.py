@@ -136,7 +136,7 @@ class ServerObject(BaseModel):
     description: str | None = None
     title: str | None = None
     summary: str | None = None
-    security: list[dict[str, list[str]]] | None = None
+    security: list[dict[str, Any]] | None = None
     tags: list[TagObject] | None = None
     externalDocs: ExternalDocumentationObject | None = None
     bindings: dict[str, dict[str, Any]] | None = None
@@ -229,7 +229,7 @@ class OperationObject(BaseModel):
     title: str | None = None
     summary: str | None = None
     description: str | None = None
-    security: list[dict[str, list[str]]] | None = None
+    security: list[dict[str, Any]] | None = None
     tags: list[TagObject] | None = None
     externalDocs: ExternalDocumentationObject | None = None
     bindings: dict[str, dict[str, Any]] | None = None

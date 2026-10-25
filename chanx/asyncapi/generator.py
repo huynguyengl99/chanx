@@ -6,6 +6,7 @@ AsyncAPI documentation from Chanx WebSocket consumer routes and their decorated
 handlers (@ws_handler, @event_handler, @channel).
 """
 
+from collections.abc import Sequence
 from textwrap import dedent
 from typing import Any, TypeAlias, cast, get_args, get_origin
 
@@ -17,7 +18,8 @@ from chanx.asyncapi.constants import (
     DEFAULT_SERVER_PROTOCOL,
     DEFAULT_SERVER_URL,
 )
-from chanx.asyncapi.type_defs import ChannelObject, ParameterObject
+from chanx.asyncapi.type_defs import ChannelObject, ParameterObject, ServerObject
+from chanx.core.authenticator import Credential
 from chanx.core.decorators import OutputType
 from chanx.core.registry import UNION_TYPES, message_registry
 from chanx.core.websocket import ChanxWebsocketConsumerMixin
@@ -29,6 +31,8 @@ from chanx.type_defs import AsyncAPIHandlerInfo, ChannelInfo
 RouteKey: TypeAlias = tuple[str, str]
 
 CORRELATION_ID_REF = "#/components/correlationIds/ref"
+SECURITY_SCHEMES_REF = "#/components/securitySchemes/"
+WS_BINDING_VERSION = "0.1.0"
 
 
 class AsyncAPIGenerator:
@@ -49,6 +53,8 @@ class AsyncAPIGenerator:
         server_url: str | None = DEFAULT_SERVER_URL,
         server_protocol: str | None = DEFAULT_SERVER_PROTOCOL,
         camelize: bool | None = False,
+        servers: dict[str, dict[str, Any]] | None = None,
+        security_schemes: dict[str, dict[str, Any]] | None = None,
     ):
         """
         Initialize the AsyncAPI generator with routes and metadata.
@@ -61,7 +67,12 @@ class AsyncAPIGenerator:
             server_url: Default server URL
             server_protocol: Default server protocol (ws/wss)
             camelize: Whether to convert all keys to camelCase (default: False)
+            servers: AsyncAPI Server Objects by name; replaces server_url/server_protocol
+            security_schemes: AsyncAPI Security Scheme Objects by name, added to
+                the ones derived from authenticator credentials
         """
+        for server in (servers or {}).values():
+            ServerObject.model_validate(server)
         self.routes = routes
         self.title = title
         self.version = version
@@ -69,6 +80,8 @@ class AsyncAPIGenerator:
         self.server_url = server_url
         self.server_protocol = server_protocol
         self.camelize = camelize
+        self.servers = servers
+        self.security_schemes = dict(security_schemes or {})
 
         self.channels: dict[str, dict[str, Any]] = {}
 
@@ -77,6 +90,8 @@ class AsyncAPIGenerator:
         self.operations: dict[str, dict[str, Any]] = {}
 
         self._operation_names: set[str] = set()
+
+        self._channel_security: dict[str, list[dict[str, str]]] = {}
 
     def generate(self) -> dict[str, Any]:
         """
@@ -96,6 +111,8 @@ class AsyncAPIGenerator:
             "schemas": dict(sorted(message_registry.schema_objects.items())),
         }
         self._add_correlation_ids(components)
+        if self.security_schemes:
+            components["securitySchemes"] = self.security_schemes
 
         spec = {
             "asyncapi": "3.0.0",
@@ -108,12 +125,15 @@ class AsyncAPIGenerator:
                     else {}
                 ),
             },
-            "servers": {
-                self._get_server_environment_name(): {
-                    "host": self.server_url,
-                    "protocol": self.server_protocol,
+            "servers": (
+                self.servers
+                or {
+                    self._get_server_environment_name(): {
+                        "host": self.server_url,
+                        "protocol": self.server_protocol,
+                    }
                 }
-            },
+            ),
             "channels": self.channels,
             "operations": self.operations,
             "components": components,
@@ -239,6 +259,16 @@ class AsyncAPIGenerator:
 
             channel["messages"] = self.get_channel_messages(consumer)
 
+            authenticator = getattr(route.host or consumer, "authenticator_class", None)
+            credentials = authenticator.credentials if authenticator else ()
+            if credentials:
+                self._channel_security[channel_name] = [
+                    {"$ref": SECURITY_SCHEMES_REF + self._add_security_scheme(c)}
+                    for c in credentials
+                ]
+                if binding := self._ws_binding(credentials):
+                    channel["bindings"] = {"ws": binding}
+
             # Add tags if specified in decorator
             if channel_info.get("tags"):
                 channel["tags"] = [
@@ -251,6 +281,37 @@ class AsyncAPIGenerator:
             self._route_channel_mapping[self._route_key(route)] = channel_name
 
         return self.channels
+
+    def _add_security_scheme(self, credential: Credential) -> str:
+        """Register a credential's security scheme, keeping a user-declared one."""
+        name = f"{credential.location}_{credential.name}".lower().replace("-", "_")
+        scheme: dict[str, Any] = {
+            "type": "httpApiKey",
+            "name": credential.name,
+            "in": credential.location,
+        }
+        if credential.description:
+            scheme["description"] = credential.description
+        self.security_schemes.setdefault(name, scheme)
+        return name
+
+    @staticmethod
+    def _ws_binding(credentials: Sequence[Credential]) -> dict[str, Any] | None:
+        """WebSocket handshake binding for credentials sent in the query or headers."""
+        binding: dict[str, Any] = {}
+        for key, location in (("query", "query"), ("headers", "header")):
+            properties: dict[str, Any] = {}
+            for credential in credentials:
+                if credential.location == location:
+                    prop: dict[str, Any] = {"type": "string"}
+                    if credential.description:
+                        prop["description"] = credential.description
+                    properties[credential.name] = prop
+            if properties:
+                binding[key] = {"type": "object", "properties": properties}
+        if not binding:
+            return None
+        return binding | {"bindingVersion": WS_BINDING_VERSION}
 
     def get_channel_messages(
         self, consumer: type[ChanxWebsocketConsumerMixin]
@@ -330,6 +391,9 @@ class AsyncAPIGenerator:
             "description": handler_info.get("description") or "",
             "summary": handler_info.get("summary") or "",
         }
+
+        if security := self._channel_security.get(channel_name):
+            operation["security"] = security
 
         # Add tags - convert to proper tag objects
         tags = handler_info.get("tags") or []
@@ -474,11 +538,6 @@ class AsyncAPIGenerator:
         parts = ref.split("/")
         camelized_parts: list[str] = []
 
-        # Track if the next part after "schemas" is a schema name
-        schemas_keyword_index = -1
-        if "schemas" in parts:
-            schemas_keyword_index = parts.index("schemas")
-
         for i, part in enumerate(parts):
             # Don't camelize the first parts (#, channels, messages, operations, components, schemas)
             if i <= 1 or part in [
@@ -487,10 +546,11 @@ class AsyncAPIGenerator:
                 "operations",
                 "components",
                 "schemas",
+                "securitySchemes",
             ]:
                 camelized_parts.append(part)
-            # If this is the part immediately after "schemas", keep it as-is (schema/class name)
-            elif schemas_keyword_index >= 0 and i == schemas_keyword_index + 1:
+            # Schema and security scheme names are kept as declared
+            elif parts[i - 1] in ("schemas", "securitySchemes"):
                 camelized_parts.append(part)
             else:
                 # Camelize other names (channels, messages, operations)

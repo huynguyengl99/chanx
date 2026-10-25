@@ -58,7 +58,7 @@ Chanx generates AsyncAPI documentation automatically by analyzing your consumers
 3. **Message schemas** from Pydantic message classes
 4. **Input/output types** inferred from method signatures
 5. **Discriminated unions** built from all message types
-6. **Authentication requirements** from authenticator classes
+6. **Authentication requirements** from the authenticator's ``credentials``
 7. **Request/reply correlation**: messages answered with a reply carry a ``correlationId`` pointing at the frame's ``ref``
 
 .. image:: ../_static/asyncapi-fastapi-info.png
@@ -102,6 +102,47 @@ Configuring AsyncAPI Settings
     @app.get("/asyncapi.json")
     async def get_asyncapi_spec(request: Request):
         return await asyncapi_spec_json(request, app, config)
+
+Servers and Security
+------------------------------
+
+Declare where an authenticator reads its credentials. Each one becomes a security
+scheme, the channel gets a WebSocket binding for the query and header ones, and its
+operations list the schemes (any one of them is enough):
+
+.. code-block:: python
+
+    from chanx.core.authenticator import Credential
+
+    class ChatAuthenticator(DjangoAuthenticator):
+        credentials = [
+            Credential("token", "query", description="Access token"),
+            Credential("sessionid", "cookie"),
+        ]
+
+Browsers cannot set headers on a WebSocket, so a browser client can only use query
+or cookie credentials.
+
+Scheme names are ``<location>_<name>`` (``query_token``). To describe the servers or
+add your own schemes, pass AsyncAPI objects; a declared scheme with the same name
+replaces the derived one, and ``servers`` replaces ``ASYNCAPI_SERVER_URL``/``PROTOCOL``:
+
+.. code-block:: python
+
+    CHANX = {
+        'ASYNCAPI_SERVERS': {
+            'production': {
+                'host': 'api.myapp.com',
+                'protocol': 'wss',
+                'security': [{'$ref': '#/components/securitySchemes/query_token'}],
+            },
+        },
+        'ASYNCAPI_SECURITY_SCHEMES': {
+            'query_token': {'type': 'httpApiKey', 'name': 'token', 'in': 'query'},
+        },
+    }
+
+    # FastAPI: the same objects under "servers" and "security_schemes" in the config
 
 Docs Page Assets
 ------------------------------

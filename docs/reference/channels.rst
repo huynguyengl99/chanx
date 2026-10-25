@@ -157,6 +157,8 @@ Here's an overview of all available settings and their default values:
         'ASYNCAPI_VERSION': '1.0.0',
         'ASYNCAPI_SERVER_URL': None,
         'ASYNCAPI_SERVER_PROTOCOL': None,
+        'ASYNCAPI_SERVERS': None,
+        'ASYNCAPI_SECURITY_SCHEMES': None,
         'ASYNCAPI_DOCS_JS_URL': None,
         'ASYNCAPI_DOCS_CSS_URL': None,
         'ASYNCAPI_DOCS_JS_INTEGRITY': None,
@@ -211,6 +213,12 @@ Settings Details
    * - ``ASYNCAPI_SERVER_PROTOCOL``
      - ``None``
      - Server protocol for AsyncAPI documentation (auto-detected if not set)
+   * - ``ASYNCAPI_SERVERS``
+     - ``None``
+     - AsyncAPI Server Objects by name; replaces the server from ``ASYNCAPI_SERVER_URL``/``PROTOCOL``
+   * - ``ASYNCAPI_SECURITY_SCHEMES``
+     - ``None``
+     - AsyncAPI Security Scheme Objects by name, added to those derived from authenticator ``credentials``
    * - ``ASYNCAPI_DOCS_JS_URL``
      - ``None``
      - Docs page script URL or static path (pinned unpkg release if not set)

@@ -50,6 +50,8 @@ def generate_asyncapi_schema(request: HttpRequest) -> dict[str, Any]:
         server_protocol=chanx_settings.ASYNCAPI_SERVER_PROTOCOL
         or ("wss" if request.is_secure() else "ws"),
         camelize=chanx_settings.CAMELIZE,
+        servers=chanx_settings.ASYNCAPI_SERVERS,
+        security_schemes=chanx_settings.ASYNCAPI_SECURITY_SCHEMES,
     )
 
     return generator.generate()

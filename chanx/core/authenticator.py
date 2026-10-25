@@ -7,11 +7,21 @@ reject unauthorized access, and send error messages to clients.
 """
 
 from abc import ABC, abstractmethod
-from collections.abc import MutableMapping
-from typing import Any
+from collections.abc import MutableMapping, Sequence
+from dataclasses import dataclass
+from typing import Any, ClassVar, Literal
 
 from chanx.constants import CLOSE_UNAUTHENTICATED
 from chanx.type_defs import SendMessageFn
+
+
+@dataclass(frozen=True)
+class Credential:
+    """Where an authenticator reads a credential from, for the AsyncAPI document."""
+
+    name: str
+    location: Literal["query", "header", "cookie"]
+    description: str | None = None
 
 
 class BaseAuthenticator(ABC):
@@ -26,9 +36,11 @@ class BaseAuthenticator(ABC):
         send_message: Function to send messages back to the client during authentication
 
     Attributes:
+        credentials: Accepted credentials, documented as security schemes; any one is enough
         status_code: Status of the last attempt; on failure it picks the close code
     """
 
+    credentials: ClassVar[Sequence[Credential]] = ()
     status_code: int | None = None
 
     def __init__(self, send_message: SendMessageFn):

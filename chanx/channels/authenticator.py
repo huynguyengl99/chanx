@@ -35,6 +35,7 @@ from asgiref.sync import sync_to_async
 
 from chanx.channels.utils import request_from_scope
 from chanx.core.authenticator import BaseAuthenticator
+from chanx.core.config import config
 from chanx.messages.outgoing import AuthenticationMessage, AuthenticationPayload
 from chanx.type_defs import SendMessageFn
 from chanx.utils.logging import logger
@@ -200,15 +201,16 @@ class DjangoAuthenticator(BaseAuthenticator):
                     # Object retrieval failed (no queryset, 404, permission denied, etc.)
                     pass
 
-            await self.send_message(
-                AuthenticationMessage(
-                    payload=AuthenticationPayload(
-                        status_code=status_code,
-                        status_text=status_text,
-                        data=response_data,
+            if config.send_authentication_message:
+                await self.send_message(
+                    AuthenticationMessage(
+                        payload=AuthenticationPayload(
+                            status_code=status_code,
+                            status_text=status_text,
+                            data=response_data,
+                        )
                     )
                 )
-            )
 
             return is_authenticated
         except Exception as e:

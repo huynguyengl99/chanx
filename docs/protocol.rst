@@ -103,7 +103,8 @@ framework signals rather than application messages.
    * - ``authentication``
      - server
      - Result of authentication, sent by ``DjangoAuthenticator`` right after the
-       handshake. See `Connection lifecycle`_.
+       handshake unless ``SEND_AUTHENTICATION_MESSAGE`` is off. See
+       `Connection lifecycle`_.
    * - ``complete``
      - server
      - Handling of a client frame finished. Only with ``send_completion`` on.
@@ -197,7 +198,7 @@ Connection lifecycle
 
 1. The server accepts the WebSocket handshake.
 2. If the consumer has an authenticator, it runs. ``DjangoAuthenticator`` then sends an
-   ``authentication`` frame:
+   ``authentication`` frame, unless ``SEND_AUTHENTICATION_MESSAGE`` is ``False``:
 
    .. code-block:: json
 

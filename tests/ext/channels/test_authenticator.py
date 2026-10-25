@@ -9,7 +9,7 @@ from typing import Any
 from unittest.mock import AsyncMock, MagicMock, patch
 
 from django.contrib.auth.models import User
-from django.test import RequestFactory, TestCase
+from django.test import RequestFactory, TestCase, override_settings
 from rest_framework.generics import GenericAPIView
 from rest_framework.permissions import BasePermission, IsAuthenticated
 from rest_framework.request import Request
@@ -134,6 +134,21 @@ class TestDjangoAuthenticator(TestCase):
         """Test that authentication works."""
         result = await self.authenticator.authenticate(self.default_scope)
         assert result
+
+    @pytest.mark.asyncio
+    async def test_authenticate_sends_authentication_message(self) -> None:
+        await self.authenticator.authenticate(self.default_scope)
+        self.send_message_mock.assert_awaited_once()
+        message = self.send_message_mock.await_args_list[0].args[0]
+        assert message.action == "authentication"
+        assert message.payload.status_code == 200
+
+    @pytest.mark.asyncio
+    async def test_authenticate_skips_message_when_disabled(self) -> None:
+        with override_settings(CHANX={"SEND_AUTHENTICATION_MESSAGE": False}):
+            result = await self.authenticator.authenticate(self.default_scope)
+        assert result
+        self.send_message_mock.assert_not_awaited()
 
     @pytest.mark.asyncio
     async def test_authenticate_failed_permission(self) -> None:

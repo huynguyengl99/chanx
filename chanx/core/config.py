@@ -23,6 +23,7 @@ class Config:
         log_ignored_actions: Collection of action names to ignore in logs.
         camelize: Whether to camelize field names.
         discriminator_field: Field name used for message discrimination.
+        send_authentication_message: Whether authenticators send their result.
     """
 
     send_completion: bool = False
@@ -31,6 +32,7 @@ class Config:
     log_ignored_actions: Collection[str] = {}
     camelize: bool = False
     discriminator_field: str = "action"
+    send_authentication_message: bool = True
 
     def __getattribute__(self, item: str) -> Any:
         """Get attribute value, preferring Django settings when available.

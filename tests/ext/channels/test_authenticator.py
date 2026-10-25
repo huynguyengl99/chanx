@@ -9,7 +9,7 @@ from typing import Any
 from unittest.mock import AsyncMock, MagicMock, patch
 
 from django.contrib.auth.models import User
-from django.test import RequestFactory, TestCase, override_settings
+from django.test import RequestFactory, TestCase
 from rest_framework.generics import GenericAPIView
 from rest_framework.permissions import BasePermission, IsAuthenticated
 from rest_framework.request import Request
@@ -22,6 +22,7 @@ from chanx.channels.authenticator import (
     ChanxSerializer,
     DjangoAuthenticator,
 )
+from chanx.channels.utils.settings import override_chanx_settings
 from chanx.type_defs import SendMessageFn
 
 
@@ -144,9 +145,9 @@ class TestDjangoAuthenticator(TestCase):
         assert message.payload.status_code == 200
 
     @pytest.mark.asyncio
+    @override_chanx_settings(SEND_AUTHENTICATION_MESSAGE=False)
     async def test_authenticate_skips_message_when_disabled(self) -> None:
-        with override_settings(CHANX={"SEND_AUTHENTICATION_MESSAGE": False}):
-            result = await self.authenticator.authenticate(self.default_scope)
+        result = await self.authenticator.authenticate(self.default_scope)
         assert result
         self.send_message_mock.assert_not_awaited()
 

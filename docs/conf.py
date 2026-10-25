@@ -45,6 +45,7 @@ extensions = [
     "sphinx_copybutton",
     "sphinx_design",
     "sphinx_llms_txt",
+    "sphinx_reredirects",
     "sphinxext.opengraph",
 ]
 
@@ -98,3 +99,9 @@ copybutton_prompt_is_regexp = True
 
 ogp_site_url = html_baseurl
 ogp_social_cards = {"enable": False}
+
+# Old per-framework quick starts now open the matching tab of the merged page.
+redirects = {
+    "quick-start-django": "quick-start.html?framework=django",
+    "quick-start-fastapi": "quick-start.html?framework=fastapi",
+}

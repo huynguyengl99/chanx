@@ -1,279 +1,112 @@
 Introduction
 ============
 
-What is Chanx?
---------------
-Chanx is a batteries-included WebSocket framework for Django Channels, FastAPI, and ASGI-compatible applications. It provides automatic message routing, Pydantic validation, type safety, AsyncAPI documentation generation, and comprehensive testing utilities out of the box.
+Chanx is a framework for building typed WebSocket APIs in Python. You describe each
+message as a Pydantic model and write one handler per message; Chanx does the routing,
+validation, broadcasting and documentation around them. It runs on Django Channels,
+FastAPI, and any ASGI framework (through
+`fast-channels <https://fast-channels.readthedocs.io/>`_).
 
-Built on years of real-world WebSocket development experience, Chanx provides proven patterns that help teams build maintainable, type-safe WebSocket applications with less code and better developer experience.
+The gap it fills
+----------------
 
-The Problem
------------
+The WebSocket layers Python developers use today stop at the connection:
 
-**Django Channels: Too Much Manual Work**
+- **Django Channels** gives you consumers and channel layers, then hands every message to
+  a single ``receive()`` method. Routing, validation, error replies and documentation are
+  yours to write, and every team writes them differently.
+- **FastAPI** gives you a socket. There are no groups, no channel layer for broadcasting
+  across processes, and no way to push to a client from an HTTP endpoint or a worker.
 
-Django Channels provides WebSocket support but leaves critical functionality to you:
+On a growing project that turns into long ``if``/``elif`` chains over ``data["action"]``,
+hand-rolled payload checks, and a frontend team asking which messages exist and what
+they look like. The answer usually lives in someone's head or in a wiki page that is
+already out of date.
 
-- Writing endless if-else chains to route messages
-- Manually parsing and validating every incoming message
-- Repeating boilerplate for authentication and broadcasting
-- No automatic API documentation
-- Limited type safety - runtime errors are common
+How Chanx works
+---------------
 
-**FastAPI: Missing Core Features**
-
-FastAPI's WebSocket support is even more basic:
-
-- No channel layers for broadcasting
-- No group management - you track connections manually
-- No built-in message routing
-- No event system to trigger messages from other app parts
-
-**The Team Collaboration Nightmare**
-
-These gaps create serious problems when working with teams:
+**1. Messages are models.** Each message has a ``Literal`` ``action`` and a typed
+payload:
 
 .. code-block:: python
-
-    # Each developer implements routing differently
-    # Developer A:
-    async def receive(self, text_data):
-        data = json.loads(text_data)
-        if data["action"] == "chat":
-            await self.handle_chat(data["message"])
-
-    # Developer B:
-    async def receive(self, text_data):
-        msg = json.loads(text_data)
-        action = msg.get("action")
-        if action == "chat":
-            if "payload" not in msg:
-                return
-            await self.process_chat(msg["payload"])
-
-    # Different patterns, no consistency, bugs everywhere
-
-This leads to:
-
-- **Painful code reviews**: Reviewing 200+ line if-else chains is tedious and error-prone
-- **Slow onboarding**: New developers spend days reading code to understand what messages exist
-- **No API contract**: Frontend asks "what messages can I send?" - no one knows for sure
-- **Broken documentation**: Manually written docs are outdated within weeks
-- **Debugging hell**: No structured logging makes tracing errors through WebSocket flows painful
-- **Fragile tests**: Each developer writes different test patterns, CI breaks often
-
-How Chanx Solves This
-----------------------
-
-**1. Automatic Routing & Validation - No More If-Else Hell**
-
-.. code-block:: python
-
-    # Before: Manual routing nightmare
-    async def receive(self, text_data):
-        data = json.loads(text_data)
-        action = data.get("action")
-
-        if action == "chat":
-            if "message" not in data.get("payload", {}):
-                await self.send(json.dumps({"error": "Missing message"}))
-                return
-            # Handle chat...
-        elif action == "ping":
-            await self.send(json.dumps({"action": "pong"}))
-        # ... 50+ more elif statements
-
-    # After: Clean, automatic routing
-    from chanx.core.decorators import ws_handler, channel
-
-    @channel(name="chat", description="Real-time chat")
-    class ChatConsumer(AsyncJsonWebsocketConsumer):
-        @ws_handler(output_type=ChatNotificationMessage)
-        async def handle_chat(self, message: ChatMessage) -> None:
-            # Automatically routed, validated, and type-safe
-            await self.broadcast_message(
-                ChatNotificationMessage(payload=message.payload)
-            )
-
-        @ws_handler
-        async def handle_ping(self, message: PingMessage) -> PongMessage:
-            return PongMessage()
-
-**2. Complete Type Safety - Catch Errors During Development**
-
-.. code-block:: python
-
-    from typing import Literal
-    from pydantic import BaseModel
-    from chanx.messages.base import BaseMessage
-
-    class ChatPayload(BaseModel):
-        message: str
 
     class ChatMessage(BaseMessage):
         action: Literal["chat"] = "chat"
         payload: ChatPayload
 
-    # ✅ IDE autocomplete works
-    # ✅ mypy/pyright catches type errors
-    # ✅ Pydantic validates at runtime
-    # ✅ Framework auto-generates discriminated unions
-
-**3. Auto-Generated Documentation & Type-Safe Clients**
+**2. Handlers are typed methods.** Chanx reads each handler's argument type and builds a
+discriminated union of everything the consumer accepts. Incoming JSON is validated
+against it and dispatched to the matching handler; invalid messages get a structured
+``error`` reply and never reach your code.
 
 .. code-block:: python
 
-    @ws_handler(
-        summary="Send chat message",
-        description="Broadcast message to all room members",
-        tags=["chat"]
-    )
-    async def handle_chat(self, message: ChatMessage) -> None:
-        # AsyncAPI 3.0 spec generated automatically
-        # Interactive docs at /asyncapi/
-        # Frontend knows exactly what to send
+    @channel(name="chat")
+    class ChatConsumer(AsyncJsonWebsocketConsumer):
+        groups = ["lobby"]
+
+        @ws_handler(output_type=ChatNotification)
+        async def handle_chat(self, message: ChatMessage) -> None:
+            await self.broadcast_message(ChatNotification(payload=message.payload))
+
+        @ws_handler
+        async def handle_ping(self, message: PingMessage) -> PongMessage:
+            return PongMessage()
+
+**3. Your server code can talk to clients.** Events sent with ``broadcast_event`` or
+``send_event`` travel through the channel layer (Redis or in-memory) to
+``@event_handler`` methods, so a view, a Celery task or an ARQ worker can push to
+connected clients.
+
+**4. The code is the contract.** Because handlers declare what they accept and send, Chanx
+generates an AsyncAPI 3.0 spec and an interactive docs page from them. Typed clients are
+generated from that spec: Python with ``chanx generate-client``, TypeScript with
+`chanx-js <https://huynguyengl99.github.io/chanx-js/>`_. When a handler changes, the docs
+and clients change with it.
 
 .. image:: _static/asyncapi-info.png
-   :alt: AsyncAPI Documentation automatically generated from Chanx decorators
+   :alt: AsyncAPI documentation generated from Chanx handlers
    :align: center
 
-**Generate Type-Safe Python Clients**
+What else is included
+---------------------
 
-.. code-block:: bash
+- **Authentication**: ``DjangoAuthenticator`` reuses DRF permission classes and
+  querysets; ``BaseAuthenticator`` covers custom schemes. See
+  :doc:`user-guide/framework-integration`.
+- **Topics**: many subscriptions over one socket, with per-topic authorization. See
+  :doc:`user-guide/topics`.
+- **Mixins**: share handlers between consumers. See :doc:`user-guide/mixins`.
+- **Testing**: communicators for both frameworks that send typed messages and collect
+  replies until a completion signal. See :doc:`user-guide/testing`.
+- **Structured logging** with ``structlog``, with per-action filtering.
+- **Static typing**: Chanx itself is checked with mypy and pyright in strict mode, and
+  handler signatures are typed end to end.
 
-    # Generate from local file or URL (JSON/YAML supported)
-    chanx generate-client --schema asyncapi.json --output ./my_client
-    chanx generate-client --schema http://localhost:8000/asyncapi.json --output ./my_client
+When Chanx fits
+---------------
 
-.. code-block:: python
+Chanx is a good fit when WebSockets carry a real API: several message types, more than
+one person working on them, and a frontend or another service that needs to know the
+shapes. It is also useful on FastAPI whenever you need groups or server-initiated
+messages.
 
-    # Use generated client with full type safety
-    from my_client.chat import ChatClient, ChatMessage, ChatPayload
+It is not the right tool when:
 
-    client = ChatClient("localhost:8000")
-    await client.send_message(
-        ChatMessage(payload=ChatPayload(message="Hello!"))
-    )
+- you stream **binary frames** (raw audio, video, files): Chanx consumers speak JSON and
+  reject binary frames;
+- you need the **Socket.IO** protocol or its client libraries;
+- the socket is a single, one-off stream with no message protocol, where a plain
+  framework endpoint is simpler.
 
-See :doc:`user-guide/client-generator` for complete client generation guide. For
-JavaScript and TypeScript frontends, see `chanx-js <https://huynguyengl99.github.io/chanx-js/>`_
-in the :doc:`ecosystem`.
+See :doc:`comparison` for how Chanx relates to Channels, FastAPI, Broadcaster and
+Socket.IO.
 
-**4. Multi-Framework Support - Works Everywhere**
-
-.. code-block:: python
-
-    # Django Channels - full support
-    from chanx.channels.websocket import AsyncJsonWebsocketConsumer
-
-    # FastAPI - adds channel layers, broadcasting, groups
-    from chanx.fast_channels.websocket import AsyncJsonWebsocketConsumer
-
-    # Same decorators, same API, same features
-
-**5. Event Broadcasting - Trigger Messages from Anywhere**
-
-.. code-block:: python
-
-    # From Django view
-    def create_post(request):
-        post = Post.objects.create(...)
-        ChatConsumer.broadcast_event_sync(
-            NewPostEvent(payload={"title": post.title}),
-            groups=["feed_updates"]
-        )
-        return JsonResponse({"status": "created"})
-
-    # From Celery task
-    @celery.task
-    def process_payment(payment_id):
-        payment = process_payment_logic(payment_id)
-        PaymentConsumer.send_event_sync(
-            PaymentCompleteEvent(payload=payment.to_dict()),
-            channel_name=f"user_{payment.user_id}"
-        )
-
-**6. Comprehensive Testing - Fast, Reliable, Easy**
-
-.. code-block:: python
-
-    # FastAPI/ASGI
-    from chanx.fast_channels.testing import WebsocketCommunicator
-
-    async def test_chat():
-        async with WebsocketCommunicator(
-            app, "/ws/chat", consumer=ChatConsumer
-        ) as comm:
-            await comm.send_message(ChatMessage(payload="Hello"))
-            messages = await comm.receive_all_messages(
-                stop_action=GROUP_ACTION_COMPLETE
-            )
-            assert messages[0].action == "chat_notification"
-
-    # Django Channels
-    from chanx.channels.testing import WebsocketTestCase
-
-    class TestChat(WebsocketTestCase):
-        consumer = ChatConsumer
-
-        async def test_broadcast(self):
-            await self.auth_communicator.connect()
-            await ChatConsumer.broadcast_event(
-                StreamingEvent(payload=data),
-                groups=[f"user_{self.user.pk}"]
-            )
-            messages = await self.auth_communicator.receive_all_messages(
-                stop_action=EVENT_ACTION_COMPLETE
-            )
-
-What You Get
-------------
-
-**Better Developer Experience**
-  - Write less code - decorators replace hundreds of lines of routing
-  - IDE autocomplete and type checking - catch errors before runtime
-  - Consistent patterns across the team - everyone uses the same decorators
-  - Fast onboarding - new developers see ``@ws_handler`` and immediately understand
-
-**Better App Flow**
-  - Automatic message routing based on ``action`` field discriminator
-  - Type-safe validation with Pydantic - invalid messages rejected automatically
-  - Event broadcasting from anywhere - HTTP views, Celery tasks, management scripts
-  - Structured logging - trace every message through the system
-
-**Better Documentation**
-  - Auto-generated AsyncAPI 3.0 specs from your code
-  - Interactive documentation at ``/asyncapi/``
-  - Always up-to-date - docs generated from actual implementation
-  - Frontend knows exactly what messages to send
-
-**Better Testing**
-  - Framework-specific test utilities
-  - Type-safe message sending/receiving
-  - ``receive_all_messages()`` with stop actions for reliable testing
-  - Comprehensive test coverage becomes easy
-
-**Safer Production**
-  - Static type checking with mypy/pyright
-  - Runtime validation with Pydantic
-  - Structured error logging for easier debugging
-  - Proven patterns from years of real-world use
-
-Who Should Use Chanx?
-----------------------
-Chanx is ideal for:
-
-- **Teams** building WebSocket features who want consistent patterns and less code review pain
-- **Python developers** building real-time features across any ASGI framework
-- **Django projects** wanting to eliminate WebSocket boilerplate and maintain REST API consistency
-- **FastAPI projects** needing robust WebSocket capabilities with channel layers, broadcasting, and automatic documentation
-- **Full-stack applications** requiring seamless event broadcasting between HTTP and WebSocket layers
-- **Type-safety advocates** who want comprehensive mypy/pyright support for WebSocket development
-- **API-first teams** who need automatic AsyncAPI documentation generation
-
-Next Steps
+Next steps
 ----------
-- :doc:`installation` - Install and configure Chanx in your project
-- :doc:`quick-start-django` - Build your first Django WebSocket endpoint
-- :doc:`quick-start-fastapi` - Build your first FastAPI WebSocket endpoint
-- :doc:`user-guide/prerequisites` - Start with the user guide prerequisites
+
+- :doc:`quick-start`: build a working consumer on Django or FastAPI.
+- :doc:`installation`: extras for the client generator and generated clients.
+- :doc:`tutorial-django/prerequisites` or :doc:`tutorial-fastapi/prerequisites`: build a
+  complete application step by step.

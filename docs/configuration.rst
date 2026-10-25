@@ -209,7 +209,6 @@ For production, consider performance and logging:
 
 Next Steps
 ----------
-Now that you understand Chanx's configuration options, proceed to the framework-specific quick-start guides:
+Now that you understand Chanx's configuration options, proceed to the quick start:
 
-* :doc:`quick-start-django` - Set up your Django project and create your first WebSocket consumer
-* :doc:`quick-start-fastapi` - Set up your FastAPI project and create your first WebSocket consumer
+* :doc:`quick-start` - Build your first consumer on Django or FastAPI

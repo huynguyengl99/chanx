@@ -549,6 +549,7 @@ docs = [
     { name = "sphinx-copybutton" },
     { name = "sphinx-design" },
     { name = "sphinx-llms-txt" },
+    { name = "sphinx-reredirects" },
     { name = "sphinxext-opengraph" },
 ]
 lint = [
@@ -675,6 +676,7 @@ docs = [
     { name = "sphinx-copybutton", specifier = ">=0.5.2" },
     { name = "sphinx-design", specifier = ">=0.7.0" },
     { name = "sphinx-llms-txt", specifier = ">=0.7.1" },
+    { name = "sphinx-reredirects", specifier = ">=1.1.0" },
     { name = "sphinxext-opengraph", specifier = ">=0.13.0" },
 ]
 lint = [
@@ -3689,6 +3691,18 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/d3/dd/6d7fa7d6f51ee20959f1734cdbd62e99880dcd87576ce554d4bb8aaabdd7/sphinx_llms_txt-0.7.1.tar.gz", hash = "sha256:b5cefec19d3fd56670aa4a28917d17d32b22c61a9feadbab8564ad11e932f5c0", size = 32464, upload-time = "2025-12-16T22:31:26.379Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/c2/17/a751012a0910e3c3afa41a5d40bdf00132466d072d25891ae7ec1f70dafd/sphinx_llms_txt-0.7.1-py3-none-any.whl", hash = "sha256:8f1cfcfe5897f5be118792f33f73eeb04cbbf66fc60c4c15982ec59252522263", size = 22545, upload-time = "2025-12-16T22:31:25.075Z" },
+]
+
+[[package]]
+name = "sphinx-reredirects"
+version = "1.1.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "sphinx" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/1b/8d/0e39fe2740d7d71417edf9a6424aa80ca2c27c17fc21282cdc39f90d5a40/sphinx_reredirects-1.1.0.tar.gz", hash = "sha256:fb9b195335ab14b43f8273287d0c7eeb637ba6c56c66581c11b47202f6718b29", size = 614624, upload-time = "2025-12-22T08:28:02.792Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/51/81/b5dd07067f3daac6d23687ec737b2d593740671ebcd145830c8f92d381c5/sphinx_reredirects-1.1.0-py3-none-any.whl", hash = "sha256:4b5692273c72cd2d4d917f4c6f87d5919e4d6114a752d4be033f7f5f6310efd9", size = 6351, upload-time = "2025-12-22T08:27:59.724Z" },
 ]
 
 [[package]]

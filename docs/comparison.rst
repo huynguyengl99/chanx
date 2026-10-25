@@ -362,5 +362,4 @@ Next Steps
 ----------
 
 - :doc:`introduction` - Learn more about Chanx
-- :doc:`quick-start-django` - Get started with Django
-- :doc:`quick-start-fastapi` - Get started with FastAPI
+- :doc:`quick-start` - Build your first consumer on Django or FastAPI

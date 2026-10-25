@@ -10,8 +10,8 @@ validates, broadcasts and documents it, and generates typed clients from the res
 Runs on Django Channels, FastAPI, or any ASGI framework.
 
 **[Documentation](https://chanx.readthedocs.io/)** ·
-[Django quick start](https://chanx.readthedocs.io/en/latest/quick-start-django.html) ·
-[FastAPI quick start](https://chanx.readthedocs.io/en/latest/quick-start-fastapi.html) ·
+[Django quick start](https://chanx.readthedocs.io/en/latest/quick-start.html?framework=django) ·
+[FastAPI quick start](https://chanx.readthedocs.io/en/latest/quick-start.html?framework=fastapi) ·
 [TypeScript clients](https://huynguyengl99.github.io/chanx-js/) ·
 [Ready-made kits](https://huynguyengl99.github.io/chanx-kit/)
 
@@ -145,7 +145,7 @@ handler; the sender gets a validation error instead. The interactive docs are at
 **On Django**, the consumer is the same class imported from
 `chanx.channels.websocket`, routed with Channels, with docs from
 `path("asyncapi/", include("chanx.channels.urls"))`. See the
-[Django quick start](https://chanx.readthedocs.io/en/latest/quick-start-django.html).
+[Django quick start](https://chanx.readthedocs.io/en/latest/quick-start.html?framework=django).
 
 ## Typed clients
 

@@ -38,7 +38,7 @@ This installs:
 This installs:
 
 - Pydantic 2.0+ (validation)
-- FastAPI 0.117+
+- FastAPI 0.118+
 - fast-channels 1.0+
 - Core dependencies (pyhumps, structlog, typing-extensions)
 
@@ -189,8 +189,7 @@ Next Steps
 ----------
 Now that you have Chanx installed, proceed to:
 
-* :doc:`quick-start-django` - Create your first Django WebSocket consumer
-* :doc:`quick-start-fastapi` - Create your first FastAPI WebSocket consumer
+* :doc:`quick-start` - Build your first consumer on Django or FastAPI
 * :doc:`user-guide/client-generator` - Generate type-safe Python clients
 * :doc:`user-guide/prerequisites` - Start with the user guide prerequisites
 * :doc:`examples/django` - See Django implementation examples

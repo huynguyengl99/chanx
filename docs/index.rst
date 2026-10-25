@@ -136,14 +136,12 @@ Pick your path
    :gutter: 3
 
    .. grid-item-card:: Django quick start
-      :link: quick-start-django
-      :link-type: doc
+      :link: quick-start.html?framework=django
 
       Add Chanx to an existing Django Channels project.
 
    .. grid-item-card:: FastAPI quick start
-      :link: quick-start-fastapi
-      :link-type: doc
+      :link: quick-start.html?framework=fastapi
 
       Consumers, channel layers and AsyncAPI on FastAPI or Starlette.
 
@@ -164,8 +162,7 @@ Pick your path
 
    introduction
    installation
-   quick-start-django
-   quick-start-fastapi
+   quick-start
    comparison
    ecosystem
 

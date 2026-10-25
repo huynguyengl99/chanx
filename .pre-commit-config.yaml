@@ -7,6 +7,8 @@ repos:
     rev: v5.0.0
     hooks:
     -   id: check-added-large-files
+        # The README demo GIF is recorded at 2x for sharp text; keep the limit for everything else.
+        exclude: ^docs/_static/chanx-demo\.gif$
     -   id: check-toml
     -   id: check-yaml
         args:

@@ -59,6 +59,7 @@ Chanx generates AsyncAPI documentation automatically by analyzing your consumers
 4. **Input/output types** inferred from method signatures
 5. **Discriminated unions** built from all message types
 6. **Authentication requirements** from authenticator classes
+7. **Request/reply correlation**: messages answered with a reply carry a ``correlationId`` pointing at the frame's ``ref``
 
 .. image:: ../_static/asyncapi-fastapi-info.png
    :alt: AsyncAPI Documentation - API Information Overview

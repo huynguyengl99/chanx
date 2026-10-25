@@ -1017,3 +1017,46 @@ class TestAsyncAPIGeneratorErrorHandling:
         # Should handle gracefully
         spec = generator.generate()
         assert isinstance(spec, dict)
+
+    def test_reply_messages_carry_correlation_id(self) -> None:
+        """Request and reply messages point at the shared `ref` correlation id."""
+        route = RouteInfo(
+            path="/ws/test",
+            handler=Mock(),
+            base_url="ws://localhost:8000",
+            consumer=DummyConsumer,
+        )
+
+        for camelize in (False, True):
+            spec = AsyncAPIGenerator([route], camelize=camelize).generate()
+            components = spec["components"]
+            assert components["correlationIds"] == {
+                "ref": {
+                    "description": (
+                        "A reply carries the `ref` of the request it answers."
+                    ),
+                    "location": "$message.payload#/ref",
+                }
+            }
+            correlated = {
+                name
+                for name, message in components["messages"].items()
+                if message.get("correlationId")
+                == {"$ref": "#/components/correlationIds/ref"}
+            }
+            assert correlated == (
+                {"dummyMessage", "dummyResponse"}
+                if camelize
+                else {"dummy_message", "dummy_response"}
+            )
+
+    def test_no_correlation_ids_without_replies(self) -> None:
+        """A spec without request/reply operations has no correlationIds."""
+        route = RouteInfo(
+            path="/ws/simple",
+            handler=Mock(),
+            base_url="ws://localhost:8000",
+            consumer=UndocumentedConsumer,
+        )
+        spec = AsyncAPIGenerator([route]).generate()
+        assert "correlationIds" not in spec["components"]

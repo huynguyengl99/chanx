@@ -149,8 +149,11 @@ class ServerObject(BaseModel):
 class CorrelationIdObject(BaseModel):
     """AsyncAPI Correlation ID Object for message correlation."""
 
+    ref: str | None = Field(default=None, alias="$ref")
     description: str | None = None
     location: str | None = None
+
+    model_config = ConfigDict(validate_by_name=True)
 
 
 class MessageTraitObject(BaseModel):

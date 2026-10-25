@@ -368,9 +368,13 @@ components:
     pingMessage:
       payload:
         $ref: '#/components/schemas/PingMessage'
+      correlationId:
+        $ref: '#/components/correlationIds/ref'
     pongMessage:
       payload:
         $ref: '#/components/schemas/PongMessage'
+      correlationId:
+        $ref: '#/components/correlationIds/ref'
     removedFromGroupMessage:
       payload:
         $ref: '#/components/schemas/RemovedFromGroupMessage'
@@ -876,3 +880,7 @@ components:
       - payload
       title: VoteUpdatedMessage
       type: object
+  correlationIds:
+    ref:
+      description: A reply carries the `ref` of the request it answers.
+      location: $message.payload#/ref

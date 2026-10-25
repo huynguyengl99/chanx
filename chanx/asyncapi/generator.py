@@ -28,6 +28,8 @@ from chanx.type_defs import AsyncAPIHandlerInfo, ChannelInfo
 # Path plus consumer name: topics share an address, so the path is not unique.
 RouteKey: TypeAlias = tuple[str, str]
 
+CORRELATION_ID_REF = "#/components/correlationIds/ref"
+
 
 class AsyncAPIGenerator:
     """
@@ -89,6 +91,12 @@ class AsyncAPIGenerator:
         self.build_channels()
         self.build_operations()
 
+        components: dict[str, Any] = {
+            "messages": dict(sorted(message_registry.message_objects.items())),
+            "schemas": dict(sorted(message_registry.schema_objects.items())),
+        }
+        self._add_correlation_ids(components)
+
         spec = {
             "asyncapi": "3.0.0",
             "info": {
@@ -104,10 +112,7 @@ class AsyncAPIGenerator:
             },
             "channels": self.channels,
             "operations": self.operations,
-            "components": {
-                "messages": dict(sorted(message_registry.message_objects.items())),
-                "schemas": dict(sorted(message_registry.schema_objects.items())),
-            },
+            "components": components,
         }
 
         # Apply camelization if enabled
@@ -115,6 +120,31 @@ class AsyncAPIGenerator:
             spec = self._apply_camelization(spec)
 
         return spec
+
+    def _add_correlation_ids(self, components: dict[str, Any]) -> None:
+        """Mark request and reply messages as correlated by the frame's `ref`."""
+        correlated: set[str] = set()
+        for operation in self.operations.values():
+            if "reply" not in operation:
+                continue
+            for ref in operation.get("messages", []) + operation["reply"]["messages"]:
+                _, _, channel, _, message = ref["$ref"].split("/")
+                target = self.channels[channel]["messages"][message]["$ref"]
+                correlated.add(target.rsplit("/", 1)[-1])
+        if not correlated:
+            return
+
+        messages = components["messages"]
+        for name in correlated:
+            messages[name] = messages[name] | {
+                "correlationId": {"$ref": CORRELATION_ID_REF}
+            }
+        components["correlationIds"] = {
+            "ref": {
+                "description": "A reply carries the `ref` of the request it answers.",
+                "location": "$message.payload#/ref",
+            }
+        }
 
     def _get_server_environment_name(self) -> str:
         """

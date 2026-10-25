@@ -1,4 +1,25 @@
-/* The wordmark already spells the name, so hide the theme's text label next to it. */
-.sy-head-brand strong {
+/* Landing page: the wordmark replaces the text title, which stays for screen readers and the tab title. */
+section#chanx > h1 {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+.yue img.hero-wordmark {
+  display: block;
+  height: 96px;
+  width: auto;
+  margin: 3rem 0 2rem;
+}
+
+.yue img.hero-dark,
+.dark .yue img.hero-light {
   display: none;
+}
+
+.dark .yue img.hero-dark {
+  display: block;
 }

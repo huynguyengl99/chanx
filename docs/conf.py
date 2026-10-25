@@ -109,6 +109,8 @@ copybutton_prompt_is_regexp = True
 toc_object_entries_show_parents = "hide"
 
 ogp_site_url = html_baseurl
+ogp_image = "_static/brand/social-card.png"
+ogp_image_alt = "Chanx: Typed WebSocket APIs for Python"
 ogp_social_cards = {"enable": False}
 
 # Local URLs in tutorials point at the reader's own server.

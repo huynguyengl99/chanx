@@ -13,6 +13,7 @@ channels meet and traffic flows both ways.
 | `cx-symbol.svg`, `cx-symbol-dark.svg` | Short form, where the full name does not fit |
 | `cx-app-icon.svg` | Square icon: avatars, social cards, app icons |
 | `favicon.ico`, `apple-touch-icon.png`, `icon-512.png`, `maskable-512.png` | Browser and device icons |
+| `social-card.png` | Link previews (1280 × 640); also upload it as the GitHub social preview |
 | `*-black.svg`, `*-white.svg`, `*-mono-1e3a8a.svg` | One-colour versions for single-colour printing, stamps or embroidery |
 
 The icons use a heavier drawing than the wordmark so they stay clear at 16 to 48 px.

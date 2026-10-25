@@ -4,6 +4,14 @@
 Chanx
 =====
 
+.. image:: _static/brand/chanx-wordmark.svg
+   :alt: Chanx
+   :class: hero-wordmark hero-light
+
+.. image:: _static/brand/chanx-wordmark-dark.svg
+   :alt: Chanx
+   :class: hero-wordmark hero-dark
+
 .. rst-class:: lead
 
    Typed WebSocket APIs for Python. Write one handler per message; Chanx routes,

@@ -29,7 +29,7 @@ Svelte and Solid.
       // Messages, params and topics are all typed from the schema.
     }
 
-It speaks Chanx's wire protocol directly: the envelope, replies matched to requests by
+It speaks Chanx's :doc:`wire protocol <protocol>` directly: the envelope, replies matched to requests by
 ``ref``, topic subscriptions that resume after a reconnect, and one shared socket for a
 channel's topics. Requests on plain channels need Chanx 2.11.2 or later.
 

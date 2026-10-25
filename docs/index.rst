@@ -213,6 +213,7 @@ Pick your path
    :caption: Reference
 
    configuration
+   protocol
    reference/core
    reference/messages
    reference/routing

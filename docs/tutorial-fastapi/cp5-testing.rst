@@ -1,5 +1,5 @@
-Part 5: Comprehensive WebSocket Testing
-========================================
+Part 5: Testing
+===============
 
 In this final part, you'll learn how to test WebSocket consumers comprehensively. This demonstrates:
 

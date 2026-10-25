@@ -1,5 +1,5 @@
-FastAPI Tutorial: Prerequisites
-================================
+Prerequisites
+=============
 
 Welcome to the Chanx FastAPI tutorial! This hands-on tutorial will guide you through building a real-world WebSocket application with FastAPI and Chanx, covering:
 

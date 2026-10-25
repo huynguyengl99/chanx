@@ -1,5 +1,5 @@
-Django Tutorial: Prerequisites
-==============================
+Prerequisites
+=============
 
 Welcome to the Chanx Django tutorial! This hands-on tutorial will guide you through building a real-world chat application with Django Channels and Chanx, covering:
 

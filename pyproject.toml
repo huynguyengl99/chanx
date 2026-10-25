@@ -57,9 +57,13 @@ dev-fastapi = [
   {include-group = "dev"}
 ]
 docs = [
-  "Sphinx>=7.0.0,<8",
+  "Sphinx>=7.0.0,<9",
   "myst-parser>=4.0.1",
-  "sphinx_rtd_theme"
+  "shibuya>=2026.7.12",
+  "sphinx-copybutton>=0.5.2",
+  "sphinx-design>=0.7.0",
+  "sphinx-llms-txt>=0.7.1",
+  "sphinxext-opengraph>=0.13.0"
 ]
 lint = [
   "black>=25.9.0,<26",

@@ -1,5 +1,5 @@
-Part 3: Assistants WebSocket
-============================
+Part 3: AI Assistants
+=====================
 
 In this part, you'll build an AI-powered chat assistant with streaming responses. This section demonstrates more advanced Chanx features:
 

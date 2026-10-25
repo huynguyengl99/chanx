@@ -1,5 +1,5 @@
-Part 3: Background Jobs with ARQ
-=================================
+Part 3: Background Jobs
+=======================
 
 In this part, you'll build a background job processing system using ARQ (Async Redis Queue). This demonstrates:
 

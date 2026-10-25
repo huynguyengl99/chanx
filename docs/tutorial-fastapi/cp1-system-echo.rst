@@ -1,5 +1,5 @@
-Part 1: Simple System Echo WebSocket
-=====================================
+Part 1: System Echo
+===================
 
 In this part, you'll build your first WebSocket consumer using Chanx. This simple echo system demonstrates:
 

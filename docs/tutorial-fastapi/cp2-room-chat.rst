@@ -1,5 +1,5 @@
-Part 2: Room Chat with Channel Layers
-======================================
+Part 2: Room Chat
+=================
 
 In this part, you'll build a room-based chat system using channel layers. This demonstrates:
 

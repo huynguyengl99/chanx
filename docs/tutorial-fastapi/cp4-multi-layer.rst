@@ -1,5 +1,5 @@
-Part 4: Multi-Layer WebSocket Showcase
-=======================================
+Part 4: Multiple Layers
+=======================
 
 In this part, you'll explore how multiple channel layer types work together in one application. This demonstrates:
 

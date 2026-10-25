@@ -1,3 +1,10 @@
+## v2.12.1 (2026-10-25)
+
+### Fix
+
+- **channels**: honor SEND_AUTHENTICATION_MESSAGE in DjangoAuthenticator
+- **docs**: give quick start broadcast handler its own action
+
 ## v2.12.0 (2026-10-25)
 
 ### Feat

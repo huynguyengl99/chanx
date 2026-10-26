@@ -10,7 +10,7 @@ Core Testing
 
 .. module:: chanx.core.testing
 
-The core testing module provides the foundation for Chanx's testing infrastructure with a framework-agnostic mixin.
+The core testing module provides the foundation for chanx's testing infrastructure with a framework-agnostic mixin.
 
 .. autoclass:: chanx.core.testing.WebsocketCommunicatorMixin
    :members:

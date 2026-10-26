@@ -1,7 +1,7 @@
 Ecosystem
 =========
 
-Chanx is the Python server. Three companion projects build on the protocol and the AsyncAPI
+This package, chanx, is the Python server. Three companion projects build on the protocol and the AsyncAPI
 schema it generates.
 
 chanx-js: TypeScript clients and servers
@@ -12,10 +12,10 @@ TypeScript, on both ends:
 
 - **Client**: ``@chanx-js/codegen`` turns your server's AsyncAPI schema into typed channel
   descriptors, and ``@chanx-js/client`` connects with them, in the browser, React, Vue,
-  Svelte, Solid or a Node service. It works against a Chanx server with no Node server
+  Svelte, Solid or a Node service. It works against a chanx server with no Node server
   involved.
 - **Server**: ``@chanx-js/server`` runs consumers on Node with ``ws``, Express, Koa,
-  Fastify, Hono, NestJS, Bun and Deno, and its Redis layer can share groups with Chanx.
+  Fastify, Hono, NestJS, Bun and Deno, and its Redis layer can share groups with chanx.
 
 .. code-block:: bash
 
@@ -35,9 +35,9 @@ TypeScript, on both ends:
       // Messages, params and topics are all typed from the schema.
     }
 
-It speaks Chanx's :doc:`wire protocol <protocol>` directly: the envelope, replies matched to requests by
+It speaks chanx's :doc:`wire protocol <protocol>` directly: the envelope, replies matched to requests by
 ``ref``, topic subscriptions that resume after a reconnect, and one shared socket for a
-channel's topics. Requests on plain channels need Chanx 2.11.2 or later.
+channel's topics. Requests on plain channels need chanx 2.11.2 or later.
 
 For a Python client, use the built-in :doc:`user-guide/client-generator`.
 
@@ -48,8 +48,8 @@ chanx-go: Go servers and clients
 
 - **Server**: messages are structs and a consumer is a struct of ``Handle...`` methods, on
   net/http (chi, gorilla/mux), gin, echo or Fiber. It emits the same AsyncAPI document as
-  Chanx, and its Redis layer shares groups with Chanx processes.
-- **Client**: ``chanx-codegen`` turns a server's AsyncAPI schema, from Chanx or chanx-go,
+  chanx, and its Redis layer shares groups with chanx processes.
+- **Client**: ``chanx-codegen`` turns a server's AsyncAPI schema, from chanx or chanx-go,
   into a typed Go client.
 
 .. code-block:: bash
@@ -60,7 +60,7 @@ chanx-kit: copy-in components
 -----------------------------
 
 `chanx-kit <https://kit.chanx.dev/>`_ is a registry of ready-made
-WebSocket components built on Chanx: AG-UI agents, presence, room chat, notifications and
+WebSocket components built on chanx: AG-UI agents, presence, room chat, notifications and
 more. Kits are copied into your project with `copit <https://github.com/huynguyengl99/copit>`_,
 so the code is yours to read and change.
 

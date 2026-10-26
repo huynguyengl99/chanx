@@ -4,7 +4,7 @@ Configuration
 General Configuration (All Frameworks)
 ---------------------------------------
 
-Chanx can be configured by creating a base consumer class and setting class attributes. This approach works across all frameworks (Django, FastAPI, and other ASGI frameworks).
+You configure chanx by creating a base consumer class and setting class attributes. This approach works across all frameworks (Django, FastAPI, and other ASGI frameworks).
 
 **Creating a Base Consumer**
 
@@ -209,6 +209,6 @@ For production, consider performance and logging:
 
 Next Steps
 ----------
-Now that you understand Chanx's configuration options, proceed to the quick start:
+Now that you understand chanx's configuration options, proceed to the quick start:
 
 * :doc:`quick-start` - Build your first consumer on Django or FastAPI

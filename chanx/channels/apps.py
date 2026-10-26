@@ -1,8 +1,8 @@
 """
-Django application configuration for Chanx Channels extension.
+Django application configuration for chanx Channels extension.
 
-This module defines the Django app configuration for the Chanx Channels integration,
-allowing Chanx to be properly integrated with Django projects.
+This module defines the Django app configuration for the chanx Channels integration,
+allowing chanx to be properly integrated with Django projects.
 """
 
 from django.apps import AppConfig
@@ -10,9 +10,9 @@ from django.apps import AppConfig
 
 class ChanxChannelsConfig(AppConfig):
     """
-    Django application configuration for Chanx Channels integration.
+    Django application configuration for chanx Channels integration.
 
-    This app config sets up the Chanx extension for Django Channels,
+    This app config sets up the chanx extension for Django Channels,
     providing WebSocket functionality integrated with Django's ecosystem.
 
     Attributes:

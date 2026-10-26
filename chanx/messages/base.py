@@ -1,7 +1,7 @@
 """
-Base message types and containers for Chanx WebSocket communication.
+Base message types and containers for chanx WebSocket communication.
 
-This module defines the foundational message structure for the Chanx WebSocket framework,
+This module defines the foundational message structure for the chanx WebSocket framework,
 providing a type-safe, validated message system built on Pydantic. The architecture
 uses discriminated unions to enable type-safe message handling with runtime validation.
 
@@ -25,7 +25,7 @@ from typing_extensions import Unpack
 
 class BaseMessage(BaseModel, abc.ABC):
     """
-    Base message for all Chanx communications.
+    Base message for all chanx communications.
 
     Use cases:
 

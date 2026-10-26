@@ -1,7 +1,7 @@
 """
-Chanx framework constants.
+Constants for the chanx framework.
 
-This module defines constants used throughout the Chanx framework, providing a
+This module defines constants used throughout the chanx framework, providing a
 centralized location for string literals, error messages, and other constant values.
 Using these named constants rather than string literals helps maintain consistency
 and makes updates easier across the codebase.

@@ -2,7 +2,7 @@ Messages Module
 ===============
 .. module:: chanx.messages
 
-The ``messages`` module provides the foundation for Chanx's structured message system, including base message
+The ``messages`` module provides the foundation for chanx's structured message system, including base message
 types, channel events, and standard message implementations.
 
 Base Messages

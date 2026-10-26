@@ -1,7 +1,7 @@
 Core Module
 ===========
 
-The core module provides the fundamental building blocks for Chanx WebSocket consumers,
+The core module provides the fundamental building blocks for chanx WebSocket consumers,
 including decorators, WebSocket handling, and authentication.
 
 Decorators

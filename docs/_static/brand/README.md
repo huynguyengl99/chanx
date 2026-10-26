@@ -1,7 +1,7 @@
-# Chanx brand
+# chanx brand
 
-The Chanx logo is the word **chanx**, with **cx** as its short form. The two dots are the
-messages Chanx carries: the **c** holds a message to broadcast, and the **x** is a hub where
+The chanx logo is the word **chanx**, with **cx** as its short form. The two dots are the
+messages chanx carries: the **c** holds a message to broadcast, and the **x** is a hub where
 channels meet and traffic flows both ways.
 
 ## Files

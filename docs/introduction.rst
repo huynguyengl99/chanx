@@ -1,8 +1,8 @@
 Introduction
 ============
 
-Chanx is a framework for building typed WebSocket APIs in Python. You describe each
-message as a Pydantic model and write one handler per message; Chanx does the routing,
+With chanx you build typed WebSocket APIs in Python. You describe each
+message as a Pydantic model and write one handler per message; chanx does the routing,
 validation, broadcasting and documentation around them. It runs on Django Channels,
 FastAPI, and any ASGI framework (through
 `fast-channels <https://fast-channels.readthedocs.io/>`_).
@@ -23,7 +23,7 @@ hand-rolled payload checks, and a frontend team asking which messages exist and 
 they look like. The answer usually lives in someone's head or in a wiki page that is
 already out of date.
 
-How Chanx works
+How chanx works
 ---------------
 
 **1. Messages are models.** Each message has a ``Literal`` ``action`` and a typed
@@ -35,7 +35,7 @@ payload:
         action: Literal["chat"] = "chat"
         payload: ChatPayload
 
-**2. Handlers are typed methods.** Chanx reads each handler's argument type and builds a
+**2. Handlers are typed methods.** chanx reads each handler's argument type and builds a
 discriminated union of everything the consumer accepts. Incoming JSON is validated
 against it and dispatched to the matching handler; invalid messages get a structured
 ``error`` reply and never reach your code.
@@ -59,14 +59,14 @@ against it and dispatched to the matching handler; invalid messages get a struct
 ``@event_handler`` methods, so a view, a Celery task or an ARQ worker can push to
 connected clients.
 
-**4. The code is the contract.** Because handlers declare what they accept and send, Chanx
+**4. The code is the contract.** Because handlers declare what they accept and send, chanx
 generates an AsyncAPI 3.0 spec and an interactive docs page from them. Typed clients are
 generated from that spec: Python with ``chanx generate-client``, TypeScript with
 `chanx-js <https://js.chanx.dev/>`_. When a handler changes, the docs
 and clients change with it.
 
 .. image:: _static/asyncapi-info.png
-   :alt: AsyncAPI documentation generated from Chanx handlers
+   :alt: AsyncAPI documentation generated from chanx handlers
    :align: center
 
 What else is included
@@ -81,26 +81,26 @@ What else is included
 - **Testing**: communicators for both frameworks that send typed messages and collect
   replies until a completion signal. See :doc:`user-guide/testing`.
 - **Structured logging** with ``structlog``, with per-action filtering.
-- **Static typing**: Chanx itself is checked with mypy and pyright in strict mode, and
+- **Static typing**: chanx itself is checked with mypy and pyright in strict mode, and
   handler signatures are typed end to end.
 
-When Chanx fits
+When chanx fits
 ---------------
 
-Chanx is a good fit when WebSockets carry a real API: several message types, more than
+Reach for chanx when WebSockets carry a real API: several message types, more than
 one person working on them, and a frontend or another service that needs to know the
 shapes. It is also useful on FastAPI whenever you need groups or server-initiated
 messages.
 
 It is not the right tool when:
 
-- you stream **binary frames** (raw audio, video, files): Chanx consumers speak JSON and
+- you stream **binary frames** (raw audio, video, files): chanx consumers speak JSON and
   reject binary frames;
 - you need the **Socket.IO** protocol or its client libraries;
 - the socket is a single, one-off stream with no message protocol, where a plain
   framework endpoint is simpler.
 
-See :doc:`comparison` for how Chanx relates to Channels, FastAPI, Broadcaster and
+See :doc:`comparison` for how chanx relates to Channels, FastAPI, Broadcaster and
 Socket.IO.
 
 Next steps

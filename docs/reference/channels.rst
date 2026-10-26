@@ -1,7 +1,7 @@
 Django Channels Integration
 ============================
 
-Chanx provides seamless integration with Django Channels, including WebSocket consumers,
+The Django Channels integration of chanx includes WebSocket consumers,
 AsyncAPI documentation views, DRF authentication, and testing utilities.
 
 .. module:: chanx.channels
@@ -132,7 +132,7 @@ Settings
 .. module:: chanx.channels.settings
 
 The Django Channels integration provides configuration through Django's settings system.
-All Chanx settings are contained within a single ``CHANX`` dictionary in your project's settings file.
+All chanx settings are contained within a single ``CHANX`` dictionary in your project's settings file.
 
 Configuration Options
 ~~~~~~~~~~~~~~~~~~~~~
@@ -187,7 +187,7 @@ Settings Details
      - Whether to send authentication status message after connection authentication
    * - ``CAMELIZE``
      - ``False``
-     - Whether to convert message keys to camelCase format using pyhumps. When enabled, requires either installing Chanx with the ``camel-case`` extra (``pip install chanx[camel-case]``) or manually installing the pyhumps package (``pip install pyhumps``).
+     - Whether to convert message keys to camelCase format using pyhumps. When enabled, requires either installing chanx with the ``camel-case`` extra (``pip install chanx[camel-case]``) or manually installing the pyhumps package (``pip install pyhumps``).
    * - ``LOG_WEBSOCKET_MESSAGE``
      - ``False``
      - Whether to log WebSocket messages (both received and sent). Enabling this adds a log call per received and sent message, which is significant on high-throughput consumers.
@@ -233,7 +233,7 @@ Settings Details
 
 Using Settings in Code
 ~~~~~~~~~~~~~~~~~~~~~~
-Chanx's settings are accessible through the ``chanx_settings`` object:
+The chanx settings are accessible through the ``chanx_settings`` object:
 
 .. code-block:: python
 
@@ -248,7 +248,7 @@ Chanx's settings are accessible through the ``chanx_settings`` object:
 
 Optional Dependencies
 ~~~~~~~~~~~~~~~~~~~~~
-Some Chanx features require additional packages. You can install these along with Chanx using extras:
+Some chanx features require additional packages. You can install these along with chanx using extras:
 
 .. code-block:: bash
 

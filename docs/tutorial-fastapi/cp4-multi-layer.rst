@@ -667,7 +667,7 @@ Understanding Channel Layer Selection
 Viewing AsyncAPI Documentation
 --------------------------------
 
-Now that you've built all the consumers, you can view the complete AsyncAPI documentation that Chanx automatically generates.
+Now that you've built all the consumers, you can view the complete AsyncAPI documentation that chanx automatically generates.
 
 Visit http://localhost:8000/asyncapi/ to see your entire WebSocket API documented:
 

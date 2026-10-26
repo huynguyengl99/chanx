@@ -1,7 +1,7 @@
 Part 1: System Echo
 ===================
 
-In this part, you'll build your first WebSocket consumer using Chanx. This simple echo system demonstrates:
+In this part, you'll build your first WebSocket consumer using chanx. This simple echo system demonstrates:
 
 - Defining type-safe message models with Pydantic
 - Creating WebSocket consumers with decorators
@@ -83,7 +83,7 @@ Create the message structure using Pydantic models for validation and type safet
 
 .. note::
 
-   The ``action`` field is crucial! Chanx uses it to automatically route incoming messages to the correct handler.
+   The ``action`` field is crucial: chanx uses it to automatically route incoming messages to the correct handler.
 
 Step 2: Create the WebSocket Consumer
 --------------------------------------
@@ -207,7 +207,7 @@ When you send a message:
 
       {"action": "user_message", "payload": {"message": "Hello"}}
 
-2. Chanx routes to ``handle_system()`` based on the ``action`` field
+2. The message is routed to ``handle_system()`` based on the ``action`` field
 
 3. Handler returns ``SystemEchoMessage``
 

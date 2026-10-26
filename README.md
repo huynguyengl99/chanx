@@ -1,7 +1,7 @@
 <h1>
   <picture>
     <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/chanx-dev/chanx/main/docs/_static/brand/chanx-wordmark-dark.svg">
-    <img alt="Chanx" src="https://raw.githubusercontent.com/chanx-dev/chanx/main/docs/_static/brand/chanx-wordmark.svg" height="64">
+    <img alt="chanx" src="https://raw.githubusercontent.com/chanx-dev/chanx/main/docs/_static/brand/chanx-wordmark.svg" height="64">
   </picture>
 </h1>
 
@@ -10,7 +10,7 @@
 [![Tests](https://github.com/chanx-dev/chanx/actions/workflows/test.yml/badge.svg?branch=main)](https://github.com/chanx-dev/chanx/actions/workflows/test.yml)
 [![Coverage](https://codecov.io/gh/chanx-dev/chanx/branch/main/graph/badge.svg?token=X8R3BDPTY6)](https://codecov.io/gh/chanx-dev/chanx)
 
-**Typed WebSocket APIs for Python.** Write one handler per message; Chanx routes,
+**Typed WebSocket APIs for Python.** Write one handler per message; chanx routes,
 validates, broadcasts and documents it, and generates typed clients from the result.
 Runs on Django Channels, FastAPI, or any ASGI framework.
 
@@ -20,9 +20,9 @@ Runs on Django Channels, FastAPI, or any ASGI framework.
 [TypeScript clients](https://js.chanx.dev/) ·
 [Ready-made kits](https://kit.chanx.dev/)
 
-![A typed Python handler, the AsyncAPI docs Chanx generates from it, generating a TypeScript client, and that client catching a typo](https://raw.githubusercontent.com/chanx-dev/chanx/main/docs/_static/chanx-demo.gif)
+![A typed Python handler, the AsyncAPI docs chanx generates from it, generating a TypeScript client, and that client catching a typo](https://raw.githubusercontent.com/chanx-dev/chanx/main/docs/_static/chanx-demo.gif)
 
-## Why Chanx
+## Why chanx
 
 A raw WebSocket endpoint is one `receive` method that grows forever:
 
@@ -38,7 +38,7 @@ async def receive(self, text_data):
     # no types, no docs, and the frontend guesses the message shapes
 ```
 
-With Chanx, each message is a Pydantic model and each handler is a typed method:
+With chanx, each message is a Pydantic model and each handler is a typed method:
 
 ```python
 @ws_handler(output_type=ChatNotification)
@@ -46,7 +46,7 @@ async def handle_chat(self, message: ChatMessage) -> None:
     await self.broadcast_message(ChatNotification(payload=message.payload))
 ```
 
-From that, Chanx gives you:
+From that, chanx gives you:
 
 - **Routing by type.** Incoming JSON is dispatched on its `action` field to the handler
   whose argument type matches. No `if`/`elif` chains.
@@ -191,7 +191,7 @@ chanx generate-client --schema http://localhost:8000/asyncapi.json --output ./ch
   and Fiber servers, with a typed Go client generator. Go and Python processes can share
   one Redis layer.
 - **[chanx-kit](https://kit.chanx.dev/)**: copy-in components built on
-  Chanx (notifications, chat with history, presence, agent streaming, voice), in the
+  chanx (notifications, chat with history, presence, agent streaming, voice), in the
   spirit of shadcn/ui.
 
 ## Learn more

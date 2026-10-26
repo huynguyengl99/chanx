@@ -2,16 +2,16 @@
 FastAPI fast-channels concrete WebSocket consumer implementation.
 
 This module provides the concrete AsyncJsonWebsocketConsumer class that combines
-Chanx's enhanced WebSocket functionality (from the core mixin) with fast-channels'
+the enhanced WebSocket functionality of chanx (from the core mixin) with fast-channels'
 AsyncJsonWebsocketConsumer base class. This is the main consumer class users should
 import when building WebSocket applications with FastAPI and fast-channels.
 
 The concrete consumer inherits from both:
-- chanx.core.websocket.AsyncJsonWebsocketConsumer (Chanx mixin with all features)
+- chanx.core.websocket.AsyncJsonWebsocketConsumer (chanx mixin with all features)
 - fast_channels.consumer.AsyncJsonWebsocketConsumer (fast-channels base)
 
 This multiple inheritance provides:
-- Automatic message routing and validation (from Chanx mixin)
+- Automatic message routing and validation (from chanx mixin)
 - FastAPI fast-channels channel layer integration
 - Full compatibility with FastAPI's ASGI application
 - Type-safe operation with static type checkers
@@ -33,12 +33,12 @@ class AsyncJsonWebsocketConsumer(
     ChanxWebsocketConsumerMixin[ReceiveEvent], FastChannelsAsyncJsonWebsocketConsumer
 ):
     """
-    FastAPI fast-channels WebSocket consumer with Chanx enhanced features.
+    FastAPI fast-channels WebSocket consumer with chanx enhanced features.
 
-    Combines Chanx's automatic message handling, type validation, and group
+    Combines chanx's automatic message handling, type validation, and group
     broadcasting capabilities with fast-channels' WebSocket consumer for FastAPI.
 
-    Features from Chanx mixin:
+    Features from chanx mixin:
 
     - Automatic message type discovery from @ws_handler decorators
     - Type-safe message validation using Pydantic discriminated unions

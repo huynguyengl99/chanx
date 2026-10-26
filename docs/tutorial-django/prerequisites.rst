@@ -1,19 +1,19 @@
 Prerequisites
 =============
 
-Welcome to the Chanx Django tutorial! This hands-on tutorial will guide you through building a real-world chat application with Django Channels and Chanx, covering:
+Welcome to the chanx Django tutorial! This hands-on tutorial will guide you through building a real-world chat application with Django Channels and chanx, covering:
 
 - Real-time chat functionality
 - AI assistants/agent chat system
 - Notification system
 - Background task processing with WebSocket notifications
 
-By the end of this tutorial, you'll understand how to use Chanx to create structured, type-safe WebSocket applications with automatic documentation.
+By the end of this tutorial, you'll understand how to use chanx to create structured, type-safe WebSocket applications with automatic documentation.
 
 What You'll Learn
 -----------------
 
-- Setting up Chanx with Django Channels
+- Setting up chanx with Django Channels
 - Creating WebSocket consumers with type-safe message handling
 - Using decorators for automatic message routing
 - Broadcasting messages to groups
@@ -78,7 +78,7 @@ The tutorial uses a Git repository with multiple branches representing different
 
 - ``main`` - Full implementation (complete tutorial result)
 - ``cp0`` - Starting point of tutorial
-- ``cp1`` - Install and setup Chanx package
+- ``cp1`` - Install and setup chanx package
 - ``cp2`` - Implement chat WebSocket
 - ``cp3`` - Implement assistants WebSocket
 - ``cp4`` - Implement system WebSocket (notifications)
@@ -106,7 +106,7 @@ Tutorial Structure
 
 Each section of this tutorial corresponds to a checkpoint (branch) in the repository:
 
-1. **Part 1: Setup Chanx** - Install Chanx, configure routing, and view AsyncAPI docs
+1. **Part 1: Setup chanx** - Install chanx, configure routing, and view AsyncAPI docs
 2. **Part 2: Chat WebSocket** - Build a real-time chat room with broadcasting
 3. **Part 3: Assistants WebSocket** - Create an AI chat system with streaming responses
 4. **Part 4: System WebSocket** - Implement a notification system
@@ -115,6 +115,6 @@ Each section of this tutorial corresponds to a checkpoint (branch) in the reposi
 Next Steps
 ----------
 
-Ready to start? Head to Part 1 to begin setting up Chanx:
+Ready to start? Head to Part 1 to begin setting up chanx:
 
 **Next:** :doc:`cp0-initial-setup`

@@ -1,7 +1,7 @@
 Django Complete Example
 =========================
 
-This example demonstrates a complete AI assistant WebSocket application using Django Channels and Chanx. The sandbox showcases real-time chat capabilities with AI streaming responses, user authentication, and database integration across multiple apps including assistants, group chat, and discussion forums.
+This example demonstrates a complete AI assistant WebSocket application using Django Channels and chanx. The sandbox showcases real-time chat capabilities with AI streaming responses, user authentication, and database integration across multiple apps including assistants, group chat, and discussion forums.
 
 Overview
 --------
@@ -272,11 +272,11 @@ Configuration
        'accounts', 'assistants', 'chat', 'discussion',
    ]
 
-   # Chanx Configuration
+   # chanx configuration
    CHANX = {
        "CAMELIZE": True,  # Convert snake_case ↔ camelCase for frontend
        "ASYNCAPI_TITLE": "CHANX AsyncAPI Documentation",
-       "ASYNCAPI_DESCRIPTION": "Websocket schema of Chanx",
+       "ASYNCAPI_DESCRIPTION": "Websocket schema of chanx",
    }
 
    # WebSocket Configuration
@@ -400,7 +400,7 @@ The Django sandbox uses pytest for comprehensive test coverage:
    # Run specific test files
    pytest sandbox_django/chat/tests/consumers/test_chat_detail_consumer.py
 
-**WebSocket Testing with Chanx:**
+**WebSocket Testing with chanx:**
 
 .. code-block:: python
 
@@ -490,4 +490,4 @@ To understand the Django integration:
 5. **Look at background tasks** (``assistants/tasks/``)
 6. **Check the tests** (``assistants/tests/``)
 
-This example provides a solid foundation for building production WebSocket applications with Django Channels and Chanx.
+This example provides a solid foundation for building production WebSocket applications with Django Channels and chanx.

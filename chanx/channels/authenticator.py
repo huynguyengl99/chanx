@@ -1,5 +1,5 @@
 """
-WebSocket authentication system for Chanx using Django REST Framework.
+WebSocket authentication system for chanx using Django REST Framework.
 
 This module provides a bridge between WebSocket connections and Django REST
 Framework's authentication and permission systems. It enables WebSocket
@@ -45,7 +45,7 @@ if TYPE_CHECKING:
 
 
 class ChanxSerializer(serializers.Serializer[Any]):
-    """Base serializer for Chanx authentication."""
+    """Base serializer for chanx authentication."""
 
     detail = serializers.CharField(write_only=True, required=False)
 
@@ -97,7 +97,7 @@ class AuthActionInterceptMixin:
 
 class ChanxAuthView(AuthActionInterceptMixin, GenericAPIView[Model]):
     """
-    Base authentication view for Chanx websockets.
+    Base authentication view for chanx websockets.
 
     Provides a REST-like interface for WebSocket authentication
     with Django REST Framework authentication and permissions.
@@ -108,7 +108,7 @@ class ChanxAuthView(AuthActionInterceptMixin, GenericAPIView[Model]):
 
 class DjangoAuthenticator(BaseAuthenticator):
     """
-    Authenticator for Chanx WebSocket connections.
+    Authenticator for chanx WebSocket connections.
 
     Uses Django REST Framework authentication classes and permissions to authenticate
     WebSocket connections with consistent behavior to RESTful APIs.

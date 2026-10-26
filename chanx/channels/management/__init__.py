@@ -1,1 +1,1 @@
-"""Management commands for Chanx Channels."""
+"""Management commands for chanx Channels."""

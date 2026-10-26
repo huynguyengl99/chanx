@@ -1,7 +1,7 @@
 Part 3: AI Assistants
 =====================
 
-In this part, you'll build an AI-powered chat assistant with streaming responses. This section demonstrates more advanced Chanx features:
+In this part, you'll build an AI-powered chat assistant with streaming responses. This section demonstrates more advanced chanx features:
 
 - Using the ``@channel`` decorator for consumer metadata
 - Server-initiated messages (sending without receiving first)
@@ -389,7 +389,7 @@ The decorator now includes:
 
 - ``summary``: Brief description (appears in AsyncAPI docs)
 - ``description``: Detailed explanation
-- ``output_type``: **Union type** using ``|`` operator - tells Chanx this handler can send any of these three message types
+- ``output_type``: **Union type** using ``|`` operator - tells chanx this handler can send any of these three message types
 
 **4. Streaming Handler:**
 
@@ -597,7 +597,7 @@ Advanced Concepts
 
    output_type=StreamingStartMessage | StreamingMessage | CompleteStreamingMessage
 
-This tells Chanx (and AsyncAPI docs) that this handler can send any of these three types. The ``|`` operator creates a union type.
+This tells chanx (and AsyncAPI docs) that this handler can send any of these three types. The ``|`` operator creates a union type.
 
 **Type-Safe History:**
 

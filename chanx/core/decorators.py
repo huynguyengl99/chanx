@@ -1,5 +1,5 @@
 """
-Decorators for Chanx WebSocket handlers.
+Decorators for chanx WebSocket handlers.
 """
 
 import inspect

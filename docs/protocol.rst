@@ -1,8 +1,8 @@
 Wire Protocol
 =============
 
-This page specifies what Chanx sends over the socket and through the channel layer. You
-do not need it to use Chanx; it is for people writing a client by hand, implementing
+This page specifies what chanx sends over the socket and through the channel layer. You
+do not need it to use chanx; it is for people writing a client by hand, implementing
 the protocol in another language (as `chanx-js <https://js.chanx.dev/>`_
 and `chanx-go <https://go.chanx.dev/>`_ do), or debugging traffic.
 
@@ -83,7 +83,7 @@ Frames without a ``ref`` work the same way; their replies just carry none.
 Built-in actions
 ----------------
 
-These actions are defined by Chanx itself. Clients should treat the server-sent ones as
+These actions are defined by chanx itself. Clients should treat the server-sent ones as
 framework signals rather than application messages.
 
 .. list-table::
@@ -216,7 +216,7 @@ Channel layer messages
 ----------------------
 
 Servers in different processes, or in different languages, cooperate through the
-channel layer. A server that wants to share a Redis layer with Chanx must use these
+channel layer. A server that wants to share a Redis layer with chanx must use these
 message shapes and group names.
 
 **Group messages** (``broadcast_message``) carry the already-serialized frame:
@@ -263,6 +263,6 @@ Implementations
 - **chanx** (this project): servers on Django Channels and ASGI, and generated Python
   clients.
 - `chanx-js <https://js.chanx.dev/>`_: TypeScript clients and a
-  Node server that implement this protocol and can share a Redis layer with Chanx.
+  Node server that implement this protocol and can share a Redis layer with chanx.
 - `chanx-go <https://go.chanx.dev/>`_: Go servers on net/http, gin, echo and Fiber, and
   generated Go clients, sharing the same Redis layer.

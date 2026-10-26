@@ -3,7 +3,7 @@ Part 5: Integration Tests
 
 In this final part, you'll write comprehensive integration tests for all your WebSocket consumers. You'll learn how to:
 
-- Use Chanx's ``WebsocketTestCase`` for testing WebSocket consumers
+- Use chanx's ``WebsocketTestCase`` for testing WebSocket consumers
 - Mock external services (OpenAI API)
 - Test with real Celery workers
 - Use ``receive_all_messages()`` with stop actions for predictable test assertions
@@ -584,11 +584,11 @@ Testing Summary
 What You've Learned
 -------------------
 
-Congratulations! You've completed the Chanx Django tutorial. You've built a full-featured real-time application with:
+Congratulations! You've completed the chanx Django tutorial. You've built a full-featured real-time application with:
 
-**Part 1: Setup Chanx**
+**Part 1: Setup chanx**
 
-- ✅ Installed and configured Chanx
+- ✅ Installed and configured chanx
 - ✅ Set up WebSocket routing
 - ✅ Enabled AsyncAPI documentation
 
@@ -632,11 +632,11 @@ The complete code is available at the ``cp5`` branch:
 Next Steps
 ----------
 
-Now that you've mastered Chanx fundamentals, explore:
+Now that you've mastered chanx fundamentals, explore:
 
 - **User Guide**: Deep dive into advanced features and patterns
 - **API Reference**: Complete API documentation
 - **Examples**: More real-world examples and use cases
 - **AsyncAPI**: Learn to customize your API documentation
 
-Happy building with Chanx! 🚀
+Happy building with chanx! 🚀

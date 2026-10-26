@@ -1,7 +1,7 @@
 """
-URL configuration for Chanx Channels extension.
+URL configuration for chanx Channels extension.
 
-This module provides URL patterns for Chanx Channels views,
+This module provides URL patterns for chanx Channels views,
 including AsyncAPI schema generation.
 """
 

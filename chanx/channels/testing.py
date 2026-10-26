@@ -1,8 +1,8 @@
 """
-Django Channels integration for Chanx WebSocket testing.
+Django Channels integration for chanx WebSocket testing.
 
 Provides:
-- WebsocketCommunicator: Base communicator with Chanx features
+- WebsocketCommunicator: Base communicator with chanx features
 - DjangoWebsocketCommunicator: Adds Django authentication and settings
 - WebsocketTestCase: Django test framework integration
 """
@@ -26,9 +26,9 @@ from chanx.messages.outgoing import AuthenticationMessage
 
 class WebsocketCommunicator(WebsocketCommunicatorMixin, ChannelsWebsocketCommunicator):
     """
-    Base WebSocket communicator for testing Chanx consumers with Django Channels.
+    Base WebSocket communicator for testing chanx consumers with Django Channels.
 
-    Combines Chanx testing features (send_message, receive_all_messages, message validation)
+    Combines chanx testing features (send_message, receive_all_messages, message validation)
     with Django Channels' WebSocket communicator (connect, disconnect, send_json_to).
 
     For Django-specific features like authentication, use DjangoWebsocketCommunicator.
@@ -102,9 +102,9 @@ class DjangoWebsocketCommunicator(WebsocketCommunicator):
 
 class WebsocketTestCase(TransactionTestCase):
     """
-    Django test case for WebSocket testing with Chanx.
+    Django test case for WebSocket testing with chanx.
 
-    Integrates Chanx WebSocket testing with Django's test framework, providing:
+    Integrates chanx WebSocket testing with Django's test framework, providing:
 
     - Django TransactionTestCase inheritance for database transaction handling
     - Automatic Django ASGI application discovery from routing configuration

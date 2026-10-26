@@ -1,8 +1,8 @@
 """
-Views for Chanx Channels extension.
+Views for chanx Channels extension.
 
 This module provides Django views for generating and serving AsyncAPI documentation
-from Chanx WebSocket consumers using the new @channel decorator system.
+from chanx WebSocket consumers using the new @channel decorator system.
 """
 
 from types import ModuleType

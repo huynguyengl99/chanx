@@ -1,7 +1,7 @@
 FastAPI & ASGI Frameworks Integration
 ======================================
 
-Chanx provides integration for FastAPI and other ASGI-based frameworks through the fast-channels module,
+FastAPI and other ASGI-based frameworks are supported through the fast-channels module,
 including WebSocket consumers, AsyncAPI documentation views, and testing utilities. Works with any ASGI framework
 including FastAPI, Starlette, Litestar, and more.
 

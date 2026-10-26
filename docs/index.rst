@@ -1,20 +1,20 @@
 :layout: landing
 :description: Typed WebSocket APIs for Python. Routing, validation, broadcasting, AsyncAPI docs and typed clients for Django Channels, FastAPI and any ASGI framework.
 
-Chanx
+chanx
 =====
 
 .. image:: _static/brand/chanx-wordmark.svg
-   :alt: Chanx
+   :alt: chanx
    :class: hero-wordmark hero-light
 
 .. image:: _static/brand/chanx-wordmark-dark.svg
-   :alt: Chanx
+   :alt: chanx
    :class: hero-wordmark hero-dark
 
 .. rst-class:: lead
 
-   Typed WebSocket APIs for Python. Write one handler per message; Chanx routes,
+   Typed WebSocket APIs for Python. Write one handler per message; chanx routes,
    validates, broadcasts and documents it, and generates typed clients from the result.
    Runs on Django Channels, FastAPI, or any ASGI framework.
 
@@ -31,9 +31,9 @@ Chanx
 .. raw:: html
 
    <video class="demo-video" autoplay muted loop playsinline controls preload="metadata"
-          poster="_static/chanx-demo-poster.jpg" width="1600" height="700" aria-label="A typed Python handler, the AsyncAPI docs Chanx generates from it, generating a TypeScript client, and that client catching a typo">
+          poster="_static/chanx-demo-poster.jpg" width="1600" height="700" aria-label="A typed Python handler, the AsyncAPI docs chanx generates from it, generating a TypeScript client, and that client catching a typo">
      <source src="_static/chanx-demo.mp4" type="video/mp4">
-     <img src="_static/chanx-demo.gif" alt="A typed Python handler, the AsyncAPI docs Chanx generates from it, generating a TypeScript client, and that client catching a typo">
+     <img src="_static/chanx-demo.gif" alt="A typed Python handler, the AsyncAPI docs chanx generates from it, generating a TypeScript client, and that client catching a typo">
    </video>
    <script>
      // Respect reduced motion: show the poster and let the visitor press play.
@@ -160,7 +160,7 @@ Pick your path
    .. grid-item-card:: Django quick start
       :link: quick-start.html?framework=django
 
-      Add Chanx to an existing Django Channels project.
+      Add chanx to an existing Django Channels project.
 
    .. grid-item-card:: FastAPI quick start
       :link: quick-start.html?framework=fastapi

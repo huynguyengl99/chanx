@@ -1,7 +1,7 @@
 Part 4: System WebSocket
 ========================
 
-In this part, you'll build a system for background task processing with real-time notifications. This demonstrates advanced Chanx concepts:
+In this part, you'll build a system for background task processing with real-time notifications. This demonstrates advanced chanx concepts:
 
 - Using ``@event_handler`` decorator for channel layer events
 - Server-to-server communication via channel layer
@@ -328,7 +328,7 @@ Now let's create the background tasks that Celery will execute.
 
 .. note::
 
-   ``async_to_sync`` is required because Celery tasks run in a synchronous context, but Chanx's ``send_event()`` is async.
+   ``async_to_sync`` is required because Celery tasks run in a synchronous context, but chanx's ``send_event()`` is async.
 
    **Shortcut:** You can also use ``SystemConsumer.send_event_sync()`` instead of ``async_to_sync(SystemConsumer.send_event)`` for cleaner code.
 
@@ -1013,6 +1013,6 @@ In the next part, you'll add comprehensive integration tests for all WebSocket e
 - Testing WebSocket consumers
 - Testing event handlers
 - Testing Celery task integration
-- Using Chanx testing utilities
+- Using chanx testing utilities
 
 **Next:** :doc:`cp4-integration-tests`

@@ -1191,7 +1191,7 @@ class ChanxWebsocketConsumerMixin(Generic[ReceiveEvent]):
         await super().send_json(content | envelope)  # type: ignore[misc]
 
     async def send_topic_message(self, topic: str, message: BaseMessage) -> None:
-        """Send a Chanx message on a topic."""
+        """Send a chanx message on a topic."""
         await self.send_topic_json(topic, message.model_dump(mode="json"))
 
     async def send_topic_error(

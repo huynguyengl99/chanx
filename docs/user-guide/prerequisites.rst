@@ -1,7 +1,7 @@
 Prerequisites
 =============
 
-Before diving into Chanx, it's helpful to understand some fundamental concepts about WebSocket development and the infrastructure that powers real-time communication in web applications.
+Before diving into chanx, it's helpful to understand some fundamental concepts about WebSocket development and the infrastructure that powers real-time communication in web applications.
 
 What are WebSocket Consumers?
 -----------------------------
@@ -158,7 +158,7 @@ Messages sent from other parts of your application via the channel layer:
         "username": "alice"
     })
 
-**Chanx handles both types with decorators:**
+**Both types are handled with decorators:**
 
 .. code-block:: python
 
@@ -224,7 +224,7 @@ WebSocket authentication differs from HTTP because:
         headers: {'Authorization': 'Bearer abc123'}
     });
 
-**Chanx provides authenticators to handle this:**
+**For this, chanx provides authenticators:**
 
 .. code-block:: python
 
@@ -234,10 +234,10 @@ WebSocket authentication differs from HTTP because:
     class MyConsumer(AsyncJsonWebsocketConsumer):
         authenticator_class = MyAuthenticator
 
-What Chanx Adds
+What chanx Adds
 ---------------
 
-Now that you understand the foundation concepts, here's what Chanx brings to WebSocket development:
+Now that you understand the foundation concepts, here's what chanx brings to WebSocket development:
 
 **1. Eliminates Manual Routing**
 No more giant if/else statements - decorators automatically route messages:
@@ -253,7 +253,7 @@ No more giant if/else statements - decorators automatically route messages:
             await self.handle_ping(content)
         # ... many more elif statements
 
-    # Chanx uses clean decorators
+    # chanx uses clean decorators
     @ws_handler
     async def handle_chat(self, message: ChatMessage) -> None: ...
 
@@ -280,10 +280,10 @@ AsyncAPI 3.0 specs generated directly from your decorated handlers.
 **5. Enhanced Testing**
 Specialized testing utilities with completion signals for reliable WebSocket tests.
 
-Ready for Chanx?
+Ready for chanx?
 ----------------
 
-Now that you understand the foundational concepts, you're ready to see how Chanx transforms WebSocket development. The next guide covers :doc:`consumers-decorators` where you'll learn the decorator-based patterns that make WebSocket development as clean as building REST APIs.
+Now that you understand the foundational concepts, you're ready to see how chanx transforms WebSocket development. The next guide covers :doc:`consumers-decorators` where you'll learn the decorator-based patterns that make WebSocket development as clean as building REST APIs.
 
 Key takeaways:
 
@@ -291,6 +291,6 @@ Key takeaways:
 - **Channel layers** enable communication from anywhere in your application
 - **Groups** provide powerful broadcasting capabilities
 - **Authentication** requires special handling for long-lived connections
-- **Chanx** eliminates boilerplate and adds type safety, documentation, and testing tools
+- **chanx** eliminates boilerplate and adds type safety, documentation, and testing tools
 
-Continue to :doc:`consumers-decorators` to start building with Chanx's decorator approach.
+Continue to :doc:`consumers-decorators` to start building with chanx's decorator approach.

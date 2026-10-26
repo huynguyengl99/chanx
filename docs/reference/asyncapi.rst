@@ -1,7 +1,7 @@
 AsyncAPI Module
 ===============
 
-The AsyncAPI module provides automatic documentation generation for Chanx WebSocket consumers,
+The AsyncAPI module provides automatic documentation generation for chanx WebSocket consumers,
 creating AsyncAPI 3.0 specifications from decorated consumers.
 
 Generator

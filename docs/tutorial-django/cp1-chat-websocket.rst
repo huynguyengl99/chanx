@@ -1,7 +1,7 @@
 Part 2: Chat WebSocket
 ======================
 
-In this part, you'll build your first real-time chat application using Chanx. You'll learn the core concepts of Chanx:
+In this part, you'll build your first real-time chat application using chanx. You'll learn the core concepts of chanx:
 
 - Defining type-safe message models with Pydantic
 - Creating WebSocket consumers
@@ -14,7 +14,7 @@ By the end, you'll have a working chat room where multiple users can send and re
 Starting Point
 --------------
 
-Make sure you've completed Part 1 and have Chanx properly installed. If you want to start fresh from checkpoint 1:
+Make sure you've completed Part 1 and have chanx properly installed. If you want to start fresh from checkpoint 1:
 
 .. code-block:: bash
 
@@ -32,7 +32,7 @@ Before we start coding, let's understand how the chat system works:
 4. **Server broadcasts** the message to all other clients in the same group
 5. **All clients receive** the message and display it
 
-The beauty of Chanx is that it handles the routing, validation, and type safety automatically!
+The beauty of chanx is that it handles the routing, validation, and type safety automatically!
 
 Step 1: Define Message Types
 -----------------------------
@@ -63,13 +63,13 @@ First, create a file to define your message structure. This uses Pydantic models
 - ``ChatMessagePayload`` - A Pydantic model defining the data structure (message text and sender name)
 - ``NewChatMessage`` - The actual message that will be sent over WebSocket
 
-  - Extends ``BaseMessage`` (required for all Chanx messages)
-  - ``action`` field uses ``Literal["new_chat_message"]`` - this is the discriminator that Chanx uses for automatic routing
+  - Extends ``BaseMessage`` (required for all chanx messages)
+  - ``action`` field uses ``Literal["new_chat_message"]`` - this is the discriminator that chanx uses for automatic routing
   - ``payload`` contains the actual data
 
 .. note::
 
-   The ``action`` field with ``Literal`` type is crucial! Chanx uses this to automatically route incoming messages to the correct handler. The action value must be unique within each consumer.
+   The ``action`` field with ``Literal`` type is crucial: chanx uses it to automatically route incoming messages to the correct handler. The action value must be unique within each consumer.
 
 Step 2: Create the WebSocket Consumer
 --------------------------------------
@@ -118,7 +118,7 @@ Now let's create the consumer that handles WebSocket connections and messages.
 
    class ChatConsumer(AsyncJsonWebsocketConsumer):
 
-Extends Chanx's ``AsyncJsonWebsocketConsumer``, which provides WebSocket handling with JSON serialization.
+Extends chanx's ``AsyncJsonWebsocketConsumer``, which provides WebSocket handling with JSON serialization.
 
 **2. Post Authentication Hook:**
 
@@ -152,7 +152,7 @@ The ``@ws_handler`` decorator registers this method as a message handler:
 
 .. note::
 
-   ``PingMessage`` and ``PongMessage`` are built-in message types provided by Chanx for health checks.
+   ``PingMessage`` and ``PongMessage`` are built-in message types provided by chanx for health checks.
 
 **4. Chat Message Handler:**
 
@@ -336,7 +336,7 @@ Let's trace what happens when Alice sends a message:
         }
       }
 
-2. **Chanx automatically**:
+2. **Then chanx automatically**:
 
    - Receives the WebSocket message
    - Looks at the ``action`` field ("new_chat_message")
@@ -375,13 +375,13 @@ Let's review what you've learned:
 **Handlers:**
 
 - Use ``@ws_handler`` decorator
-- Chanx automatically routes based on message type
+- Messages are routed automatically by type
 - Return a message to send to the client
 - Use ``broadcast_message()`` to send to groups
 
 **Routing:**
 
-- Use Chanx's ``path()`` and ``include()`` functions
+- Use chanx's ``path()`` and ``include()`` functions
 - Support dynamic URL parameters
 - Hierarchical routing structure
 

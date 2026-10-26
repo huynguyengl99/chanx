@@ -1,7 +1,7 @@
 Prerequisites
 =============
 
-Welcome to the Chanx FastAPI tutorial! This hands-on tutorial will guide you through building a real-world WebSocket application with FastAPI and Chanx, covering:
+Welcome to the chanx FastAPI tutorial! This hands-on tutorial will guide you through building a real-world WebSocket application with FastAPI and chanx, covering:
 
 - Simple echo WebSocket with system messages
 - Real-time room chat with channel layers
@@ -9,7 +9,7 @@ Welcome to the Chanx FastAPI tutorial! This hands-on tutorial will guide you thr
 - Multi-layer WebSocket with external messaging
 - Comprehensive WebSocket testing
 
-By the end of this tutorial, you'll understand how to use Chanx to create structured, type-safe WebSocket applications with FastAPI and automatic documentation.
+By the end of this tutorial, you'll understand how to use chanx to create structured, type-safe WebSocket applications with FastAPI and automatic documentation.
 
 .. image:: ../_static/tut-fastapi-landing.png
    :alt: Complete WebSocket application with all features
@@ -109,7 +109,7 @@ The ``cp0`` branch provides a minimal starting point with:
 
 .. note::
 
-   For your own projects, you can install Chanx with FastAPI support using:
+   For your own projects, you can install chanx with FastAPI support using:
 
    .. code-block:: bash
 

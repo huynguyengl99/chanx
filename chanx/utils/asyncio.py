@@ -1,8 +1,8 @@
 """
-Asyncio task management utilities for Chanx.
+Asyncio task management utilities for chanx.
 
 This module provides enhanced task management for asynchronous operations
-in Chanx WebSocket consumers. It offers utilities to safely create
+in chanx WebSocket consumers. It offers utilities to safely create
 and manage background tasks with proper error handling, database connection
 cleanup, and task tracking.
 

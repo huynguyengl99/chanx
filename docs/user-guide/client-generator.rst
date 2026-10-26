@@ -1,7 +1,7 @@
 Client Generator
 ================
 
-The Chanx client generator automatically creates type-safe Python WebSocket clients from AsyncAPI 3.0 schemas. This eliminates the need to manually write and maintain client code, ensuring your client always stays in sync with your server's API.
+The chanx client generator automatically creates type-safe Python WebSocket clients from AsyncAPI 3.0 schemas. This eliminates the need to manually write and maintain client code, ensuring your client always stays in sync with your server's API.
 
 .. tip::
 
@@ -92,7 +92,7 @@ Quick Start
 
 1. **Get AsyncAPI Schema**
 
-Your Chanx server automatically generates an AsyncAPI schema (see :doc:`asyncapi` for details):
+Your chanx server automatically generates an AsyncAPI schema (see :doc:`asyncapi` for details):
 
 .. code-block:: bash
 
@@ -649,14 +649,14 @@ The generated client provides full type safety with IDE support:
         )
     )
 
-Integration with Chanx Server
+Integration with chanx Server
 ------------------------------
 
-The client generator is designed to work seamlessly with Chanx servers:
+The client generator is designed to work seamlessly with chanx servers:
 
 1. **Auto-Generated from Server**
 
-   Your AsyncAPI schema is automatically generated from your Chanx decorators
+   Your AsyncAPI schema is automatically generated from your chanx decorators
 
 2. **Type-Safe Communication**
 
@@ -676,7 +676,7 @@ Workflow Example
 .. code-block:: bash
 
     # 1. Update server
-    # Add new message type to your Chanx consumer
+    # Add new message type to your chanx consumer
 
     # 2. Regenerate client directly from server (no file needed!)
     chanx generate-client \

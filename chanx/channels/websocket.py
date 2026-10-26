@@ -2,16 +2,16 @@
 Django Channels concrete WebSocket consumer implementation.
 
 This module provides the concrete AsyncJsonWebsocketConsumer class that combines
-Chanx's enhanced WebSocket functionality (from the core mixin) with Django Channels'
+the enhanced WebSocket functionality of chanx (from the core mixin) with Django Channels'
 AsyncJsonWebsocketConsumer base class. This is the main consumer class users should
 import when building WebSocket applications with Django and Channels.
 
 The concrete consumer inherits from both:
-- chanx.core.websocket.AsyncJsonWebsocketConsumer (Chanx mixin with all features)
+- chanx.core.websocket.AsyncJsonWebsocketConsumer (chanx mixin with all features)
 - channels.generic.websocket.AsyncJsonWebsocketConsumer (Django Channels base)
 
 This multiple inheritance provides:
-- Automatic message routing and validation (from Chanx mixin)
+- Automatic message routing and validation (from chanx mixin)
 - Django Channels channel layer integration
 - Full compatibility with Django's ASGI application
 - Type-safe operation with static type checkers
@@ -34,12 +34,12 @@ class AsyncJsonWebsocketConsumer(  # type: ignore[misc]
     ChanxWebsocketConsumerMixin[ReceiveEvent], ChannelsAsyncJsonWebsocketConsumer
 ):
     """
-    Django Channels WebSocket consumer with Chanx enhanced features.
+    Django Channels WebSocket consumer with chanx enhanced features.
 
-    Combines Chanx's automatic message handling, type validation, authentication,
+    Combines chanx's automatic message handling, type validation, authentication,
     and group broadcasting capabilities with Django Channels' WebSocket consumer.
 
-    Features from Chanx mixin:
+    Features from chanx mixin:
 
     - Automatic message type discovery from @ws_handler decorators
     - Type-safe message validation using Pydantic discriminated unions

@@ -1,7 +1,7 @@
 Handler Mixins
 ==============
 
-Chanx supports composing reusable handler logic via Python mixin classes. A mixin is a plain class that defines ``@ws_handler`` or ``@event_handler`` methods — when mixed into a consumer through multiple inheritance, its handlers are automatically discovered and available for message routing and AsyncAPI documentation.
+You can compose reusable handler logic in chanx with Python mixin classes. A mixin is a plain class that defines ``@ws_handler`` or ``@event_handler`` methods. When mixed into a consumer through multiple inheritance, its handlers are automatically discovered and available for message routing and AsyncAPI documentation.
 
 WebSocket Handler Mixin
 -----------------------
@@ -105,7 +105,7 @@ This consumer handles ``ping``, ``extra_request`` (from the WebSocket mixin), an
 Contributing Groups
 -------------------
 
-A mixin whose ``@event_handler`` methods rely on a channel group needs that group to be joined, but ``groups`` is owned by the underlying framework and follows normal MRO shadowing — if two classes in the chain declare it, only the most derived one applies. Use ``extra_groups`` instead, which Chanx merges across the whole MRO:
+A mixin whose ``@event_handler`` methods rely on a channel group needs that group to be joined, but ``groups`` is owned by the underlying framework and follows normal MRO shadowing — if two classes in the chain declare it, only the most derived one applies. Use ``extra_groups`` instead, which chanx merges across the whole MRO:
 
 .. code-block:: python
 
@@ -136,7 +136,7 @@ Mixins compose handlers onto one consumer, so every action shares one namespace 
 How It Works
 ------------
 
-Mixin handlers are auto-discovered through Python's method resolution order (MRO). When a consumer class is defined, Chanx scans all methods in the inheritance chain for ``@ws_handler`` and ``@event_handler`` decorators and registers them in the consumer's handler maps. This means:
+Mixin handlers are auto-discovered through Python's method resolution order (MRO). When a consumer class is defined, chanx scans all methods in the inheritance chain for ``@ws_handler`` and ``@event_handler`` decorators and registers them in the consumer's handler maps. This means:
 
 - **No extra registration** — just add the mixin to your class's bases
 - **Message routing works automatically** — mixin handlers are routed the same way as handlers defined directly on the consumer

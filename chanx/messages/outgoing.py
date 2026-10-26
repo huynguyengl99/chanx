@@ -1,5 +1,5 @@
 """
-Standard outgoing message types for Chanx websockets.
+Standard outgoing message types for chanx websockets.
 
 Provides ready-to-use message types for server-to-client communication:
 - PongMessage: Response to ping requests

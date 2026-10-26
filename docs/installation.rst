@@ -2,7 +2,7 @@ Installation
 ============
 Requirements
 ------------
-Chanx has the following core dependencies:
+The core dependencies of chanx are:
 
 * Python 3.11+
 * Pydantic 2.0+
@@ -12,7 +12,7 @@ Chanx has the following core dependencies:
 
 Framework-specific dependencies are installed automatically based on which extra you choose.
 
-Installing Chanx
+Installing chanx
 ----------------
 
 **For Django Channels Projects**
@@ -106,7 +106,7 @@ Framework Setup
         # ...
     ]
 
-2. Configure Chanx in your Django settings:
+2. Configure chanx in your Django settings:
 
 .. code-block:: python
 
@@ -150,7 +150,7 @@ Configuration Options
 ---------------------
 **camelCase Conversion**
 
-Chanx includes automatic camelCase conversion. Enable it in your configuration:
+Automatic camelCase conversion is built in. Enable it in your configuration:
 
 .. code-block:: python
 
@@ -187,7 +187,7 @@ See :doc:`user-guide/client-generator` for complete CLI documentation.
 
 Next Steps
 ----------
-Now that you have Chanx installed, proceed to:
+Now that you have chanx installed, proceed to:
 
 * :doc:`quick-start` - Build your first consumer on Django or FastAPI
 * :doc:`user-guide/client-generator` - Generate type-safe Python clients

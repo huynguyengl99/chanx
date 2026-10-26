@@ -1,8 +1,8 @@
 """
-AsyncAPI 3.0 specification generator for Chanx WebSocket consumers.
+AsyncAPI 3.0 specification generator for chanx WebSocket consumers.
 
 This module provides the AsyncAPIGenerator class that automatically generates
-AsyncAPI documentation from Chanx WebSocket consumer routes and their decorated
+AsyncAPI documentation from chanx WebSocket consumer routes and their decorated
 handlers (@ws_handler, @event_handler, @channel).
 """
 
@@ -37,7 +37,7 @@ WS_BINDING_VERSION = "0.1.0"
 
 class AsyncAPIGenerator:
     """
-    Generates AsyncAPI 3.0 specifications from Chanx WebSocket routes.
+    Generates AsyncAPI 3.0 specifications from chanx WebSocket routes.
 
     This class analyzes WebSocket consumer routes and their decorated handlers
     to automatically generate comprehensive AsyncAPI documentation including

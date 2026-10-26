@@ -1,5 +1,5 @@
 """
-Core WebSocket testing utilities for Chanx.
+Core WebSocket testing utilities for chanx.
 
 This module provides fundamental testing infrastructure for WebSocket consumers,
 including an enhanced WebsocketCommunicator mixin with structured message handling,
@@ -91,9 +91,9 @@ class CapturedBroadcastEvent:
 
 class WebsocketCommunicatorMixin:
     """
-    Mixin providing enhanced WebSocket testing functionality for Chanx consumers.
+    Mixin providing enhanced WebSocket testing functionality for chanx consumers.
 
-    This mixin provides Chanx-specific features that work across different WebSocket
+    This mixin provides chanx-specific features that work across different WebSocket
     frameworks (Django Channels, fast-channels, etc.):
 
     - Structured message sending and receiving with BaseMessage objects
@@ -110,7 +110,7 @@ class WebsocketCommunicatorMixin:
     - connect()/disconnect(): Enhanced connection management
 
     The mixin automatically handles message serialization/deserialization and integrates
-    with Chanx's completion signal system for reliable testing.
+    with chanx's completion signal system for reliable testing.
 
     Concrete implementations should inherit from both this mixin and a framework-specific
     WebSocket communicator class (e.g., channels.testing.WebsocketCommunicator).

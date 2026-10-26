@@ -1,8 +1,8 @@
 """
-Type definitions for Chanx websocket components.
+Type definitions for chanx websocket components.
 
 This module provides TypedDict and other type definitions that represent
-the structure of complex objects used throughout the Chanx framework.
+the structure of complex objects used throughout the chanx framework.
 """
 
 from collections.abc import Awaitable, Callable

@@ -1,5 +1,5 @@
 """
-Standard incoming message types for Chanx websockets.
+Standard incoming message types for chanx websockets.
 
 Provides ready-to-use message types for WebSocket communication:
 - PingMessage: Simple connection status check message

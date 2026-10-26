@@ -1,7 +1,7 @@
 Framework Integration
 ======================
 
-Chanx provides framework-specific utilities that complement your WebSocket consumers, including Django views for AsyncAPI documentation and FastAPI integration helpers. These tools bridge the gap between your WebSocket endpoints and traditional HTTP APIs.
+To complement your WebSocket consumers, chanx provides framework-specific utilities, including Django views for AsyncAPI documentation and FastAPI integration helpers. These tools bridge the gap between your WebSocket endpoints and traditional HTTP APIs.
 
 Django Channels Integration
 ---------------------------
@@ -20,7 +20,7 @@ The simplest way to add AsyncAPI endpoints is to include the pre-configured URL 
     from django.urls import path, include
 
     urlpatterns = [
-        # Include Chanx AsyncAPI endpoints
+        # Include chanx AsyncAPI endpoints
         path('asyncapi/', include('chanx.channels.urls')),
     ]
 
@@ -54,7 +54,7 @@ For custom paths, configure the views manually:
 
 **Django Authenticators**
 
-Chanx provides Django REST Framework integration for WebSocket authentication using ``DjangoAuthenticator``:
+For WebSocket authentication, chanx integrates with Django REST Framework through ``DjangoAuthenticator``:
 
 .. code-block:: python
 
@@ -249,4 +249,4 @@ With framework-specific integration utilities, you have all the tools needed to 
 - **Django**: AsyncAPI documentation views and DjangoAuthenticator for DRF integration
 - **FastAPI**: AsyncAPI endpoint functions and custom authenticator patterns
 
-These framework-specific extensions complement the core Chanx features to provide seamless integration with your existing web applications while maintaining framework-specific conventions and patterns.
+These framework-specific extensions complement the core chanx features to provide seamless integration with your existing web applications while maintaining framework-specific conventions and patterns.

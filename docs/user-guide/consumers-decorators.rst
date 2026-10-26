@@ -1,12 +1,12 @@
 Consumers & Decorators
 ======================
 
-Chanx transforms WebSocket development with decorator-based message handlers that automatically route messages, validate types, and generate documentation. This guide covers the core patterns you'll use to build WebSocket applications.
+In chanx, WebSocket code is built from decorator-based message handlers that automatically route messages, validate types, and generate documentation. This guide covers the core patterns you'll use to build WebSocket applications.
 
 The AsyncJsonWebsocketConsumer Base Class
 -----------------------------------------
 
-All Chanx consumers inherit from ``AsyncJsonWebsocketConsumer``, which provides the foundation for decorator-based message handling.
+All chanx consumers inherit from ``AsyncJsonWebsocketConsumer``, which provides the foundation for decorator-based message handling.
 
 **Framework-Specific Imports:**
 
@@ -335,7 +335,7 @@ Duplicate types across the chain are de-duplicated. Because the lists are merged
 AsyncAPI Documentation Mapping
 -------------------------------
 
-Understanding how Chanx decorators map to AsyncAPI operations helps you write better documentation and understand the generated API specs.
+Understanding how chanx decorators map to AsyncAPI operations helps you write better documentation and understand the generated API specs.
 
 **@ws_handler AsyncAPI Mapping:**
 
@@ -408,7 +408,7 @@ This mapping ensures your AsyncAPI documentation accurately reflects the WebSock
 Message Types and Automatic Routing
 -----------------------------------
 
-Chanx uses **discriminated unions** to automatically route both WebSocket messages and events to the correct handlers. Messages and events are identified by their ``action`` field:
+**Discriminated unions** route both WebSocket messages and events to the correct handlers automatically. Messages and events are identified by their ``action`` field:
 
 **WebSocket Message Example:**
 
@@ -518,7 +518,7 @@ Output Messages and Broadcasting
 Event Broadcasting from Anywhere
 ---------------------------------
 
-One of Chanx's most powerful features is sending events to WebSocket consumers from anywhere in your application:
+One of chanx's most powerful features is sending events to WebSocket consumers from anywhere in your application:
 
 **From Django Views:**
 
@@ -742,7 +742,7 @@ Here's a complete example that demonstrates all the concepts:
 Next Steps
 ----------
 
-Now that you understand Chanx's decorator-based approach, you can:
+Now that you understand chanx's decorator-based approach, you can:
 
 - Learn about :doc:`mixins` for reusable handler composition
 - Learn about :doc:`asyncapi` documentation generation

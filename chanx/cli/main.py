@@ -57,7 +57,7 @@ def _run_formatter(output_dir: Path, formatter_cmd: str | None) -> None:
 
 @click.group()
 def cli() -> None:
-    """Chanx CLI - WebSocket development tools for AsyncAPI."""
+    """The chanx CLI: WebSocket development tools for AsyncAPI."""
     pass
 
 

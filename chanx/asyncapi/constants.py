@@ -2,7 +2,7 @@
 Constants for AsyncAPI generation.
 
 This module provides default configuration values used by the AsyncAPI generator
-when creating documentation from Chanx WebSocket consumers.
+when creating documentation from chanx WebSocket consumers.
 """
 
 # Default configuration values

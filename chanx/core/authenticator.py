@@ -1,8 +1,8 @@
 """
-Base authenticator interface for Chanx WebSocket consumers.
+Base authenticator interface for chanx WebSocket consumers.
 
 This module defines the abstract base class for implementing custom authentication
-logic in Chanx WebSocket applications. Authenticators can validate connections,
+logic in chanx WebSocket applications. Authenticators can validate connections,
 reject unauthorized access, and send error messages to clients.
 """
 
@@ -29,7 +29,7 @@ class BaseAuthenticator(ABC):
     Abstract base class for WebSocket authentication handlers.
 
     Provides a common interface for implementing custom authentication logic
-    in Chanx WebSocket consumers. Subclasses must implement the authenticate
+    in chanx WebSocket consumers. Subclasses must implement the authenticate
     method to define specific authentication rules.
 
     Args:

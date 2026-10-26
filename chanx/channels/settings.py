@@ -1,7 +1,7 @@
 """
-Chanx settings configuration system.
+Settings configuration system for chanx.
 
-This module provides a flexible configuration system for Chanx, allowing
+This module provides a flexible configuration system for chanx, allowing
 settings to be defined with defaults in a dataclass and overridden through
 Django settings. It handles importing string references, reloading when settings
 change, and providing type-safe access to configuration values.
@@ -20,7 +20,7 @@ from rest_framework.settings import APISettings
 @dataclass
 class MySetting:
     """
-    Configuration settings for Chanx websocket framework.
+    Configuration settings for chanx websocket framework.
 
     This dataclass defines all available configuration options with their default values.
     These settings can be overridden through Django's settings with the CHANX dictionary.

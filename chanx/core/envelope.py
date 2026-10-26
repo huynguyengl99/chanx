@@ -39,5 +39,5 @@ class TopicErrorReason(StrEnum):
 
 
 def strip_envelope(content: dict[str, Any]) -> dict[str, Any]:
-    """Drop reserved keys so the rest validates as a plain Chanx message."""
+    """Drop reserved keys so the rest validates as a plain chanx message."""
     return {k: v for k, v in content.items() if k not in ENVELOPE_FIELDS}

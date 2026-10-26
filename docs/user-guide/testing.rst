@@ -1,7 +1,7 @@
 Testing WebSocket Consumers
 ===========================
 
-Chanx provides enhanced testing utilities that make WebSocket testing reliable and straightforward. The testing framework includes completion signal handling, automatic message collection, and framework-specific authentication support.
+The testing utilities in chanx make WebSocket testing reliable and straightforward. The testing framework includes completion signal handling, automatic message collection, and framework-specific authentication support.
 
 Testing Configuration
 ---------------------

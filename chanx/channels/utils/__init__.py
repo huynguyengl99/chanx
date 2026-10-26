@@ -1,5 +1,5 @@
 """
-Django utility modules for Chanx.
+Django utility modules for chanx.
 """
 
 from .asgi import get_websocket_application

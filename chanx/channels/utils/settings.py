@@ -1,7 +1,7 @@
 """
-Settings override utilities for Chanx.
+Settings override utilities for chanx.
 
-This module provides utilities for temporarily overriding Chanx settings,
+This module provides utilities for temporarily overriding chanx settings,
 primarily useful for testing scenarios where different configurations need
 to be tested without permanently changing settings.
 """

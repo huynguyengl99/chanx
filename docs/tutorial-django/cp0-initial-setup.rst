@@ -1,10 +1,10 @@
-Part 1: Setup Chanx
+Part 1: Setup chanx
 ===================
 
-In this part, you'll set up the foundational Django project and install Chanx. By the end, you'll have:
+In this part, you'll set up the foundational Django project and install chanx. By the end, you'll have:
 
 - A running Django project with Channels configured
-- Chanx installed and integrated
+- The chanx package installed and integrated
 - WebSocket routing configured
 - AsyncAPI documentation accessible
 
@@ -98,7 +98,7 @@ This sets up the initial database tables for Django.
 
 **5. Verify the Setup:**
 
-Let's make sure everything works before adding Chanx:
+Let's make sure everything works before adding chanx:
 
 .. code-block:: bash
 
@@ -109,23 +109,23 @@ Visit http://localhost:8000 in your browser. You should see the landing page wit
 
 Press ``Ctrl+C`` to stop the server.
 
-Installing Chanx
+Installing chanx
 ----------------
 
-Now let's add Chanx to the project:
+Now let's add chanx to the project:
 
 .. code-block:: bash
 
    uv add "chanx[channels]"
 
-This installs Chanx with Django Channels support. The ``[channels]`` extra includes all the Django-specific integrations.
+This installs chanx with Django Channels support. The ``[channels]`` extra includes all the Django-specific integrations.
 
-Configuring Chanx
+Configuring chanx
 -----------------
 
-We need to make several changes to integrate Chanx into the Django project.
+We need to make several changes to integrate chanx into the Django project.
 
-**1. Add Chanx to Installed Apps**
+**1. Add chanx to Installed Apps**
 
 Edit ``chanx_django/config/settings/base.py`` and add ``"chanx.channels"`` to ``INSTALLED_APPS``:
 
@@ -150,7 +150,7 @@ Edit ``chanx_django/config/settings/base.py`` and add ``"chanx.channels"`` to ``
        "system",
    ]
 
-This registers Chanx's Django app, which enables the AsyncAPI documentation URLs and other features.
+This registers chanx's Django app, which enables the AsyncAPI documentation URLs and other features.
 
 **2. Create WebSocket Routing Configuration**
 
@@ -161,7 +161,7 @@ Create a new file ``chanx_django/config/routing.py`` to manage WebSocket routing
    """
    WebSocket routing configuration for the project.
 
-   This module defines the WebSocket URL routing structure using Chanx's
+   This module defines the WebSocket URL routing structure using chanx's
    routing utilities. Routes are organized by app and mounted under /ws/.
    """
    from channels.routing import URLRouter
@@ -188,11 +188,11 @@ This creates a hierarchical routing structure:
 
 - All WebSocket connections will be under ``/ws/``
 - Each app (chat, assistants, system) will have its own sub-router
-- We're using Chanx's ``include()`` and ``path()`` functions, which work like Django's URL routing
+- We're using chanx's ``include()`` and ``path()`` functions, which work like Django's URL routing
 
 **3. Update ASGI Configuration**
 
-Edit ``chanx_django/config/asgi.py`` to use Chanx routing:
+Edit ``chanx_django/config/asgi.py`` to use chanx routing:
 
 .. code-block:: python
 
@@ -230,7 +230,7 @@ Key changes:
 
 **4. Add AsyncAPI Documentation URL**
 
-Edit ``chanx_django/config/urls.py`` to include Chanx's AsyncAPI documentation:
+Edit ``chanx_django/config/urls.py`` to include chanx's AsyncAPI documentation:
 
 .. code-block:: python
 
@@ -264,12 +264,12 @@ Now let's verify everything is working:
 Visit http://localhost:8000 - you should see the same landing page as before.
 
 .. image:: ../_static/tut-django-home.png
-   :alt: Chanx Django Tutorial Landing Page
+   :alt: chanx Django Tutorial Landing Page
    :align: center
 
 **3. View AsyncAPI Documentation:**
 
-Visit http://localhost:8000/asyncapi/docs/ - you should see an AsyncAPI documentation page. It will be mostly empty since we haven't created any consumers yet, but it confirms Chanx is properly installed.
+Visit http://localhost:8000/asyncapi/docs/ - you should see an AsyncAPI documentation page. It will be mostly empty since we haven't created any consumers yet, but it confirms chanx is properly installed.
 
 .. note::
 
@@ -310,9 +310,9 @@ This auto-runs linting, formatting, and checks before each commit.
 What's Next?
 ------------
 
-Congratulations! You've successfully set up Chanx with Django. Your project now has:
+Congratulations! You've successfully set up chanx with Django. Your project now has:
 
-- ✅ Chanx installed with Django Channels support
+- ✅ chanx installed with Django Channels support
 - ✅ WebSocket routing structure configured
 - ✅ AsyncAPI documentation available
 - ✅ All development tools ready to use

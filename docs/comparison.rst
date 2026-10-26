@@ -1,10 +1,10 @@
 Comparison with Other Solutions
 ================================
 
-Chanx vs Django Channels
+chanx vs Django Channels
 -------------------------
 
-Django Channels is the foundation that Chanx builds upon for Django projects. **Chanx is an extension, not a replacement**—it adds batteries-included features on top of Channels.
+Django Channels is the foundation that chanx builds upon for Django projects. **It is an extension, not a replacement**: chanx adds batteries-included features on top of Channels.
 
 .. list-table::
    :header-rows: 1
@@ -12,7 +12,7 @@ Django Channels is the foundation that Chanx builds upon for Django projects. **
 
    * - Feature
      - Django Channels
-     - Chanx
+     - chanx
    * - **Message Routing**
      - Manual if-else chains
      - Automatic via ``@ws_handler`` decorators
@@ -55,7 +55,7 @@ Django Channels is the foundation that Chanx builds upon for Django projects. **
             await self.handle_ping(data)
         # ... endless if-else chains
 
-    # Chanx - Automatic routing
+    # chanx: automatic routing
     @ws_handler
     async def handle_chat(self, message: ChatMessage) -> None:
         await self.broadcast_message(...)
@@ -82,12 +82,12 @@ Django Channels provides the infrastructure, but leaves critical features to you
 - Extremely simple use case (1-2 message types, never growing)
 - Integrating with legacy code that can't be refactored
 
-**Our Take**: Even for simple cases, Chanx's type safety and automatic routing prevent bugs and save development time. The performance overhead is negligible (~1-2ms for Pydantic validation).
+**Our Take**: Even for simple cases, chanx's type safety and automatic routing prevent bugs and save development time. The performance overhead is negligible (~1-2ms for Pydantic validation).
 
-Chanx vs Broadcaster (FastAPI)
+chanx vs Broadcaster (FastAPI)
 -------------------------------
 
-Broadcaster is a minimal pub/sub library (~300 lines) for broadcasting messages across server instances. Chanx is a full-featured WebSocket framework.
+Broadcaster is a minimal pub/sub library (~300 lines) for broadcasting messages across server instances. In contrast, chanx is a full-featured WebSocket framework.
 
 .. list-table::
    :header-rows: 1
@@ -95,7 +95,7 @@ Broadcaster is a minimal pub/sub library (~300 lines) for broadcasting messages 
 
    * - Feature
      - Broadcaster
-     - Chanx
+     - chanx
    * - **Scope**
      - Pub/sub only
      - ✅ Full WebSocket framework
@@ -155,7 +155,7 @@ Broadcaster is a minimal pub/sub library (~300 lines) for broadcasting messages 
                     # Manual handling, validation, etc.
                     pass
 
-    # Chanx - Automatic routing
+    # chanx: automatic routing
     @channel(name="chat")
     class ChatConsumer(AsyncJsonWebsocketConsumer):
         @ws_handler
@@ -179,7 +179,7 @@ Broadcaster only handles pub/sub messaging. You still need to manually build:
 - Only need basic pub/sub (not WebSocket connection management)
 - Extremely simple use case (1-2 message types, no growth expected)
 
-**When to Choose Chanx**
+**When to Choose chanx**
 
 - Building a real WebSocket application with multiple message types
 - Want to avoid reinventing routing, validation, and testing
@@ -188,9 +188,9 @@ Broadcaster only handles pub/sub messaging. You still need to manually build:
 - Need authentication and permissions
 - Working in a team where consistent patterns matter
 
-**Reality Check**: Nearly every project that starts with Broadcaster ends up building routing, validation, testing, and documentation on top. Chanx gives you these from day one, saving weeks of development.
+**Reality Check**: Nearly every project that starts with Broadcaster ends up building routing, validation, testing, and documentation on top. With chanx you get these from day one, saving weeks of development.
 
-Chanx vs Socket.IO
+chanx vs Socket.IO
 -------------------
 
 Socket.IO is a mature WebSocket library (since 2010) built primarily for Node.js. While python-socketio exists, it's challenging to integrate with Django or FastAPI.
@@ -201,7 +201,7 @@ Socket.IO is a mature WebSocket library (since 2010) built primarily for Node.js
 
    * - Feature
      - Socket.IO (python-socketio)
-     - Chanx
+     - chanx
    * - **Framework Integration**
      - ⚠️ Requires custom ASGI/WSGI adapters, separate from Django/FastAPI routing
      - ✅ Native Django Channels and FastAPI integration
@@ -251,7 +251,7 @@ python-socketio is a port of the Node.js library and presents several challenges
 - Need official mobile SDKs with auto-reconnection built-in
 - **Building with Node.js** (Socket.IO's native environment)
 
-**When to Choose Chanx**
+**When to Choose chanx**
 
 - Python backend (Django/FastAPI)
 - Want native framework integration (routing, auth, middleware just work)
@@ -268,7 +268,7 @@ Overall Feature Comparison
    :widths: 30 15 15 15 15
 
    * - Feature
-     - Chanx
+     - chanx
      - Channels
      - Broadcaster
      - Socket.IO
@@ -348,7 +348,7 @@ Legend: ✅ Strong support | ⚠️ Partial/Manual | ❌ Not supported
 Quick Recommendations
 ----------------------
 
-**Choose Chanx** → Python/Django/FastAPI apps needing type safety, automatic docs, and faster development
+**Choose chanx** → Python/Django/FastAPI apps needing type safety, automatic docs, and faster development
 
 **Choose Django Channels** → Absolute minimal overhead or legacy integration
 
@@ -356,10 +356,10 @@ Quick Recommendations
 
 **Choose Socket.IO** → Legacy projects already using Socket.IO, or Node.js backend
 
-**Bottom Line**: For Python/Django/FastAPI, Chanx eliminates the boilerplate. You get automatic routing, type safety, validation, API docs, authentication, and testing utilities from day one—features you'd spend weeks building on top of other solutions.
+**Bottom Line**: For Python/Django/FastAPI, chanx eliminates the boilerplate. You get automatic routing, type safety, validation, API docs, authentication, and testing utilities from day one—features you'd spend weeks building on top of other solutions.
 
 Next Steps
 ----------
 
-- :doc:`introduction` - Learn more about Chanx
+- :doc:`introduction` - Learn more about chanx
 - :doc:`quick-start` - Build your first consumer on Django or FastAPI

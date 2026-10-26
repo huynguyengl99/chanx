@@ -62,7 +62,7 @@ connected clients.
 **4. The code is the contract.** Because handlers declare what they accept and send, Chanx
 generates an AsyncAPI 3.0 spec and an interactive docs page from them. Typed clients are
 generated from that spec: Python with ``chanx generate-client``, TypeScript with
-`chanx-js <https://huynguyengl99.github.io/chanx-js/>`_. When a handler changes, the docs
+`chanx-js <https://js.chanx.dev/>`_. When a handler changes, the docs
 and clients change with it.
 
 .. image:: _static/asyncapi-info.png

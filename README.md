@@ -1,26 +1,26 @@
 <h1>
   <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/huynguyengl99/chanx/main/docs/_static/brand/chanx-wordmark-dark.svg">
-    <img alt="Chanx" src="https://raw.githubusercontent.com/huynguyengl99/chanx/main/docs/_static/brand/chanx-wordmark.svg" height="64">
+    <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/chanx-dev/chanx/main/docs/_static/brand/chanx-wordmark-dark.svg">
+    <img alt="Chanx" src="https://raw.githubusercontent.com/chanx-dev/chanx/main/docs/_static/brand/chanx-wordmark.svg" height="64">
   </picture>
 </h1>
 
 [![PyPI](https://img.shields.io/pypi/v/chanx)](https://pypi.org/project/chanx/)
 [![Python](https://img.shields.io/pypi/pyversions/chanx)](https://pypi.org/project/chanx/)
-[![Tests](https://github.com/huynguyengl99/chanx/actions/workflows/test.yml/badge.svg?branch=main)](https://github.com/huynguyengl99/chanx/actions/workflows/test.yml)
-[![Coverage](https://codecov.io/gh/huynguyengl99/chanx/branch/main/graph/badge.svg?token=X8R3BDPTY6)](https://codecov.io/gh/huynguyengl99/chanx)
+[![Tests](https://github.com/chanx-dev/chanx/actions/workflows/test.yml/badge.svg?branch=main)](https://github.com/chanx-dev/chanx/actions/workflows/test.yml)
+[![Coverage](https://codecov.io/gh/chanx-dev/chanx/branch/main/graph/badge.svg?token=X8R3BDPTY6)](https://codecov.io/gh/chanx-dev/chanx)
 
 **Typed WebSocket APIs for Python.** Write one handler per message; Chanx routes,
 validates, broadcasts and documents it, and generates typed clients from the result.
 Runs on Django Channels, FastAPI, or any ASGI framework.
 
-**[Documentation](https://chanx.readthedocs.io/)** ·
-[Django quick start](https://chanx.readthedocs.io/en/latest/quick-start.html?framework=django) ·
-[FastAPI quick start](https://chanx.readthedocs.io/en/latest/quick-start.html?framework=fastapi) ·
-[TypeScript clients](https://huynguyengl99.github.io/chanx-js/) ·
-[Ready-made kits](https://huynguyengl99.github.io/chanx-kit/)
+**[Documentation](https://python.chanx.dev/)** ·
+[Django quick start](https://python.chanx.dev/en/latest/quick-start.html?framework=django) ·
+[FastAPI quick start](https://python.chanx.dev/en/latest/quick-start.html?framework=fastapi) ·
+[TypeScript clients](https://js.chanx.dev/) ·
+[Ready-made kits](https://kit.chanx.dev/)
 
-![A typed Python handler, the AsyncAPI docs Chanx generates from it, generating a TypeScript client, and that client catching a typo](https://raw.githubusercontent.com/huynguyengl99/chanx/main/docs/_static/chanx-demo.gif)
+![A typed Python handler, the AsyncAPI docs Chanx generates from it, generating a TypeScript client, and that client catching a typo](https://raw.githubusercontent.com/chanx-dev/chanx/main/docs/_static/chanx-demo.gif)
 
 ## Why Chanx
 
@@ -57,8 +57,8 @@ From that, Chanx gives you:
 - **AsyncAPI 3.0 docs.** A spec and an interactive docs page, generated from your
   handlers, so the contract the frontend reads is the code that runs.
 - **Typed clients.** Generate a Python client, a TypeScript client with React, Vue,
-  Svelte and Solid bindings via [chanx-js](https://huynguyengl99.github.io/chanx-js/), or a
-  Go client via [chanx-go](https://huynguyengl99.github.io/chanx-go/).
+  Svelte and Solid bindings via [chanx-js](https://js.chanx.dev/), or a
+  Go client via [chanx-go](https://go.chanx.dev/).
 - **Testing and auth.** Test communicators for both frameworks, and authenticators that
   reuse your DRF permission classes on Django.
 - **Static typing throughout.** Checked with mypy and pyright in strict mode, so handler
@@ -151,13 +151,13 @@ handler; the sender gets a validation error instead. The interactive docs are at
 **On Django**, the consumer is the same class imported from
 `chanx.channels.websocket`, routed with Channels, with docs from
 `path("asyncapi/", include("chanx.channels.urls"))`. See the
-[Django quick start](https://chanx.readthedocs.io/en/latest/quick-start.html?framework=django).
+[Django quick start](https://python.chanx.dev/en/latest/quick-start.html?framework=django).
 
 ## Typed clients
 
 Clients are generated from the AsyncAPI spec, so they always match the server.
 
-TypeScript, with [chanx-js](https://huynguyengl99.github.io/chanx-js/):
+TypeScript, with [chanx-js](https://js.chanx.dev/):
 
 ```bash
 npm install @chanx-js/client
@@ -184,30 +184,30 @@ chanx generate-client --schema http://localhost:8000/asyncapi.json --output ./ch
 
 ## Ecosystem
 
-- **[chanx-js](https://huynguyengl99.github.io/chanx-js/)**: TypeScript clients for the
+- **[chanx-js](https://js.chanx.dev/)**: TypeScript clients for the
   browser and Node, and a TypeScript server that speaks the same protocol and can share a
   Redis layer with Python.
-- **[chanx-go](https://huynguyengl99.github.io/chanx-go/)**: the Go implementation, for net/http, gin, echo
+- **[chanx-go](https://go.chanx.dev/)**: the Go implementation, for net/http, gin, echo
   and Fiber servers, with a typed Go client generator. Go and Python processes can share
   one Redis layer.
-- **[chanx-kit](https://huynguyengl99.github.io/chanx-kit/)**: copy-in components built on
+- **[chanx-kit](https://kit.chanx.dev/)**: copy-in components built on
   Chanx (notifications, chat with history, presence, agent streaming, voice), in the
   spirit of shadcn/ui.
 
 ## Learn more
 
-- [Introduction](https://chanx.readthedocs.io/en/latest/introduction.html) and
-  [comparison with Channels and FastAPI](https://chanx.readthedocs.io/en/latest/comparison.html)
-- Tutorials: [Django](https://chanx.readthedocs.io/en/latest/tutorial-django/prerequisites.html),
-  [FastAPI](https://chanx.readthedocs.io/en/latest/tutorial-fastapi/prerequisites.html)
-- [Configuration](https://chanx.readthedocs.io/en/latest/configuration.html) and
-  [API reference](https://chanx.readthedocs.io/en/latest/reference/core.html)
-- [Changelog](https://github.com/huynguyengl99/chanx/blob/main/CHANGELOG.md)
+- [Introduction](https://python.chanx.dev/en/latest/introduction.html) and
+  [comparison with Channels and FastAPI](https://python.chanx.dev/en/latest/comparison.html)
+- Tutorials: [Django](https://python.chanx.dev/en/latest/tutorial-django/prerequisites.html),
+  [FastAPI](https://python.chanx.dev/en/latest/tutorial-fastapi/prerequisites.html)
+- [Configuration](https://python.chanx.dev/en/latest/configuration.html) and
+  [API reference](https://python.chanx.dev/en/latest/reference/core.html)
+- [Changelog](https://github.com/chanx-dev/chanx/blob/main/CHANGELOG.md)
 
 ## Contributing
 
-Issues and pull requests are welcome. See [CONTRIBUTING.md](https://github.com/huynguyengl99/chanx/blob/main/CONTRIBUTING.md).
+Issues and pull requests are welcome. See [CONTRIBUTING.md](https://github.com/chanx-dev/chanx/blob/main/CONTRIBUTING.md).
 
 ## License
 
-BSD. See [LICENSE](https://github.com/huynguyengl99/chanx/blob/main/LICENSE).
+BSD. See [LICENSE](https://github.com/chanx-dev/chanx/blob/main/LICENSE).

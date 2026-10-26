@@ -83,7 +83,7 @@ No CLI tools, no server dependencies - just what's needed to run the generated c
 
 .. code-block:: bash
 
-    git clone https://github.com/huynguyengl99/chanx.git
+    git clone https://github.com/chanx-dev/chanx.git
     cd chanx
     pip install -e ".[channels]"  # For Django
     # or

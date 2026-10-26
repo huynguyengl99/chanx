@@ -23,7 +23,7 @@ Quick Start
 
    .. code-block:: bash
 
-      git clone https://github.com/huynguyengl99/chanx
+      git clone https://github.com/chanx-dev/chanx
       cd chanx
 
 2. **Prerequisites**: Ensure Docker and uv are installed

@@ -455,5 +455,5 @@ Next steps
       - :doc:`examples/fastapi`: a complete project.
 
 For both: :doc:`user-guide/consumers-decorators`, :doc:`user-guide/testing`,
-:doc:`user-guide/asyncapi`, and `chanx-js <https://huynguyengl99.github.io/chanx-js/>`_
+:doc:`user-guide/asyncapi`, and `chanx-js <https://js.chanx.dev/>`_
 for a typed TypeScript client.

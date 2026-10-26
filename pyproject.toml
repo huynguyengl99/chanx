@@ -146,9 +146,9 @@ fast_channels = [
 chanx = "chanx.cli.main:cli"
 
 [project.urls]
-Documentation = "https://chanx.readthedocs.io/"
-Homepage = "https://github.com/huynguyengl99/chanx"
-Repository = "https://github.com/huynguyengl99/chanx"
+Documentation = "https://python.chanx.dev/"
+Homepage = "https://github.com/chanx-dev/chanx"
+Repository = "https://github.com/chanx-dev/chanx"
 
 [tool.black]
 line-length = 88

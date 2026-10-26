@@ -11,7 +11,7 @@ Contributing
 
 
 .. image:: /_static/interrogate_badge.svg
-   :target: https://github.com/huynguyengl99/chanx
+   :target: https://github.com/chanx-dev/chanx
    :alt: Documentation Coverage
 
 .. include:: ../CONTRIBUTING.md

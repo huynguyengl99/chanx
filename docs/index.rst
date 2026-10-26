@@ -21,7 +21,7 @@ Chanx
 .. container:: buttons
 
    :doc:`Get started <introduction>`
-   `GitHub <https://github.com/huynguyengl99/chanx>`_
+   `GitHub <https://github.com/chanx-dev/chanx>`_
 
 .. code-block:: bash
 
@@ -174,7 +174,7 @@ Pick your path
       Build a full app step by step: chat, AI streaming, background jobs and tests.
 
    .. grid-item-card:: TypeScript clients
-      :link: https://huynguyengl99.github.io/chanx-js/
+      :link: https://js.chanx.dev/
 
       chanx-js generates a typed client from your server's AsyncAPI spec.
 

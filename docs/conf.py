@@ -61,11 +61,11 @@ exclude_patterns = ["_build", "Thumbs.db", ".DS_Store", "images"]
 html_theme = "shibuya"
 html_title = "Chanx"
 html_static_path = ["_static"]
-html_baseurl = "https://chanx.readthedocs.io/en/latest/"
+html_baseurl = "https://python.chanx.dev/en/latest/"
 
 html_context = {
     "source_type": "github",
-    "source_user": "huynguyengl99",
+    "source_user": "chanx-dev",
     "source_repo": "chanx",
     "source_version": "main",
     "source_docs_path": "/docs/",
@@ -78,7 +78,7 @@ html_theme_options = {
     "light_logo": "_static/brand/chanx-wordmark.svg",
     "dark_logo": "_static/brand/chanx-wordmark-dark.svg",
     "accent_color": "blue",
-    "github_url": "https://github.com/huynguyengl99/chanx",
+    "github_url": "https://github.com/chanx-dev/chanx",
     "nav_links": [
         {"title": "Get started", "url": "introduction"},
         {"title": "Tutorials", "url": "tutorial-django/prerequisites"},
@@ -88,12 +88,12 @@ html_theme_options = {
             "children": [
                 {
                     "title": "chanx-js",
-                    "url": "https://huynguyengl99.github.io/chanx-js/",
+                    "url": "https://js.chanx.dev/",
                     "summary": "TypeScript clients and server",
                 },
                 {
                     "title": "chanx-kit",
-                    "url": "https://huynguyengl99.github.io/chanx-kit/",
+                    "url": "https://kit.chanx.dev/",
                     "summary": "Copy-in WebSocket components",
                 },
             ],

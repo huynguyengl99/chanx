@@ -654,7 +654,7 @@ AsyncAPI documentation integrates with various tools:
 **Code Generation:**
 
 - Generate typed clients: Python with the built-in :doc:`client-generator`, JavaScript and
-  TypeScript with `chanx-js <https://huynguyengl99.github.io/chanx-js/>`_
+  TypeScript with `chanx-js <https://js.chanx.dev/>`_
 - Generate client SDKs in other languages with AsyncAPI tooling
 - Use AsyncAPI CLI tools for validation and generation
 

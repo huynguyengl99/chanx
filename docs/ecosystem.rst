@@ -7,7 +7,7 @@ schema it generates.
 chanx-js: TypeScript clients and servers
 ----------------------------------------
 
-`chanx-js <https://huynguyengl99.github.io/chanx-js/>`_ implements the same protocol in
+`chanx-js <https://js.chanx.dev/>`_ implements the same protocol in
 TypeScript, on both ends:
 
 - **Client**: ``@chanx-js/codegen`` turns your server's AsyncAPI schema into typed channel
@@ -44,7 +44,7 @@ For a Python client, use the built-in :doc:`user-guide/client-generator`.
 chanx-go: Go servers and clients
 --------------------------------
 
-`chanx-go <https://huynguyengl99.github.io/chanx-go/>`_ implements the same protocol in Go:
+`chanx-go <https://go.chanx.dev/>`_ implements the same protocol in Go:
 
 - **Server**: messages are structs and a consumer is a struct of ``Handle...`` methods, on
   net/http (chi, gorilla/mux), gin, echo or Fiber. It emits the same AsyncAPI document as
@@ -54,17 +54,17 @@ chanx-go: Go servers and clients
 
 .. code-block:: bash
 
-    go run github.com/huynguyengl99/chanx-go/cmd/chanx-codegen@latest -o ./chatclient http://localhost:8000/asyncapi.json
+    go run go.chanx.dev/cmd/chanx-codegen@latest -o ./chatclient http://localhost:8000/asyncapi.json
 
 chanx-kit: copy-in components
 -----------------------------
 
-`chanx-kit <https://huynguyengl99.github.io/chanx-kit/>`_ is a registry of ready-made
+`chanx-kit <https://kit.chanx.dev/>`_ is a registry of ready-made
 WebSocket components built on Chanx: AG-UI agents, presence, room chat, notifications and
 more. Kits are copied into your project with `copit <https://github.com/huynguyengl99/copit>`_,
 so the code is yours to read and change.
 
 .. code-block:: bash
 
-    uvx copit registry add chanx-kit github:huynguyengl99/chanx-kit@v0.1.0 --to app/ws_kits
+    uvx copit registry add chanx-kit github:chanx-dev/chanx-kit@v0.1.0 --to app/ws_kits
     uvx copit add @chanx-kit/notification

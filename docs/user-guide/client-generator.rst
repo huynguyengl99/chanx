@@ -5,7 +5,7 @@ The Chanx client generator automatically creates type-safe Python WebSocket clie
 
 .. tip::
 
-   For JavaScript and TypeScript clients, use `chanx-js <https://huynguyengl99.github.io/chanx-js/>`_. See :doc:`../ecosystem`.
+   For JavaScript and TypeScript clients, use `chanx-js <https://js.chanx.dev/>`_. See :doc:`../ecosystem`.
 
 Why Use the Client Generator?
 ------------------------------

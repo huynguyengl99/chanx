@@ -56,8 +56,9 @@ From that, Chanx gives you:
   workers through the channel layer (Redis or in-memory).
 - **AsyncAPI 3.0 docs.** A spec and an interactive docs page, generated from your
   handlers, so the contract the frontend reads is the code that runs.
-- **Typed clients.** Generate a Python client, or a TypeScript client with React, Vue,
-  Svelte and Solid bindings via [chanx-js](https://huynguyengl99.github.io/chanx-js/).
+- **Typed clients.** Generate a Python client, a TypeScript client with React, Vue,
+  Svelte and Solid bindings via [chanx-js](https://huynguyengl99.github.io/chanx-js/), or a
+  Go client via [chanx-go](https://huynguyengl99.github.io/chanx-go/).
 - **Testing and auth.** Test communicators for both frameworks, and authenticators that
   reuse your DRF permission classes on Django.
 - **Static typing throughout.** Checked with mypy and pyright in strict mode, so handler
@@ -186,6 +187,9 @@ chanx generate-client --schema http://localhost:8000/asyncapi.json --output ./ch
 - **[chanx-js](https://huynguyengl99.github.io/chanx-js/)**: TypeScript clients for the
   browser and Node, and a TypeScript server that speaks the same protocol and can share a
   Redis layer with Python.
+- **[chanx-go](https://huynguyengl99.github.io/chanx-go/)**: the Go implementation, for net/http, gin, echo
+  and Fiber servers, with a typed Go client generator. Go and Python processes can share
+  one Redis layer.
 - **[chanx-kit](https://huynguyengl99.github.io/chanx-kit/)**: copy-in components built on
   Chanx (notifications, chat with history, presence, agent streaming, voice), in the
   spirit of shadcn/ui.

@@ -4,7 +4,7 @@ Wire Protocol
 This page specifies what Chanx sends over the socket and through the channel layer. You
 do not need it to use Chanx; it is for people writing a client by hand, implementing
 the protocol in another language (as `chanx-js <https://huynguyengl99.github.io/chanx-js/>`_
-does), or debugging traffic.
+and `chanx-go <https://huynguyengl99.github.io/chanx-go/>`_ do), or debugging traffic.
 
 Examples use the defaults: the discriminator field is ``action`` and camelization is off.
 
@@ -264,3 +264,5 @@ Implementations
   clients.
 - `chanx-js <https://huynguyengl99.github.io/chanx-js/>`_: TypeScript clients and a
   Node server that implement this protocol and can share a Redis layer with Chanx.
+- `chanx-go <https://huynguyengl99.github.io/chanx-go/>`_: Go servers on net/http, gin, echo and Fiber, and
+  generated Go clients, sharing the same Redis layer.

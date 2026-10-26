@@ -1,7 +1,7 @@
 Ecosystem
 =========
 
-Chanx is the Python server. Two companion projects build on the protocol and the AsyncAPI
+Chanx is the Python server. Three companion projects build on the protocol and the AsyncAPI
 schema it generates.
 
 chanx-js: TypeScript clients and servers
@@ -40,6 +40,21 @@ It speaks Chanx's :doc:`wire protocol <protocol>` directly: the envelope, replie
 channel's topics. Requests on plain channels need Chanx 2.11.2 or later.
 
 For a Python client, use the built-in :doc:`user-guide/client-generator`.
+
+chanx-go: Go servers and clients
+--------------------------------
+
+`chanx-go <https://huynguyengl99.github.io/chanx-go/>`_ implements the same protocol in Go:
+
+- **Server**: messages are structs and a consumer is a struct of ``Handle...`` methods, on
+  net/http (chi, gorilla/mux), gin, echo or Fiber. It emits the same AsyncAPI document as
+  Chanx, and its Redis layer shares groups with Chanx processes.
+- **Client**: ``chanx-codegen`` turns a server's AsyncAPI schema, from Chanx or chanx-go,
+  into a typed Go client.
+
+.. code-block:: bash
+
+    go run github.com/huynguyengl99/chanx-go/cmd/chanx-codegen@latest -o ./chatclient http://localhost:8000/asyncapi.json
 
 chanx-kit: copy-in components
 -----------------------------

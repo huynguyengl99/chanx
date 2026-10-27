@@ -4,7 +4,7 @@ Tests for chanx.asyncapi.generator module.
 Tests the AsyncAPI 3.0 specification generator functionality.
 """
 
-from typing import Any, Literal
+from typing import Any, ClassVar, Literal
 from unittest.mock import Mock
 
 from chanx.asyncapi.generator import AsyncAPIGenerator
@@ -756,6 +756,47 @@ class TestAsyncAPIGenerator:
         # Messages should be in components
         assert "passthrough_event" in spec["components"]["messages"]
         assert "another_passthrough_event" in spec["components"]["messages"]
+
+    def test_emits_documents_what_the_consumer_pushes(self) -> None:
+        class WelcomeMessage(BaseMessage):
+            action: Literal["welcome"] = "welcome"
+            payload: str
+
+        class EmitsMixin:
+            emits: ClassVar[list[type[BaseMessage]]] = [WelcomeMessage]
+
+        @channel(name="news")
+        class NewsConsumer(EmitsMixin, AsyncJsonWebsocketConsumer):  # type: ignore[misc]
+            emits = [DummyResponse]
+
+            @ws_handler
+            async def handle_test(self, message: DummyMessage) -> None:
+                pass
+
+        route = RouteInfo(
+            path="/ws/news",
+            handler=Mock(),
+            base_url="ws://localhost:8000",
+            consumer=NewsConsumer,
+        )
+        spec = AsyncAPIGenerator([route]).generate()
+
+        assert spec["operations"]["news_emits"] == {
+            "action": "send",
+            "channel": {"$ref": "#/channels/news"},
+            "description": "",
+            "summary": "Messages the server pushes",
+            "messages": [
+                {"$ref": "#/channels/news/messages/dummy_response"},
+                {"$ref": "#/channels/news/messages/welcome_message"},
+            ],
+        }
+        assert {"dummy_response", "welcome_message"} <= set(
+            spec["channels"]["news"]["messages"]
+        )
+        assert NewsConsumer.outgoing_message_adapter.validate_python(
+            {"action": "welcome", "payload": "hi"}
+        ) == WelcomeMessage(payload="hi")
 
     def test_passthrough_events_with_explicit_handler_override(self) -> None:
         """Test that explicit @event_handler overrides passthrough in AsyncAPI."""

@@ -420,6 +420,14 @@ class TestPassthroughEvents:
 
             _ = InvalidConsumer  # used to trigger class creation above
 
+    def test_emits_validates_base_message_subclass(self) -> None:
+        with pytest.raises(TypeError, match="emits item"):
+
+            class InvalidConsumer(AsyncJsonWebsocketConsumer):
+                emits = [str]  # type: ignore[list-item]
+
+            _ = InvalidConsumer
+
 
 class TestHandlerCollisions:
     """Test that two distinct handlers cannot claim the same action."""

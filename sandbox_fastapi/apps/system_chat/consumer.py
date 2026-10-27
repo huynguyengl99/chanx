@@ -24,6 +24,8 @@ class SystemMessageConsumer(BaseConsumer):
     Migrated to use chanx framework.
     """
 
+    emits = [SystemEchoMessage]
+
     @ws_handler(
         summary="Handle ping requests",
         description="Simple ping-pong for connectivity testing",

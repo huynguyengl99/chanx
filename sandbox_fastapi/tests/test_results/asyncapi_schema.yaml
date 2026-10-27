@@ -409,6 +409,14 @@ operations:
         $ref: '#/channels/system'
       messages:
       - $ref: '#/channels/system/messages/system_echo_message'
+  system_emits:
+    action: send
+    channel:
+      $ref: '#/channels/system'
+    description: ''
+    summary: Messages the server pushes
+    messages:
+    - $ref: '#/channels/system/messages/system_echo_message'
   handle_job:
     action: receive
     channel:

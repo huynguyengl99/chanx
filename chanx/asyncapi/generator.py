@@ -363,6 +363,34 @@ class AsyncAPIGenerator:
                     handler_info, consumer, route, is_event=True
                 )
 
+            if emits := getattr(consumer, "_merged_emits", None):
+                self._build_emits_operation(emits, consumer, route)
+
+    def _build_emits_operation(
+        self,
+        emits: list[type[BaseMessage]],
+        consumer: type[ChanxWebsocketConsumerMixin],
+        route: RouteInfo,
+    ) -> None:
+        """Document the messages a consumer sends outside its handlers."""
+        channel_name = self._route_channel_mapping[self._route_key(route)]
+        name = f"{channel_name}_emits"
+        if name in self._operation_names:
+            name = f"{consumer.snake_name}_{name}"
+
+        operation: dict[str, Any] = {
+            "action": "send",
+            "channel": {"$ref": f"#/channels/{channel_name}"},
+            "description": "",
+            "summary": "Messages the server pushes",
+            "messages": [self.build_output(channel_name, m) for m in emits],
+        }
+        if security := self._channel_security.get(channel_name):
+            operation["security"] = security
+
+        self.operations[name] = operation
+        self._operation_names.add(name)
+
     def _build_single_operation(
         self,
         handler_info: AsyncAPIHandlerInfo,

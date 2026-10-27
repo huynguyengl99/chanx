@@ -332,6 +332,31 @@ Duplicate types across the chain are de-duplicated. Because the lists are merged
 
 **Note:** ``passthrough_events`` only applies to event handlers (channel layer events), not WebSocket message handlers (``@ws_handler``). WebSocket messages from clients typically require processing logic, so passthrough is not supported for them.
 
+Messages Sent Outside Handlers
+------------------------------
+
+A handler's ``output_type`` documents what it sends. A message the consumer sends on its
+own, such as a welcome from ``post_authentication``, belongs in ``emits``:
+
+.. code-block:: python
+
+    class ChatConsumer(AsyncJsonWebsocketConsumer):
+        emits = [WelcomeMessage]
+
+        async def post_authentication(self) -> None:
+            await self.send_message(WelcomeMessage(payload="Connected"))
+
+Each message type listed in ``emits``:
+
+- Appears in the channel's messages, so generated clients get a type for it
+- Is accepted by outgoing validation (``send_message(validate=True)`` and the test
+  communicator)
+- Is documented by one AsyncAPI ``send`` operation, ``<channel>_emits``
+
+Like ``passthrough_events``, lists from mixins and base classes are merged. Events that
+arrive through the channel layer, from a worker or a view, need no entry here: their
+``@event_handler`` or ``passthrough_events`` entry already documents them.
+
 AsyncAPI Documentation Mapping
 -------------------------------
 

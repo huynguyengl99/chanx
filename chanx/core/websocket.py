@@ -91,6 +91,11 @@ class ChanxWebsocketConsumerMixin(Generic[ReceiveEvent]):
     passthrough_events: ClassVar[list[type[BaseMessage]]] = []
     passthrough_method_prefix: ClassVar[str] = "handle_passthrough_"
 
+    # Messages the consumer sends outside any handler, such as a welcome from
+    # post_authentication. Documented and validated like handler output.
+    emits: ClassVar[list[type[BaseMessage]]] = []
+    _merged_emits: ClassVar[list[type[BaseMessage]]] = []
+
     # Topics this connection serves. Empty means the consumer behaves exactly as a
     # consumer without topics.
     topics: ClassVar[list[type["Topic[Any]"]]] = []
@@ -164,7 +169,8 @@ class ChanxWebsocketConsumerMixin(Generic[ReceiveEvent]):
         cls._MESSAGE_HANDLER_INFO_MAP = {}
         cls._EVENT_HANDLER_INFO_MAP = {}
 
-        cls._merged_extra_groups = cls._collect_extra_groups()
+        cls._merged_extra_groups = cls._collect_from_mro("extra_groups")
+        cls._merged_emits = cls._collect_messages("emits")
 
         # Process all handlers
         cls._process_handlers()
@@ -235,36 +241,33 @@ class ChanxWebsocketConsumerMixin(Generic[ReceiveEvent]):
         handler_info_map[action] = handler_info
 
     @classmethod
-    def _collect_passthrough_events(cls) -> list[type[BaseMessage]]:
+    def _collect_from_mro(cls, name: str) -> list[Any]:
         """
-        Collect passthrough_events from the entire MRO, deduplicated.
+        Merge a list attribute across the entire MRO, deduplicated.
 
         Each class in the inheritance chain (mixins included) may declare its own
-        ``passthrough_events``. Plain attribute access would only return the most
-        derived definition and shadow the rest, so we walk the MRO and merge every
-        class's own list. Order follows the MRO (most derived first); duplicates
-        keep their first occurrence.
+        list. Plain attribute access would only return the most derived definition
+        and shadow the rest, so we walk the MRO and merge every class's own list.
+        Order follows the MRO (most derived first); duplicates keep their first
+        occurrence.
         """
-        merged: list[type[BaseMessage]] = []
-        seen: set[type[BaseMessage]] = set()
+        merged: list[Any] = []
         for klass in cls.__mro__:
-            for msg_type in klass.__dict__.get("passthrough_events", []):
-                if msg_type not in seen:
-                    seen.add(msg_type)
-                    merged.append(msg_type)
+            for item in klass.__dict__.get(name, []):
+                if item not in merged:
+                    merged.append(item)
         return merged
 
     @classmethod
-    def _collect_extra_groups(cls) -> list[str]:
-        """Collect extra_groups from the entire MRO, deduplicated."""
-        merged: list[str] = []
-        seen: set[str] = set()
-        for klass in cls.__mro__:
-            for group in klass.__dict__.get("extra_groups", []):
-                if group not in seen:
-                    seen.add(group)
-                    merged.append(group)
-        return merged
+    def _collect_messages(cls, name: str) -> list[type[BaseMessage]]:
+        """Merge a list of message types across the MRO, rejecting non-messages."""
+        messages = cls._collect_from_mro(name)
+        for msg_type in messages:
+            if not (inspect.isclass(msg_type) and issubclass(msg_type, BaseMessage)):
+                raise TypeError(
+                    f"{name} item {msg_type} must be a BaseMessage subclass."
+                )
+        return messages
 
     @classmethod
     def _default_groups(cls) -> list[str]:
@@ -284,16 +287,7 @@ class ChanxWebsocketConsumerMixin(Generic[ReceiveEvent]):
         it to the WebSocket client).
         Explicit @event_handler definitions take priority over passthrough.
         """
-        for msg_type in cls._collect_passthrough_events():
-            if not (
-                inspect.isclass(msg_type)
-                and issubclass(  # pyright: ignore[reportUnnecessaryIsInstance]
-                    msg_type, BaseMessage
-                )
-            ):
-                raise TypeError(
-                    f"passthrough_events item {msg_type} must be a BaseMessage subclass."
-                )
+        for msg_type in cls._collect_messages("passthrough_events"):
             message_action = msg_type.model_fields["action"].default
             # Explicit @event_handler takes priority
             if message_action in cls._EVENT_HANDLER_INFO_MAP:
@@ -335,6 +329,9 @@ class ChanxWebsocketConsumerMixin(Generic[ReceiveEvent]):
             output_type = handler_info["output_type"]
             if output_type:
                 message_registry.add(output_type, cls.__name__)
+
+        for msg_type in cls._merged_emits:
+            message_registry.add(msg_type, cls.__name__)
 
     @classmethod
     def _extract_types_from_handlers(
@@ -426,7 +423,9 @@ class ChanxWebsocketConsumerMixin(Generic[ReceiveEvent]):
             else None
         )
 
-        all_output_types = set(message_output_types + event_output_types)
+        all_output_types = set(
+            message_output_types + event_output_types + cls._merged_emits
+        )
         all_output_types |= {
             CompleteMessage,
             GroupCompleteMessage,

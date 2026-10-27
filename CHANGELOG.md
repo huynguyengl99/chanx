@@ -1,3 +1,10 @@
+## v2.13.0 (2026-10-27)
+
+### Feat
+
+- add emits for messages a consumer sends outside its handlers
+- add join_group and leave_group for groups at run time
+
 ## v2.12.4 (2026-10-26)
 
 ## v2.12.3 (2026-10-25)

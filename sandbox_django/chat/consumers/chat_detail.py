@@ -40,8 +40,7 @@ class ChatDetailConsumer(AsyncJsonWebsocketConsumer[ChatDetailEvent]):
         chat_member = self.authenticator.obj
         group_name = name_group_chat(chat_member.pk)
 
-        await self.channel_layer.group_add(group_name, self.channel_name)
-        self.groups.append(group_name)
+        await self.join_group(group_name)
 
     @ws_handler(
         summary="Handle ping requests",

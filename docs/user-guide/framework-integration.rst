@@ -78,7 +78,7 @@ For WebSocket authentication, chanx integrates with Django REST Framework throug
             room = self.authenticator.obj
 
             # Join room-specific group
-            await self.channel_layer.group_add(f"room_{room.id}", self.channel_name)
+            await self.join_group(f"room_{room.id}")
 
 **Advanced Configuration**
 

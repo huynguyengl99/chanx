@@ -45,8 +45,7 @@ class ConversationAssistantConsumer(AsyncJsonWebsocketConsumer[AssistantEvent]):
             group_name = f"user_{user.pk}_conversation_{conversation_id}"
         else:
             group_name = f"anonymous_{conversation_id}"
-        await self.channel_layer.group_add(group_name, self.channel_name)
-        self.groups.append(group_name)
+        await self.join_group(group_name)
 
     @ws_handler(
         summary="Handle ping requests",

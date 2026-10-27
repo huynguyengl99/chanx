@@ -43,8 +43,7 @@ class DiscussionTopicConsumer(AsyncJsonWebsocketConsumer[TopicDetailEvent]):
 
         group_name = f"discussion_topic_{self.authenticator.obj.pk}"
 
-        await self.channel_layer.group_add(group_name, self.channel_name)
-        self.groups.append(group_name)
+        await self.join_group(group_name)
 
     @ws_handler(
         summary="Handle ping requests",

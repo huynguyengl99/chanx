@@ -65,11 +65,7 @@ class RoomChatConsumer(BaseConsumer):
         self.room_group_name = f"room_{self.room_name}"
 
         # Join room group
-        await self.channel_layer.group_add(self.room_group_name, self.channel_name)
-
-        # Add room to groups
-        if self.room_group_name not in self.groups:
-            self.groups.append(self.room_group_name)
+        await self.join_group(self.room_group_name)
 
         # Send join notification to the room
         await self.broadcast_message(

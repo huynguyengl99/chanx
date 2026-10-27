@@ -112,8 +112,7 @@ Key Consumer Applications
            self.room_group_name = f"room_{self.room_name}"
 
            # Join room group dynamically
-           await self.channel_layer.group_add(self.room_group_name, self.channel_name)
-           self.groups.append(self.room_group_name)
+           await self.join_group(self.room_group_name)
 
 **3. Background Jobs App (apps/background_jobs/consumer.py) - Real ARQ Integration:**
 

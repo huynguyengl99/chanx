@@ -129,8 +129,7 @@ Demonstrates different patterns for group-based real-time messaging:
            chat_member = self.authenticator.obj
            group_name = name_group_chat(chat_member.pk)
 
-           await self.channel_layer.group_add(group_name, self.channel_name)
-           self.groups.append(group_name)
+           await self.join_group(group_name)
 
        @event_handler
        async def handle_member_removed(

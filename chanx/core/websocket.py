@@ -584,6 +584,8 @@ class ChanxWebsocketConsumerMixin(Generic[ReceiveEvent]):
         Args:
             message: The disconnection message from the framework
         """
+        # A join_group still awaiting its add sees this and undoes it.
+        self._closed = True
         for topic, subscription in list(self.subscriptions.items()):
             await subscription.on_unsubscribe()
             await self._leave_topic_group(topic, subscription)
@@ -592,6 +594,22 @@ class ChanxWebsocketConsumerMixin(Generic[ReceiveEvent]):
         await logger.ainfo("Disconnecting websocket")
         structlog.contextvars.clear_contextvars()
         await super().websocket_disconnect(message)  # type: ignore
+
+    async def join_group(self, group: str) -> None:
+        """Join a group at run time; disconnect leaves it like the connect groups."""
+        await self.channel_layer.group_add(group, self.channel_name)
+        if self._closed:
+            # Disconnect may have run during the add and would not discard it.
+            await self.channel_layer.group_discard(group, self.channel_name)
+            return
+        if group not in self.groups:
+            self.groups.append(group)
+
+    async def leave_group(self, group: str) -> None:
+        """Leave a group joined on connect or with ``join_group``."""
+        await self.channel_layer.group_discard(group, self.channel_name)
+        if group in self.groups:
+            self.groups.remove(group)
 
     async def post_authentication(self) -> None:
         """
@@ -1123,9 +1141,9 @@ class ChanxWebsocketConsumerMixin(Generic[ReceiveEvent]):
             )
             return
 
-        group = topic_class.group_name(topic)
-        await self.channel_layer.group_add(group, self.channel_name)
-        self.groups.append(group)
+        await self.join_group(topic_class.group_name(topic))
+        if self._closed:
+            return
         self.subscriptions[topic] = subscription
         await self.send_topic_message(topic, SubscribedMessage())
 
@@ -1146,10 +1164,7 @@ class ChanxWebsocketConsumerMixin(Generic[ReceiveEvent]):
 
     async def _leave_topic_group(self, topic: str, subscription: "Topic[Any]") -> None:
         """Drop a subscription's group, both in the layer and on this consumer."""
-        group = type(subscription).group_name(topic)
-        await self.channel_layer.group_discard(group, self.channel_name)
-        if group in self.groups:
-            self.groups.remove(group)
+        await self.leave_group(type(subscription).group_name(topic))
 
     @classmethod
     def _match(cls, topic: str) -> type["Topic[Any]"] | None:

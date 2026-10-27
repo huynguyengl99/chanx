@@ -495,6 +495,11 @@ Output Messages and Broadcasting
 
 **Group Management:**
 
+A consumer joins its ``groups`` on connect. To join or leave a group later, such as when
+the user enters a room, use ``join_group()`` and ``leave_group()``. They update the
+channel layer and ``self.groups`` together, so ``broadcast_message()`` without ``groups``
+reaches the new group and disconnect leaves it.
+
 .. code-block:: python
 
     class RoomChatConsumer(AsyncJsonWebsocketConsumer):
@@ -504,9 +509,8 @@ Output Messages and Broadcasting
             room_id = self.scope["path_params"]["room_id"]
             group_name = f"room_{room_id}"
 
-            # Join the room group
-            await self.channel_layer.group_add(group_name, self.channel_name)
-            self.groups.append(group_name)
+            # Join the room group; leave it with ``await self.leave_group(group_name)``
+            await self.join_group(group_name)
 
             # Notify others about the join
             await self.broadcast_message(
@@ -638,10 +642,7 @@ Authentication Integration
             room = self.authenticator.obj  # If using object-level auth
 
             # Join room-specific group
-            await self.channel_layer.group_add(
-                f"room_{room.id}",
-                self.channel_name
-            )
+            await self.join_group(f"room_{room.id}")
 
 **FastAPI/Custom Example:**
 
@@ -710,8 +711,7 @@ Here's a complete example that demonstrates all the concepts:
         async def post_authentication(self) -> None:
             """Join room group after authentication."""
             room_group = f"room_{self.authenticator.obj.id}"
-            await self.channel_layer.group_add(room_group, self.channel_name)
-            self.groups.append(room_group)
+            await self.join_group(room_group)
 
         @ws_handler(
             summary="Handle chat messages",

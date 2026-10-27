@@ -39,9 +39,7 @@ class GroupChatConsumer(AsyncJsonWebsocketConsumer[GroupChatEvent]):
             return
 
         assert user.pk
-        personal_group = make_user_groups_layer_name(user.pk)
-        groups = [personal_group]
-        await self.channel_layer.group_add(personal_group, self.channel_name)
+        await self.join_group(make_user_groups_layer_name(user.pk))
         user_group_chats = await sync_to_async(
             lambda: list(
                 GroupChat.objects.filter(members__user_id=str(user.pk)).values_list(
@@ -51,11 +49,7 @@ class GroupChatConsumer(AsyncJsonWebsocketConsumer[GroupChatEvent]):
         )()
 
         for group_chat_id in user_group_chats:
-            group_name = f"group_chat_{group_chat_id}_updates"
-            await self.channel_layer.group_add(group_name, self.channel_name)
-            groups.append(f"group_chat_{group_chat_id}_updates")
-
-        self.groups.extend(groups)
+            await self.join_group(f"group_chat_{group_chat_id}_updates")
 
     @ws_handler(
         summary="Handle ping requests",
@@ -69,9 +63,7 @@ class GroupChatConsumer(AsyncJsonWebsocketConsumer[GroupChatEvent]):
         self, event: NotifyAddedToGroupEvent
     ) -> AddedToGroupMessage:
         group_id = event.payload.get("id")
-        await self.channel_layer.group_add(
-            f"group_chat_{group_id}_updates", self.channel_name
-        )
+        await self.join_group(f"group_chat_{group_id}_updates")
         return AddedToGroupMessage(payload=event.payload)
 
     @event_handler
@@ -79,9 +71,7 @@ class GroupChatConsumer(AsyncJsonWebsocketConsumer[GroupChatEvent]):
         self, event: NotifyRemovedFromGroupEvent
     ) -> RemovedFromGroupMessage:
         group_id = event.payload.group_pk
-        await self.channel_layer.group_discard(
-            f"group_chat_{group_id}_updates", self.channel_name
-        )
+        await self.leave_group(f"group_chat_{group_id}_updates")
         return RemovedFromGroupMessage(payload=event.payload)
 
     @event_handler
